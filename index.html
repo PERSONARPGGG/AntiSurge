@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>네온 서바이버즈 (Neon Survivors) - 사이버 생존 게임</title>
+  <meta name="description" content="사이버펑크 네온 스타일의 2D 탑다운 자동 공격 생존 게임, 네온 서바이버즈를 브라우저에서 즐겨보세요!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 메인 메뉴 화면 -->
+  <div id="menu-screen" class="screen active">
+    <div class="menu-content">
+      <h1 class="neon-title" data-text="NEON SURVIVORS">NEON SURVIVORS</h1>
+      <p class="subtitle">네온 바이러스의 침공으로부터 시스템을 방어하세요</p>
+      <div class="version-badge">v0.01 ALPHA</div>
+
+      <div class="instructions">
+        <h3>[ 조작 방법 ]</h3>
+        <p><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> 또는 <span class="key">방향키</span> : 이동</p>
+        <p>※ 모든 공격은 자동으로 적을 타겟팅하여 실행됩니다.</p>
+        <p>※ 적을 물리쳐 네온 코어를 흡수하고 레벨업하세요.</p>
+        <p class="objective">★ 목표: 스테이지 100 돌파 후 무한 생존 기록을 달성하세요! ★</p>
+      </div>
+
+      <button id="start-btn" class="neon-btn">백신 프로그램 가동 (시작)</button>
+
+      <!-- Coming Soon 섹션 -->
+      <div class="coming-soon-row">
+        <div class="coming-soon-card">
+          <span class="cs-icon">🏆</span>
+          <span class="cs-label">랭킹 시스템</span>
+          <span class="cs-badge">준비 중</span>
+        </div>
+        <div class="coming-soon-card">
+          <span class="cs-icon">👥</span>
+          <span class="cs-label">멀티플레이</span>
+          <span class="cs-badge">준비 중</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 클래스 선택 화면 -->
+  <div id="class-select-screen" class="screen">
+    <div class="class-select-content">
+      <h2 class="neon-title-sm">백신 유형 선택</h2>
+      <p class="modal-desc">전투 스타일을 선택하세요. 각 클래스는 고유 능력을 보유합니다.</p>
+      <div class="class-card-grid">
+        <button class="class-card" data-class="hacker" style="--cls-color:#00f0ff">
+          <div class="cls-icon">💻</div>
+          <div class="cls-name">해커</div>
+          <div class="cls-type">올라운더</div>
+          <ul class="cls-stats">
+            <li>HP 100 / 속도 보통</li>
+            <li>시작 무기: 네온 플레어</li>
+            <li>XP 획득 +10%</li>
+            <li>리롤 횟수 +1 (3회)</li>
+          </ul>
+        </button>
+        <button class="class-card" data-class="cyborg" style="--cls-color:#b026ff">
+          <div class="cls-icon">🤖</div>
+          <div class="cls-name">사이보그</div>
+          <div class="cls-type">방어형</div>
+          <ul class="cls-stats">
+            <li>HP 160 / 속도 느림</li>
+            <li>시작 무기: 사이버 오비터</li>
+            <li>피해량 -10%</li>
+            <li>실드 지속 +3초</li>
+          </ul>
+        </button>
+        <button class="class-card" data-class="ghost" style="--cls-color:#39ff14">
+          <div class="cls-icon">👻</div>
+          <div class="cls-name">고스트</div>
+          <div class="cls-type">공격형</div>
+          <ul class="cls-stats">
+            <li>HP 70 / 속도 매우 빠름</li>
+            <li>시작 무기: 네온 플레어</li>
+            <li>피해량 +25%</li>
+            <li>이동속도 +40%</li>
+          </ul>
+        </button>
+        <button class="class-card" data-class="engineer" style="--cls-color:#ffe600">
+          <div class="cls-icon">🔧</div>
+          <div class="cls-name">엔지니어</div>
+          <div class="cls-type">지원형</div>
+          <ul class="cls-stats">
+            <li>HP 110 / 속도 보통</li>
+            <li>시작 무기: 일렉트로 존</li>
+            <li>자석 범위 2배</li>
+            <li>회복 아이템 +50%</li>
+          </ul>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 게임 실행 화면 -->
+  <div id="game-screen" class="screen">
+
+    <!-- HUD 상단 정보 바 -->
+    <div id="hud">
+      <div class="hud-top">
+        <div class="level-container">
+          <span class="hud-label">LEVEL</span>
+          <span id="player-level" class="neon-text-blue">1</span>
+        </div>
+
+        <div class="level-container">
+          <span class="hud-label">CLASS</span>
+          <span id="class-icon" class="neon-text-blue">💻</span>
+        </div>
+
+        <div class="stage-container">
+          <span class="hud-label">STAGE</span>
+          <span id="stage-number" class="neon-text-blue">1</span>
+        </div>
+
+        <div class="timer-container">
+          <span id="game-timer" class="neon-text-pink">00:00</span>
+          <button id="mute-btn" class="mute-btn" title="배경음악 끄기 (M)">🎵</button>
+        </div>
+
+        <div class="kills-container">
+          <span class="hud-label">VIRUS KILLED</span>
+          <span id="kill-count" class="neon-text-green">0</span>
+        </div>
+      </div>
+
+      <!-- XP 바 -->
+      <div class="xp-bar-container">
+        <div id="xp-bar" class="xp-bar-fill"></div>
+      </div>
+
+      <!-- 스테이지 진행 바 -->
+      <div class="stage-bar-row">
+        <span class="hud-label" style="white-space:nowrap">STAGE PROGRESS</span>
+        <div class="stage-bar-outer">
+          <div id="stage-bar" class="stage-bar-fill"></div>
+        </div>
+        <span id="stage-bar-text" class="stage-bar-text">0 / 20</span>
+      </div>
+
+      <!-- 보스 HP 바 (보스 전 시에만 표시) -->
+      <div id="boss-hud" class="boss-hud">
+        <div class="boss-hud-header">
+          <span id="boss-name-text" class="boss-name-text">⚠ ELITE VIRUS CORE ⚠</span>
+          <span id="boss-hp-display" class="boss-hp-display">1000 / 1000</span>
+        </div>
+        <div class="boss-bar-outer">
+          <div id="boss-hp-bar" class="boss-bar-inner"></div>
+        </div>
+      </div>
+
+      <!-- HP 바 + 무기 슬롯 -->
+      <div class="hud-bottom">
+        <div class="hp-container">
+          <span class="hud-label">SYSTEM HEALTH</span>
+          <div class="hp-bar-outer">
+            <div id="hp-bar" class="hp-bar-inner"></div>
+            <span id="hp-text">100 / 100</span>
+          </div>
+        </div>
+        <div id="weapons-list" class="weapons-list"></div>
+      </div>
+    </div>
+
+    <!-- 게임 캔버스 -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 콤보 표시 (플로팅) -->
+    <div id="combo-display" class="combo-display">
+      <div id="combo-multiplier" class="combo-multiplier">x1.25 XP</div>
+      <div id="combo-count" class="combo-count">5 COMBO</div>
+    </div>
+
+    <!-- 스테이지 클리어 / 보스 경고 오버레이 -->
+    <div id="stage-overlay" class="stage-overlay">
+      <div id="stage-overlay-text" class="stage-overlay-text">STAGE 1 CLEAR!</div>
+      <div id="stage-overlay-sub" class="stage-overlay-sub"></div>
+    </div>
+
+    <!-- 무기 진화 배너 -->
+    <div id="evolution-banner" class="evolution-banner">
+      <span id="evo-icon" class="evo-icon">✨</span>
+      <div class="evo-text">
+        <div class="evo-label">WEAPON EVOLVED!</div>
+        <div id="evo-name" class="evo-name">플라즈마 캐논</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 스테이지 클리어 보너스 모달 -->
+  <div id="stage-bonus-modal" class="modal">
+    <div class="modal-content glass-panel bonus-panel">
+      <h2 class="neon-title-sm">★ 스테이지 보상 선택 ★</h2>
+      <p class="modal-desc">하나를 선택하세요.</p>
+      <div id="stage-bonus-list" class="bonus-list"></div>
+    </div>
+  </div>
+
+  <!-- 레벨업 선택창 모달 -->
+  <div id="level-up-modal" class="modal">
+    <div class="modal-content glass-panel levelup-panel">
+      <h2 class="neon-title-sm">시스템 업그레이드 감지</h2>
+      <p class="modal-desc">업그레이드 모듈을 선택하세요.</p>
+      <div id="card-container" class="card-container"></div>
+      <div class="reroll-row">
+        <button id="reroll-btn" class="reroll-btn">🔄 리롤 <span id="reroll-uses">(2회)</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 게임 오버 / 결과 화면 -->
+  <div id="game-over-modal" class="modal">
+    <div class="modal-content glass-panel result-panel">
+      <h2 id="result-title" class="neon-title-lg">SYSTEM OVERLOAD</h2>
+      <p id="result-subtitle" class="result-subtitle">백신 프로그램 작동이 중단되었습니다.</p>
+
+      <div class="result-stats">
+        <div class="stat-card">
+          <div class="stat-label">생존 시간</div>
+          <div id="stat-time" class="stat-value neon-text-pink">00:00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">도달 스테이지</div>
+          <div id="stat-stage" class="stat-value neon-text-yellow">1</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">파괴된 바이러스</div>
+          <div id="stat-kills" class="stat-value neon-text-blue">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">최종 레벨</div>
+          <div id="stat-level" class="stat-value neon-text-green">Lv. 1</div>
+        </div>
+      </div>
+
+      <div class="result-details">
+        <h3>[ 업그레이드 이력 및 무기 기여도 ]</h3>
+        <div id="weapon-contribution-list" class="contrib-list"></div>
+      </div>
+
+      <div class="result-actions">
+        <button id="retry-btn" class="neon-btn font-sm">시스템 재가동</button>
+        <button id="home-btn" class="neon-btn font-sm neon-btn-purple">메인 화면으로</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
