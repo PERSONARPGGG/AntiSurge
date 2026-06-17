@@ -24,7 +24,7 @@
     <div class="menu-content">
       <h1 class="neon-title" data-text="NEON SURVIVORS">NEON SURVIVORS</h1>
       <p class="subtitle">네온 바이러스의 침공으로부터 시스템을 방어하세요</p>
-      <div class="version-badge">v0.01 ALPHA</div>
+      <div class="version-badge">v0.02 ALPHA</div>
 
       <div class="instructions">
         <h3>[ 조작 방법 ]</h3>
@@ -294,6 +294,12 @@
       <div class="result-details">
         <h3>[ 업그레이드 이력 및 무기 기여도 ]</h3>
         <div id="weapon-contribution-list" class="contrib-list"></div>
+      </div>
+
+      <!-- 이름 입력 + 공유 -->
+      <div class="share-row">
+        <input id="player-name-input" class="name-input" type="text" placeholder="닉네임 입력 (선택)" maxlength="12" autocomplete="off">
+        <button id="share-btn" class="neon-btn font-sm neon-btn-share" onclick="shareResult()">📤 결과 공유</button>
       </div>
 
       <div class="result-actions">

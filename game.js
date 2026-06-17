@@ -125,6 +125,57 @@ const bgStars = Array.from({ length: 130 }, () => ({
 }));
 let bgScanY = Math.random(); // 스캔 라인 위치 (0-1 normalized)
 
+// ── 배경 테마 (스테이지별 자동 전환) ──────────────────────────
+const BG_THEMES = [
+  { // Stage 1-24: Cyan / Neon
+    bgDark:'#01010a', glow:'rgba(0,18,45,0.4)',
+    stars:['#00f0ff','#b026ff','#ffe600'],
+    gridRgb:'0,240,255', scanRgb:'0,240,255',
+    borderColor:'rgba(255,0,127,0.75)', borderGlow:'#ff007f',
+    vignetteColor:'rgba(0,0,10,0.6)'
+  },
+  { // Stage 25-49: Void / Purple
+    bgDark:'#07010e', glow:'rgba(35,0,65,0.45)',
+    stars:['#b026ff','#ff00cc','#00f0ff'],
+    gridRgb:'160,0,255', scanRgb:'176,38,255',
+    borderColor:'rgba(176,38,255,0.8)', borderGlow:'#b026ff',
+    vignetteColor:'rgba(5,0,15,0.65)'
+  },
+  { // Stage 50-74: Crimson / Red
+    bgDark:'#0a0101', glow:'rgba(50,0,5,0.45)',
+    stars:['#ff4466','#ff8800','#ffe600'],
+    gridRgb:'255,50,80', scanRgb:'255,68,102',
+    borderColor:'rgba(255,20,0,0.8)', borderGlow:'#ff2200',
+    vignetteColor:'rgba(12,0,0,0.65)'
+  },
+  { // Stage 75-99: Matrix / Green
+    bgDark:'#000a01', glow:'rgba(0,30,5,0.4)',
+    stars:['#39ff14','#00f0ff','#ffe600'],
+    gridRgb:'57,255,20', scanRgb:'57,255,20',
+    borderColor:'rgba(57,255,20,0.8)', borderGlow:'#39ff14',
+    vignetteColor:'rgba(0,8,0,0.65)'
+  },
+  { // Stage 100+: Endless / Gold
+    bgDark:'#060400', glow:'rgba(60,40,0,0.45)',
+    stars:['#ffe600','#ff8800','#ffffff'],
+    gridRgb:'255,200,0', scanRgb:'255,230,0',
+    borderColor:'rgba(255,200,0,0.85)', borderGlow:'#ffe600',
+    vignetteColor:'rgba(6,4,0,0.7)'
+  }
+];
+
+function getCurrentBgTheme() {
+  const s = (typeof currentStage !== 'undefined' && gameState !== STATE_MENU) ? currentStage : 1;
+  if (s >= 100) return BG_THEMES[4];
+  if (s >= 75)  return BG_THEMES[3];
+  if (s >= 50)  return BG_THEMES[2];
+  if (s >= 25)  return BG_THEMES[1];
+  return BG_THEMES[0];
+}
+
+// 별 색상 매핑 (기존 고정 색 → 테마 인덱스)
+const _STAR_CI = { '#00f0ff': 0, '#b026ff': 1, '#ffe600': 2 };
+
 // ─── 개발자 모드 ───
 let devMode       = false;
 let devGodMode    = false;
@@ -1624,7 +1675,11 @@ function createDamageOverlayParticles(x, y) {
 // 14. 스테이지 시스템
 // ============================================================
 function getStageKillGoal(stage) {
-  if (stage % 10 === 0) return 0; // 보스 스테이지는 목표 없음
+  if (stage % 10 === 0) return 0;
+  if (stage > 100) {
+    // 무한 모드: 60~100 범위에서 완만하게 증가, 과도한 grinding 방지
+    return Math.min(60 + Math.floor((stage - 101) * 3), 100);
+  }
   return Math.floor(20 + (stage - 1) * 6);
 }
 
@@ -1648,9 +1703,11 @@ function triggerStageClear() {
   enemies = [];
   projectiles = [];
 
+  const isEntry = currentStage === 100;
   showStageOverlay(
     `STAGE ${currentStage} CLEAR!`,
-    currentStage >= 100 ? '★ ENDLESS MODE 진입! ★' : `보너스 보상을 선택하세요!`,
+    currentStage > 100  ? '∞ 다음 파동으로 진입!' :
+    isEntry             ? '★ ENDLESS MODE 진입! ★' : '보너스 보상을 선택하세요!',
     currentStage >= 100 ? '#ffe600' : '#39ff14'
   );
   playStageClearSound();
@@ -1663,9 +1720,20 @@ function triggerStageClear() {
 }
 
 // 레벨업 모달이 열려 있으면 대기 후 보너스 모달 표시
-function showStageBonusSafe() {
+function showStageBonusSafe(retries = 0) {
   if (gameState === STATE_GAME_OVER || gameState === STATE_MENU) return;
-  if (levelUpInProgress) { setTimeout(showStageBonusSafe, 60); return; }
+  if (gameState === STATE_STAGE_BONUS) return; // 이미 표시 중
+  if (!isStageClearAnim) return; // 보너스 선택이 먼저 완료된 경우
+  if (levelUpInProgress && retries < 200) {
+    setTimeout(() => showStageBonusSafe(retries + 1), 60);
+    return;
+  }
+  // 200회 폴링(~12초) 초과 시 강제 해제
+  if (levelUpInProgress) {
+    levelUpInProgress = false;
+    pendingLevelUps   = 0;
+    levelUpModal.classList.remove('active');
+  }
   showStageBonusModal();
 }
 
@@ -2117,60 +2185,64 @@ function checkCollisions() {
 // 20. 배경 + 맵 격자 렌더링
 // ============================================================
 function drawBackground(ctx, w, h, dt) {
+  const th = getCurrentBgTheme();
+
   // 베이스 다크
-  ctx.fillStyle = '#01010a';
+  ctx.fillStyle = th.bgDark;
   ctx.fillRect(0, 0, w, h);
 
-  // 중앙 방사형 미세 글로우
+  // 중앙 방사형 글로우
   const grad = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
-  grad.addColorStop(0, 'rgba(0, 18, 45, 0.4)');
-  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  grad.addColorStop(0, th.glow);
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
-  // 흘러가는 별 입자
+  // 흘러가는 별 입자 (색상 테마 적용)
   const elapsed = (dt || 16.66) / 1000;
   for (const s of bgStars) {
     s.xNorm -= s.speedNorm * elapsed;
     if (s.xNorm < -0.01) { s.xNorm = 1.02 + Math.random() * 0.05; s.yNorm = Math.random(); }
     ctx.globalAlpha = s.alpha;
-    ctx.fillStyle   = s.color;
+    ctx.fillStyle   = th.stars[_STAR_CI[s.color] ?? 0];
     ctx.beginPath();
     ctx.arc(s.xNorm * w, s.yNorm * h, s.size, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // 수평 스캔 라인 (느리게 흘러내림)
+  // 수평 스캔 라인
   bgScanY = (bgScanY + 0.00010 * (dt || 16.66)) % 1;
   const scanY    = bgScanY * h;
   const scanGrad = ctx.createLinearGradient(0, scanY - 28, 0, scanY + 28);
-  scanGrad.addColorStop(0,   'rgba(0,240,255,0)');
-  scanGrad.addColorStop(0.5, 'rgba(0,240,255,0.022)');
-  scanGrad.addColorStop(1,   'rgba(0,240,255,0)');
+  scanGrad.addColorStop(0,   `rgba(${th.scanRgb},0)`);
+  scanGrad.addColorStop(0.5, `rgba(${th.scanRgb},0.022)`);
+  scanGrad.addColorStop(1,   `rgba(${th.scanRgb},0)`);
   ctx.fillStyle = scanGrad;
   ctx.fillRect(0, scanY - 28, w, 56);
 }
 
 function drawVignette(ctx, w, h) {
+  const th = getCurrentBgTheme();
   ctx.save();
   const vGrad = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.22,
                                           w * 0.5, h * 0.5, Math.max(w, h) * 0.82);
   vGrad.addColorStop(0, 'rgba(0,0,0,0)');
-  vGrad.addColorStop(1, 'rgba(0,0,10,0.6)');
+  vGrad.addColorStop(1, th.vignetteColor);
   ctx.fillStyle = vGrad;
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
 }
 
 function drawGrid(ctx, camera, width, height) {
+  const th = getCurrentBgTheme();
   ctx.save();
   const gridSize = 100;
   let startX = Math.floor(camera.x / gridSize) * gridSize;
   let startY = Math.floor(camera.y / gridSize) * gridSize;
 
-  // 소격자선 (미세 사이언)
-  ctx.strokeStyle = 'rgba(0, 240, 255, 0.07)';
+  // 소격자선
+  ctx.strokeStyle = `rgba(${th.gridRgb},0.07)`;
   ctx.lineWidth   = 0.5;
   for (let x = startX; x < startX + width + gridSize; x += gridSize) {
     ctx.beginPath(); ctx.moveTo(x - camera.x, 0); ctx.lineTo(x - camera.x, height); ctx.stroke();
@@ -2179,11 +2251,11 @@ function drawGrid(ctx, camera, width, height) {
     ctx.beginPath(); ctx.moveTo(0, y - camera.y); ctx.lineTo(width, y - camera.y); ctx.stroke();
   }
 
-  // 대격자선 (500 단위, 조금 더 밝게)
+  // 대격자선 (500 단위)
   const majorGrid = 500;
   let mx = Math.floor(camera.x / majorGrid) * majorGrid;
   let my = Math.floor(camera.y / majorGrid) * majorGrid;
-  ctx.strokeStyle = 'rgba(0, 240, 255, 0.14)';
+  ctx.strokeStyle = `rgba(${th.gridRgb},0.14)`;
   ctx.lineWidth   = 0.8;
   for (let x = mx; x < mx + width + majorGrid; x += majorGrid) {
     ctx.beginPath(); ctx.moveTo(x - camera.x, 0); ctx.lineTo(x - camera.x, height); ctx.stroke();
@@ -2192,9 +2264,9 @@ function drawGrid(ctx, camera, width, height) {
     ctx.beginPath(); ctx.moveTo(0, y - camera.y); ctx.lineTo(width, y - camera.y); ctx.stroke();
   }
 
-  // 맵 경계 (네온 핑크 글로우)
-  ctx.shadowBlur  = 12; ctx.shadowColor = '#ff007f';
-  ctx.strokeStyle = 'rgba(255, 0, 127, 0.75)';
+  // 맵 경계 (테마 컬러 글로우)
+  ctx.shadowBlur  = 12; ctx.shadowColor = th.borderGlow;
+  ctx.strokeStyle = th.borderColor;
   ctx.lineWidth   = 2.5;
   ctx.strokeRect(-camera.x, -camera.y, MAP_WIDTH, MAP_HEIGHT);
   ctx.restore();
@@ -2770,7 +2842,7 @@ function updateHUD() {
     let progPct = stageKillGoal > 0 ? (stageKillProgress / stageKillGoal) * 100 : 100;
     stageBar.style.width      = `${Math.min(progPct, 100)}%`;
     stageBar.style.background = isEndlessMode ? 'linear-gradient(90deg,#ffe600,#ff8800)' : '';
-    stageBarText.innerText    = isEndlessMode ? `∞ ENDLESS` : `${stageKillProgress} / ${stageKillGoal}`;
+    stageBarText.innerText    = isEndlessMode ? `∞ ${stageKillProgress}/${stageKillGoal}` : `${stageKillProgress} / ${stageKillGoal}`;
   }
 
   // 무기 슬롯
@@ -3247,6 +3319,37 @@ function buildWeaponContributionList() {
   }
 
   if (c.innerHTML === '') c.innerHTML = '<p style="color:#64748b;font-size:0.9rem">기록된 공격 이력이 없습니다.</p>';
+}
+
+// ============================================================
+// 결과 공유
+// ============================================================
+function shareResult() {
+  const nameInput = document.getElementById('player-name-input');
+  const name      = (nameInput?.value || '').trim() || 'UNKNOWN';
+  const minutes   = Math.floor(gameTime / 60);
+  const seconds   = gameTime % 60;
+  const timeStr   = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+  const stageStr  = `${currentStage}${isEndlessMode ? ' ∞' : ''}`;
+  const text =
+    `🎮 네온 서바이버즈 v0.02\n` +
+    `👤 ${name}\n` +
+    `🏆 STAGE ${stageStr} 도달\n` +
+    `💀 ${killCount}마리 바이러스 제거\n` +
+    `⏱ 생존시간 ${timeStr}\n` +
+    `⭐ Lv.${player?.level ?? '?'}\n` +
+    `\n#네온서바이버즈 #NeonSurvivors`;
+
+  const btn = document.getElementById('share-btn');
+  if (navigator.share) {
+    navigator.share({ title: '네온 서바이버즈 v0.02', text }).catch(() => {});
+  } else if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      if (btn) { btn.textContent = '✓ 클립보드 복사!'; setTimeout(() => { btn.textContent = '📤 결과 공유'; }, 2500); }
+    }).catch(() => { prompt('아래 텍스트를 복사하세요 (Ctrl+A → Ctrl+C):', text); });
+  } else {
+    prompt('아래 텍스트를 복사하세요 (Ctrl+A → Ctrl+C):', text);
+  }
 }
 
 // ============================================================
