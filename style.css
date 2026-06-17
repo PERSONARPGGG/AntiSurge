@@ -1172,6 +1172,131 @@ body {
 .evo-label { font-family: 'Orbitron', monospace; font-size: 0.7rem; letter-spacing: 0.15em; color: #ffe600; text-shadow: 0 0 8px #ffe600; }
 .evo-name  { font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: 900; color: #ffffff; text-shadow: 0 0 12px #ffe600; }
 
+/* ===== 레벨업 카드 키보드 포커스 ===== */
+.upgrade-card.card-kb-focus {
+  border-color: #ffe600 !important;
+  box-shadow: 0 0 22px rgba(255, 230, 0, 0.55) !important;
+  transform: translateY(-4px) !important;
+  outline: none;
+}
+
+/* ===== 업적 팝업 ===== */
+.achievement-popup {
+  position: absolute;
+  top: 90px;
+  right: 12px;
+  background: rgba(5, 5, 15, 0.95);
+  border: 1px solid rgba(255, 230, 0, 0.5);
+  border-left: 3px solid #ffe600;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  z-index: 200;
+  opacity: 0;
+  transform: translateX(calc(100% + 20px));
+  transition: opacity 0.35s, transform 0.35s;
+  pointer-events: none;
+  max-width: 260px;
+  min-width: 200px;
+}
+.achievement-popup.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+.ach-icon-el { font-size: 1.4rem; flex-shrink: 0; }
+.ach-info    { flex: 1; min-width: 0; }
+.ach-title   { font-family: 'Orbitron', monospace; font-size: 0.58rem; color: #ffe600; letter-spacing: 0.1em; margin-bottom: 1px; }
+.ach-name    { font-size: 0.82rem; font-weight: 700; color: #fff; }
+.ach-desc-el { font-size: 0.68rem; color: #94a3b8; }
+.ach-reward  { font-family: 'Orbitron', monospace; font-size: 0.78rem; color: #ffe600; white-space: nowrap; flex-shrink: 0; }
+
+/* ===== 메타 영구 업그레이드 모달 ===== */
+.meta-panel { max-width: 600px; max-height: 88vh; overflow-y: auto; }
+.meta-cores-display {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  color: #ffe600;
+  text-shadow: 0 0 8px #ffe600;
+  text-align: center;
+  margin-bottom: 0.4rem;
+}
+.meta-upgrade-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin: 0.6rem 0 1rem;
+}
+@media (max-width: 600px) { .meta-upgrade-grid { grid-template-columns: 1fr; } }
+.meta-card {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  transition: border-color 0.2s;
+}
+.meta-card:hover:not(.meta-maxed) { border-color: rgba(0, 240, 255, 0.45); }
+.meta-card.meta-maxed             { border-color: rgba(255, 230, 0, 0.35); background: rgba(255, 230, 0, 0.03); }
+.meta-icon   { font-size: 1.4rem; flex-shrink: 0; }
+.meta-info   { flex: 1; min-width: 0; }
+.meta-name   { font-family: 'Orbitron', monospace; font-size: 0.68rem; font-weight: 700; color: #00f0ff; margin-bottom: 2px; }
+.meta-stars  { font-size: 0.72rem; color: #ffe600; letter-spacing: 1px; margin-bottom: 2px; }
+.meta-effect { font-size: 0.7rem; color: #94a3b8; }
+.meta-buy-btn {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  color: #00f0ff;
+  border-radius: 5px;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  pointer-events: auto;
+}
+.meta-buy-btn:hover:not(.meta-buy-disabled) {
+  background: rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+.meta-buy-btn.meta-buy-disabled { opacity: 0.32; cursor: not-allowed; }
+.meta-card.meta-maxed .meta-buy-btn {
+  border-color: rgba(255, 230, 0, 0.4);
+  color: #ffe600;
+  background: rgba(255, 230, 0, 0.07);
+  cursor: default;
+}
+.meta-badge {
+  display: inline-block;
+  font-size: 0.75em;
+  background: rgba(255, 230, 0, 0.12);
+  border: 1px solid rgba(255, 230, 0, 0.3);
+  color: #ffe600;
+  border-radius: 10px;
+  padding: 1px 7px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+/* ===== 게임오버 코어 획득 표시 ===== */
+.cores-earned-row {
+  text-align: center;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.82rem;
+  color: #ffe600;
+  text-shadow: 0 0 6px #ffe600;
+  margin: 0.4rem 0;
+  padding: 0.4rem;
+  border: 1px solid rgba(255, 230, 0, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 230, 0, 0.04);
+}
+
 /* ===== 골드 HUD ===== */
 .gold-container {
   display: flex;

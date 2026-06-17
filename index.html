@@ -28,6 +28,9 @@
       </div>
 
       <button id="start-btn" class="neon-btn">백신 프로그램 가동 (시작)</button>
+      <button class="neon-btn neon-btn-purple font-sm" onclick="openMetaModal()" style="margin-top:0.6rem">
+        ⚡ 영구 업그레이드 <span class="meta-badge">💾 <span id="meta-cores-badge">0</span></span>
+      </button>
 
       <!-- Coming Soon 섹션 -->
       <div class="coming-soon-row">
@@ -176,6 +179,17 @@
       </div>
     </div>
 
+    <!-- 업적 팝업 -->
+    <div id="achievement-popup" class="achievement-popup">
+      <span class="ach-icon-el">🏆</span>
+      <div class="ach-info">
+        <div class="ach-title">업적 달성!</div>
+        <div class="ach-name"></div>
+        <div class="ach-desc-el"></div>
+      </div>
+      <span class="ach-reward"></span>
+    </div>
+
     <!-- 게임 캔버스 -->
     <canvas id="game-canvas"></canvas>
 
@@ -248,6 +262,8 @@
         </div>
       </div>
 
+      <div id="cores-earned-row" class="cores-earned-row"></div>
+
       <div class="result-details">
         <h3>[ 업그레이드 이력 및 무기 기여도 ]</h3>
         <div id="weapon-contribution-list" class="contrib-list"></div>
@@ -256,6 +272,19 @@
       <div class="result-actions">
         <button id="retry-btn" class="neon-btn font-sm">시스템 재가동</button>
         <button id="home-btn" class="neon-btn font-sm neon-btn-purple">메인 화면으로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 메타 영구 업그레이드 모달 -->
+  <div id="meta-upgrade-modal" class="modal">
+    <div class="modal-content glass-panel meta-panel">
+      <h2 class="neon-title-sm">⚡ 영구 업그레이드</h2>
+      <p id="meta-cores-display" class="meta-cores-display">💾 보유 데이터 코어: 0</p>
+      <p class="modal-desc">런 종료 후 획득한 데이터 코어로 영구 능력을 강화하세요.</p>
+      <div id="meta-upgrade-grid" class="meta-upgrade-grid"></div>
+      <div style="text-align:center;margin-top:0.5rem">
+        <button class="neon-btn font-sm" onclick="closeMetaModal()">← 돌아가기</button>
       </div>
     </div>
   </div>

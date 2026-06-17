@@ -97,6 +97,11 @@ let rerollUses = 2;
 let shopTimer = 0;
 let goldCoins = [];
 
+// 메타 / 업적
+let saveData            = { dataCores: 0, metaLevels: {}, achievements: [] };
+let achieveCheckTimer   = 0;
+let levelUpSelectedIdx  = 0;
+
 // ============================================================
 // 3. 업그레이드 / 레어리티 상수
 // ============================================================
@@ -161,6 +166,31 @@ const FIELD_ITEM_TYPES = {
   shield:  { icon: '🛡️', color: '#00f0ff', name: '실드 버블',  effect: '5초간 피격 무적' },
   surge:   { icon: '⚡', color: '#39ff14', name: '오버클럭',   effect: '8초간 이동속도 2배' }
 };
+
+// ============================================================
+// 저장 / 메타 / 업적 상수
+// ============================================================
+const SAVE_KEY = 'neonSurvivorsData';
+
+const META_UPGRADES = [
+  { id: 'meta_hp',     icon: '❤️', name: '시스템 강화',      desc: ['최대 HP +20',    '+40 (누적)', '+60 (누적)'], maxLevel: 3, costs: [5, 12, 25] },
+  { id: 'meta_speed',  icon: '🏃', name: '오버클럭 드라이브', desc: ['이동속도 +5%',   '+10%', '+20%'],            maxLevel: 3, costs: [5, 12, 25] },
+  { id: 'meta_magnet', icon: '🧲', name: '중력 코어',         desc: ['자석 범위 +10%', '+25%', '+50%'],            maxLevel: 3, costs: [5, 12, 25] },
+  { id: 'meta_damage', icon: '🔥', name: '전투 프로토콜',     desc: ['피해량 +5%',     '+12%', '+25%'],            maxLevel: 3, costs: [8, 18, 35] },
+  { id: 'meta_reroll', icon: '🔄', name: '리롤 확장 칩',      desc: ['시작 리롤 +1',   '+2 (누적)'],              maxLevel: 2, costs: [10, 25] },
+  { id: 'meta_gold',   icon: '💰', name: '골드 스타터',       desc: ['시작 골드 +5',   '+12 (누적)'],             maxLevel: 2, costs: [8, 20] }
+];
+
+const ACHIEVEMENTS = [
+  { id: 'ach_first',    icon: '💀', name: '최초 처치',     desc: '바이러스 1마리 처치',      reward: 2  },
+  { id: 'ach_hunter',   icon: '⚔️', name: '바이러스 헌터', desc: '바이러스 100마리 처치',    reward: 5  },
+  { id: 'ach_survivor', icon: '🛡️', name: '생존자',        desc: '스테이지 5 도달',          reward: 5  },
+  { id: 'ach_stage10',  icon: '🏆', name: '디지털 영웅',   desc: '스테이지 10 도달',         reward: 10 },
+  { id: 'ach_evolved',  icon: '✨', name: '진화의 달인',   desc: '무기 진화 1회 달성',       reward: 8  },
+  { id: 'ach_combo',    icon: '🎯', name: '연속 처형',     desc: '콤보 25 이상 달성',        reward: 5  },
+  { id: 'ach_gold',     icon: '💰', name: '황금 수집가',   desc: '골드 50 이상 보유',        reward: 5  },
+  { id: 'ach_endless',  icon: '∞',  name: '무한의 수호자', desc: '무한 모드 진입',           reward: 20 }
+];
 
 // ============================================================
 // 패시브 아이템 정의
@@ -588,7 +618,7 @@ class Player {
   }
 
   gainXp(amount) {
-    let mult = getXpMultiplier();
+    let mult = getXpMultiplier() * getEarlyGameXpMult();
     const cls = CLASS_DEFS[this.classId];
     if (cls) mult *= cls.xpBonus;
     mult *= this.passiveXpMult;
@@ -1617,6 +1647,140 @@ function getXpMultiplier() {
   return 2.5;
 }
 
+// 초반 경험치 버프 (스테이지 10 이하)
+function getEarlyGameXpMult() {
+  if (currentStage <= 3)  return 2.5;
+  if (currentStage <= 6)  return 2.0;
+  if (currentStage <= 10) return 1.5;
+  return 1.0;
+}
+
+// ============================================================
+// 저장 / 메타 성장 / 업적 시스템
+// ============================================================
+function loadSaveData() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return { dataCores: 0, metaLevels: {}, achievements: [] };
+    const d = JSON.parse(raw);
+    return {
+      dataCores:    d.dataCores    || 0,
+      metaLevels:   d.metaLevels   || {},
+      achievements: d.achievements || []
+    };
+  } catch(e) { return { dataCores: 0, metaLevels: {}, achievements: [] }; }
+}
+
+function saveSaveData() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); } catch(e) {}
+}
+
+function applyMetaUpgrades() {
+  const l = saveData.metaLevels;
+  const hpBonus = [0, 20, 40, 60][l.meta_hp || 0];
+  player.maxHp += hpBonus;
+  player.hp    += hpBonus;
+  player.speed            *= [1, 1.05, 1.10, 1.20][l.meta_speed  || 0];
+  player.magnetRadius     *= [1, 1.10, 1.25, 1.50][l.meta_magnet || 0];
+  player.damageMultiplier *= [1, 1.05, 1.12, 1.25][l.meta_damage || 0];
+  rerollUses  += [0, 1, 2][l.meta_reroll || 0];
+  player.gold += [0, 5, 12][l.meta_gold  || 0];
+}
+
+function earnDataCores() {
+  const earned = Math.max(1, Math.floor(killCount / 8) + Math.floor(currentStage / 2));
+  saveData.dataCores += earned;
+  saveSaveData();
+  return earned;
+}
+
+function checkAchievements() {
+  if (!player) return;
+  const done = saveData.achievements;
+  const conds = {
+    ach_first:    () => killCount >= 1,
+    ach_hunter:   () => killCount >= 100,
+    ach_survivor: () => currentStage >= 5,
+    ach_stage10:  () => currentStage >= 10,
+    ach_evolved:  () => Object.values(player.weapons).some(w => w.level >= 5),
+    ach_combo:    () => comboCount >= 25,
+    ach_gold:     () => player.gold >= 50,
+    ach_endless:  () => isEndlessMode
+  };
+  for (const ach of ACHIEVEMENTS) {
+    if (done.includes(ach.id)) continue;
+    if (conds[ach.id] && conds[ach.id]()) {
+      done.push(ach.id);
+      saveData.dataCores += ach.reward;
+      saveSaveData();
+      showAchievementPopup(ach);
+    }
+  }
+}
+
+function showAchievementPopup(ach) {
+  const el = document.getElementById('achievement-popup');
+  if (!el) return;
+  el.querySelector('.ach-icon-el').textContent  = ach.icon;
+  el.querySelector('.ach-name').textContent      = ach.name;
+  el.querySelector('.ach-desc-el').textContent   = ach.desc;
+  el.querySelector('.ach-reward').textContent    = `+${ach.reward}💾`;
+  el.classList.add('active');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('active'), 3500);
+}
+
+function updateMenuMetaBadge() {
+  const badge = document.getElementById('meta-cores-badge');
+  if (badge) badge.textContent = saveData.dataCores;
+}
+
+function renderMetaGrid() {
+  const grid = document.getElementById('meta-upgrade-grid');
+  const disp = document.getElementById('meta-cores-display');
+  if (!grid) return;
+  if (disp) disp.textContent = `💾 보유 데이터 코어: ${saveData.dataCores}`;
+  grid.innerHTML = '';
+  for (const upg of META_UPGRADES) {
+    const lvl   = saveData.metaLevels[upg.id] || 0;
+    const maxed = lvl >= upg.maxLevel;
+    const cost  = maxed ? null : upg.costs[lvl];
+    const canBuy = !maxed && saveData.dataCores >= cost;
+    const stars  = '★'.repeat(lvl) + '☆'.repeat(upg.maxLevel - lvl);
+    const card = document.createElement('div');
+    card.className = `meta-card${maxed ? ' meta-maxed' : ''}`;
+    card.innerHTML = `
+      <div class="meta-icon">${upg.icon}</div>
+      <div class="meta-info">
+        <div class="meta-name">${upg.name}</div>
+        <div class="meta-stars">${stars}</div>
+        <div class="meta-effect">${maxed ? '✓ 최대 강화' : upg.desc[lvl]}</div>
+      </div>
+      <button class="meta-buy-btn${canBuy ? '' : ' meta-buy-disabled'}"${canBuy ? '' : ' disabled'}>
+        ${maxed ? 'MAX' : `💾${cost}`}
+      </button>`;
+    if (canBuy) {
+      card.querySelector('.meta-buy-btn').addEventListener('click', () => {
+        saveData.dataCores -= cost;
+        saveData.metaLevels[upg.id] = lvl + 1;
+        saveSaveData();
+        renderMetaGrid();
+      });
+    }
+    grid.appendChild(card);
+  }
+}
+
+function openMetaModal() {
+  renderMetaGrid();
+  document.getElementById('meta-upgrade-modal').classList.add('active');
+}
+
+function closeMetaModal() {
+  document.getElementById('meta-upgrade-modal').classList.remove('active');
+  updateMenuMetaBadge();
+}
+
 function updateComboDisplay() {
   const el   = document.getElementById('combo-display');
   const mult = document.getElementById('combo-multiplier');
@@ -1813,6 +1977,29 @@ resizeCanvas();
 
 // 키보드
 window.addEventListener('keydown', e => {
+  // 레벨업 모달 키보드 조작
+  if (gameState === STATE_LEVEL_UP) {
+    const cards = [...document.querySelectorAll('#card-container .upgrade-card')];
+    if (cards.length) {
+      if (['ArrowLeft','ArrowUp','a','A','w','W'].includes(e.key)) {
+        e.preventDefault();
+        levelUpSelectedIdx = (levelUpSelectedIdx - 1 + cards.length) % cards.length;
+        updateLevelUpFocus(cards);
+        return;
+      }
+      if (['ArrowRight','ArrowDown','d','D','s','S'].includes(e.key)) {
+        e.preventDefault();
+        levelUpSelectedIdx = (levelUpSelectedIdx + 1) % cards.length;
+        updateLevelUpFocus(cards);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        cards[levelUpSelectedIdx]?.click();
+        return;
+      }
+    }
+  }
   keys[e.key] = true;
   if (e.key === 'm' || e.key === 'M') toggleBGM();
 });
@@ -1856,7 +2043,7 @@ function showScreen(state) {
   gameOverModal.classList.remove('active');
   document.getElementById('stage-bonus-modal').classList.remove('active');
   document.getElementById('shop-modal').classList.remove('active');
-  if (state === STATE_MENU) { menuScreen.classList.add('active'); stopBGM(); }
+  if (state === STATE_MENU) { menuScreen.classList.add('active'); stopBGM(); updateMenuMetaBadge(); }
   else if (state === STATE_PLAYING || state === STATE_STAGE_CLEAR || state === STATE_STAGE_BONUS) {
     gameScreen.classList.add('active');
   }
@@ -1879,17 +2066,19 @@ function startGame() {
   isStageClearAnim  = false;
   screenShake       = { x: 0, y: 0, intensity: 0, duration: 0 };
   comboCount = 0; comboTimer = 0;
-  fieldItemTimer  = 0;
-  shopTimer       = 0;
-  goldCoins       = [];
-  rerollUses      = (CLASS_DEFS[selectedClass] || CLASS_DEFS.hacker).rerolls;
-  enemySpawnTimer = 0;
+  fieldItemTimer    = 0;
+  shopTimer         = 0;
+  goldCoins         = [];
+  achieveCheckTimer = 0;
+  rerollUses        = (CLASS_DEFS[selectedClass] || CLASS_DEFS.hacker).rerolls;
+  enemySpawnTimer   = 0;
   hideComboDisplay();
   hideStageOverlay();
 
   for (let k in weaponStats) weaponStats[k] = { level: 0, damage: 0, kills: 0 };
 
   player = new Player(MAP_WIDTH / 2, MAP_HEIGHT / 2);
+  applyMetaUpgrades();
   resizeCanvas();
   camera.x = player.x - camera.width  / 2;
   camera.y = player.y - camera.height / 2;
@@ -1973,6 +2162,10 @@ function update(dt) {
 
   // 콤보
   updateComboSystem(dt);
+
+  // 업적 체크 (2초마다)
+  achieveCheckTimer += dt;
+  if (achieveCheckTimer >= 2000) { achieveCheckTimer = 0; checkAchievements(); }
 
   // 골드 코인 업데이트
   for (let i = goldCoins.length - 1; i >= 0; i--) {
@@ -2255,10 +2448,16 @@ function rollRarity() {
   return 'common';
 }
 
+function updateLevelUpFocus(cards) {
+  cards.forEach((c, i) => c.classList.toggle('card-kb-focus', i === levelUpSelectedIdx));
+}
+
 function triggerLevelUpModal() {
   gameState = STATE_LEVEL_UP;
   levelUpModal.classList.add('active');
   renderUpgradeCards(generateUpgradeChoices());
+  levelUpSelectedIdx = 0;
+  updateLevelUpFocus([...document.querySelectorAll('#card-container .upgrade-card')]);
 
   const rerollBtn  = document.getElementById('reroll-btn');
   const rerollUsesEl = document.getElementById('reroll-uses');
@@ -2269,6 +2468,8 @@ function triggerLevelUpModal() {
     if (rerollUses <= 0) return;
     rerollUses--;
     renderUpgradeCards(generateUpgradeChoices());
+    levelUpSelectedIdx = 0;
+    updateLevelUpFocus([...document.querySelectorAll('#card-container .upgrade-card')]);
     rerollBtn.disabled = (rerollUses <= 0);
     if (rerollUsesEl) rerollUsesEl.textContent = `(${rerollUses}회)`;
     playSynthSound([400, 600, 800], 0.15, 'square', 0.05);
@@ -2595,6 +2796,11 @@ function endGame(isVictory) {
   document.getElementById('stat-level').innerText  = `Lv. ${player.level}`;
   document.getElementById('stat-stage').innerText  = `S${currentStage}${isEndlessMode ? ' ∞' : ''}`;
 
+  checkAchievements();
+  const coresEarned = earnDataCores();
+  const coresEl = document.getElementById('cores-earned-row');
+  if (coresEl) coresEl.textContent = `💾 데이터 코어 획득: +${coresEarned}  (보유: ${saveData.dataCores})`;
+
   buildWeaponContributionList();
 }
 
@@ -2636,3 +2842,7 @@ function distToSegment(px, py, x1, y1, x2, y2) {
   let t  = Math.max(0, Math.min(1, ((px-x1)*(x2-x1) + (py-y1)*(y2-y1)) / l2));
   return dist(px, py, x1 + t*(x2-x1), y1 + t*(y2-y1));
 }
+
+// 저장 데이터 로드 (스크립트 초기화 시)
+saveData = loadSaveData();
+updateMenuMetaBadge();
