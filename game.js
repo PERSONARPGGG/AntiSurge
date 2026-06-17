@@ -264,6 +264,20 @@ const UPGRADES = {
       desc: ["무작위 방향으로 적을 관통하는 일직선 레이저 빔 발사", "발사 대기 시간 감소", "레이저 두께 확장 및 피해량 증가", "발사 대기 시간 대폭 감소", "【진화】십자 레이저 — 4방향 동시 발사"],
       evolvedName: "십자 레이저",
       maxLevel: 5
+    },
+    boomerang: {
+      name: "사이버 부메랑",
+      icon: "🪃",
+      desc: ["적을 향해 부메랑 발사, 되돌아와 재차 관통", "귀환 속도 및 피해량 증가", "발사 간격 단축, 관통력 강화", "크기 및 피해량 대폭 증가", "【진화】포톤 크로스 — 4방향 동시 발사"],
+      evolvedName: "포톤 크로스",
+      maxLevel: 5
+    },
+    drone: {
+      name: "데이터 드론",
+      icon: "🛸",
+      desc: ["자율 드론 소환, 인근 적에게 탄막 발사", "드론 발사 속도 증가", "드론 추가 소환 (+1)", "피해량 및 사거리 대폭 증가", "【진화】헥사 드론 — 드론 3기, 3발 동시 사격"],
+      evolvedName: "헥사 드론",
+      maxLevel: 5
     }
   },
   stats: [
@@ -356,10 +370,12 @@ const BOSS_NAMES = [
 
 // 무기 통계 (결과 화면용)
 let weaponStats = {
-  flare:   { level: 0, damage: 0, kills: 0 },
-  orbiter: { level: 0, damage: 0, kills: 0 },
-  zone:    { level: 0, damage: 0, kills: 0 },
-  laser:   { level: 0, damage: 0, kills: 0 }
+  flare:     { level: 0, damage: 0, kills: 0 },
+  orbiter:   { level: 0, damage: 0, kills: 0 },
+  zone:      { level: 0, damage: 0, kills: 0 },
+  laser:     { level: 0, damage: 0, kills: 0 },
+  boomerang: { level: 0, damage: 0, kills: 0 },
+  drone:     { level: 0, damage: 0, kills: 0 }
 };
 
 // ============================================================
@@ -454,7 +470,9 @@ function playBossDeathSound() {
 // ============================================================
 let bgmGainNode       = null;
 let bgmAudioElement   = null;
-let bgmMuted          = false;
+let bgmMuted           = false;
+let bgmTrackId         = 0;
+let bgmTrackCheckTimer = 0;
 let bgmSchedulerTimer = null;
 let bgmCurrentStep    = 0;
 let bgmNextNoteTime   = 0;
@@ -490,6 +508,28 @@ const BGM_PAD = [
 const BGM_KICK  = [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0];
 const BGM_SNARE = [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0];
 const BGM_HIHAT = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0];
+
+// ─── BGM Track 2: DEVA SYSTEM (Persona 2 inspired, C minor, heavy) ───
+const BGM2_BASS = [
+  36,null,36,null,39,null,null,null,43,null,null,null,41,null,43,null,
+  36,null,null,null,36,null,39,null,41,null,null,null,43,null,null,null,
+  44,null,null,null,44,null,48,null,51,null,null,null,48,null,46,null,
+  43,null,null,null,43,null,46,null,36,null,null,null,39,null,36,null
+];
+const BGM2_LEAD = [
+  72,null,null,null,null,null,75,null,79,null,null,null,77,null,75,null,
+  74,null,75,null,77,null,null,null,75,null,null,null,72,null,null,null,
+  80,null,null,null,79,null,77,null,80,null,null,null,82,null,80,null,
+  79,null,77,null,75,null,null,null,77,null,75,null,72,null,null,null
+];
+const BGM2_PAD = [
+  60,null,null,null,null,null,null,null,63,null,null,null,null,null,null,null,
+  65,null,null,null,null,null,null,null,68,null,null,null,null,null,null,null,
+  56,null,null,null,null,null,null,null,60,null,null,null,null,null,null,null,
+  55,null,null,null,null,null,null,null,58,null,null,null,null,null,null,null
+];
+const BGM2_KICK  = [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0];
+const BGM2_SNARE = [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0];
 
 function initBGMBuffers() {
   if (!audioCtx) return;
@@ -558,17 +598,23 @@ function bgmPlayHihat(t) {
 function bgmSchedule() {
   if (!audioCtx || !bgmGainNode) return;
   while (bgmNextNoteTime < audioCtx.currentTime + BGM_SCHEDULE_AHEAD) {
-    const step = bgmCurrentStep % BGM_TOTAL_STEPS;
-    const t    = bgmNextNoteTime;
-    if (BGM_BASS[step] !== null) bgmPlayTone(midiToFreq(BGM_BASS[step] - 12), BGM_STEP * 1.7, 'sawtooth', 0.17, t);
-    if (BGM_PAD[step]  !== null) {
-      bgmPlayTone(midiToFreq(BGM_PAD[step]),     BGM_STEP * 3.8, 'sawtooth', 0.045, t);
-      bgmPlayTone(midiToFreq(BGM_PAD[step] + 7), BGM_STEP * 3.8, 'sawtooth', 0.03,  t);
+    const step  = bgmCurrentStep % BGM_TOTAL_STEPS;
+    const t     = bgmNextNoteTime;
+    const isT2  = bgmTrackId === 1;
+    const bass  = isT2 ? BGM2_BASS  : BGM_BASS;
+    const lead  = isT2 ? BGM2_LEAD  : BGM_LEAD;
+    const pad   = isT2 ? BGM2_PAD   : BGM_PAD;
+    const kick  = isT2 ? BGM2_KICK  : BGM_KICK;
+    const snare = isT2 ? BGM2_SNARE : BGM_SNARE;
+    if (bass[step]  !== null) bgmPlayTone(midiToFreq(bass[step] - 12), BGM_STEP * 1.7, 'sawtooth', isT2 ? 0.22 : 0.17, t);
+    if (pad[step]   !== null) {
+      bgmPlayTone(midiToFreq(pad[step]),     BGM_STEP * 3.8, 'sawtooth', 0.05, t);
+      bgmPlayTone(midiToFreq(pad[step] + 7), BGM_STEP * 3.8, 'sawtooth', 0.03, t);
     }
-    if (BGM_LEAD[step] !== null) bgmPlayTone(midiToFreq(BGM_LEAD[step]), BGM_STEP * 0.85, 'square', 0.055, t);
-    if (BGM_KICK[step])  bgmPlayKick(t);
-    if (BGM_SNARE[step]) bgmPlaySnare(t);
-    if (BGM_HIHAT[step]) bgmPlayHihat(t);
+    if (lead[step]  !== null) bgmPlayTone(midiToFreq(lead[step]), BGM_STEP * 0.85, isT2 ? 'sawtooth' : 'square', isT2 ? 0.07 : 0.055, t);
+    if (kick[step])  bgmPlayKick(t);
+    if (snare[step]) bgmPlaySnare(t);
+    if (!isT2 && BGM_HIHAT[step]) bgmPlayHihat(t);
     bgmCurrentStep++;
     bgmNextNoteTime += BGM_STEP;
   }
@@ -654,10 +700,12 @@ class Player {
     this.gold = 0;
 
     this.weapons = {
-      flare:   new FlareWeapon(this),
-      orbiter: new OrbiterWeapon(this),
-      zone:    new ZoneWeapon(this),
-      laser:   new LaserWeapon(this)
+      flare:     new FlareWeapon(this),
+      orbiter:   new OrbiterWeapon(this),
+      zone:      new ZoneWeapon(this),
+      laser:     new LaserWeapon(this),
+      boomerang: new BoomerangWeapon(this),
+      drone:     new DroneWeapon(this)
     };
     const startW = cls.startWeapon || 'flare';
     this.weapons[startW].level = 1;
@@ -1017,6 +1065,99 @@ class LaserWeapon extends BaseWeapon {
   }
 }
 
+// 5. 사이버 부메랑
+class BoomerangWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); this.cooldown = 2200; }
+  update(dt) {
+    this.timer += dt;
+    const cd = [2200, 2000, 1700, 1500, 1200][this.level - 1] ?? 2200;
+    if (this.timer >= cd) { this.timer = 0; this.fire(); }
+  }
+  fire() {
+    if (projectiles.length >= MAX_PROJECTILES) return;
+    let targets = [...enemies]; if (activeBoss) targets.push(activeBoss);
+    let angle = Math.random() * Math.PI * 2;
+    if (targets.length > 0) {
+      targets.sort((a, b) => dist(this.owner.x, this.owner.y, a.x, a.y) - dist(this.owner.x, this.owner.y, b.x, b.y));
+      angle = Math.atan2(targets[0].y - this.owner.y, targets[0].x - this.owner.x);
+    }
+    const dmgBase = [18, 24, 32, 44, 60][this.level - 1] ?? 18;
+    const damage  = dmgBase * this.owner.damageMultiplier;
+    const speed   = this.level >= 4 ? 9 : 7;
+    const count   = this.level === 5 ? 4 : 1;
+    playSynthSound([900, 400], 0.18, 'sawtooth', 0.08);
+    for (let i = 0; i < count; i++) {
+      const a = this.level === 5 ? angle + i * (Math.PI / 2) : angle;
+      projectiles.push(new BoomerangProjectile(this.owner.x, this.owner.y, Math.cos(a) * speed, Math.sin(a) * speed, damage, '#ff00cc', this.owner));
+    }
+  }
+}
+
+// 6. 데이터 드론
+class DroneWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); this.angleOffset = 0; this.droneTimers = [0, 0, 0]; }
+  update(dt) {
+    const count  = [1, 1, 2, 2, 3][this.level - 1] ?? 1;
+    const fireCD = [2000, 1500, 1500, 1100, 900][this.level - 1] ?? 2000;
+    const radius = 115;
+    this.angleOffset += 0.014 * (dt / 16.66);
+    for (let i = 0; i < count; i++) {
+      this.droneTimers[i] = (this.droneTimers[i] || 0) + dt;
+      if (this.droneTimers[i] >= fireCD) {
+        this.droneTimers[i] = 0;
+        const angle  = this.angleOffset + (i / count) * Math.PI * 2;
+        const droneX = this.owner.x + Math.cos(angle) * radius;
+        const droneY = this.owner.y + Math.sin(angle) * radius;
+        let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+        let nearest = null, minD = 350;
+        for (let e of allT) {
+          const d = dist(droneX, droneY, e.x, e.y);
+          if (d < minD) { minD = d; nearest = e; }
+        }
+        if (nearest && projectiles.length < MAX_PROJECTILES) {
+          const a     = Math.atan2(nearest.y - droneY, nearest.x - droneX);
+          const dmgB  = [12, 16, 20, 30, 45][this.level - 1] ?? 12;
+          const dmg   = dmgB * this.owner.damageMultiplier;
+          const shots = this.level === 5 ? 3 : 1;
+          playSynthSound([700, 1100], 0.08, 'square', 0.05);
+          for (let s = 0; s < shots; s++) {
+            const sa = a + (shots > 1 ? (s - 1) * 0.14 : 0);
+            projectiles.push(new Projectile(droneX, droneY, Math.cos(sa) * 9, Math.sin(sa) * 9, dmg, 4, '#ff8800', 1, 'drone'));
+          }
+        }
+      }
+    }
+  }
+  draw(ctx, camera) {
+    const count  = [1, 1, 2, 2, 3][this.level - 1] ?? 1;
+    const radius = 115;
+    const color  = this.level === 5 ? '#ff6600' : '#ff8800';
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,136,0,0.1)';
+    ctx.lineWidth = 1; ctx.setLineDash([3, 7]);
+    ctx.beginPath();
+    ctx.arc(this.owner.x - camera.x, this.owner.y - camera.y, radius, 0, Math.PI * 2);
+    ctx.stroke(); ctx.setLineDash([]);
+    for (let i = 0; i < count; i++) {
+      const a  = this.angleOffset + (i / count) * Math.PI * 2;
+      const dx = this.owner.x + Math.cos(a) * radius - camera.x;
+      const dy = this.owner.y + Math.sin(a) * radius - camera.y;
+      ctx.shadowBlur = 16; ctx.shadowColor = color;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (let j = 0; j < 6; j++) {
+        const ja = (j / 6) * Math.PI * 2 + this.angleOffset * 2;
+        if (j === 0) ctx.moveTo(dx + Math.cos(ja) * 8, dy + Math.sin(ja) * 8);
+        else         ctx.lineTo(dx + Math.cos(ja) * 8, dy + Math.sin(ja) * 8);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(dx, dy, 3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 // ============================================================
 // 8. 투사체 및 레이저
 // ============================================================
@@ -1035,6 +1176,53 @@ class Projectile {
     ctx.beginPath();
     ctx.arc(this.x - camera.x, this.y - camera.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+  }
+}
+
+class BoomerangProjectile extends Projectile {
+  constructor(x, y, vx, vy, damage, color, owner) {
+    super(x, y, vx, vy, damage, 8, color, 15, 'boomerang');
+    this.owner       = owner;
+    this.returning   = false;
+    this.travelTime  = 0;
+    this.returnDelay = 550;
+    this.life        = 3000;
+  }
+  update(dt) {
+    this.travelTime += dt;
+    if (!this.returning && this.travelTime >= this.returnDelay) {
+      this.returning = true;
+      this.hitEnemies.clear();
+      this.pierce = 15;
+    }
+    if (this.returning) {
+      const dx = this.owner.x - this.x;
+      const dy = this.owner.y - this.y;
+      const d  = Math.sqrt(dx * dx + dy * dy);
+      if (d < 22) { this.life = 0; return; }
+      this.vx = (dx / d) * 11;
+      this.vy = (dy / d) * 11;
+    }
+    this.x += this.vx * (dt / 16.66);
+    this.y += this.vy * (dt / 16.66);
+    this.life -= dt;
+  }
+  draw(ctx, camera) {
+    const sx = this.x - camera.x, sy = this.y - camera.y;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(this.travelTime * 0.025);
+    ctx.shadowBlur = 14; ctx.shadowColor = this.color;
+    ctx.strokeStyle = this.color; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0.35, Math.PI * 2 - 0.35);
+    ctx.stroke();
+    ctx.strokeStyle = this.color + '66';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0.6, Math.PI * 2 - 0.6);
+    ctx.stroke();
     ctx.restore();
   }
 }
@@ -2476,6 +2664,8 @@ function startGame() {
   camera.x = player.x - camera.width  / 2;
   camera.y = player.y - camera.height / 2;
 
+  bgmTrackId = 0;
+  bgmTrackCheckTimer = 0;
   startBGM();
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
@@ -2621,6 +2811,14 @@ function update(dt) {
 
   // HUD 동기화
   updateHUD();
+
+  // BGM 트랙 체크 (스테이지 기반)
+  bgmTrackCheckTimer += dt;
+  if (bgmTrackCheckTimer >= 4000) {
+    bgmTrackCheckTimer = 0;
+    const wantTrack = (isEndlessMode || currentStage >= 50) ? 1 : 0;
+    if (wantTrack !== bgmTrackId) bgmTrackId = wantTrack;
+  }
 
   // MP 상태 동기화
   if (mpMode) syncMpState(dt);
@@ -3355,8 +3553,6 @@ function toggleFullscreen() {
     const exit = document.exitFullscreen || document.webkitExitFullscreen;
     if (exit) exit.call(document);
   }
-  const btn = document.getElementById('fullscreen-btn');
-  if (btn) btn.textContent = fsEl ? '⛶' : '⛶';
 }
 
 document.addEventListener('fullscreenchange', () => {});
@@ -3372,7 +3568,7 @@ function shareResult() {
   const timeStr   = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
   const stageStr  = `${currentStage}${isEndlessMode ? ' ∞' : ''}`;
   const text =
-    `🎮 네온 서바이버즈 v0.02\n` +
+    `🎮 네온 서바이버즈 v0.03\n` +
     `👤 ${name}\n` +
     `🏆 STAGE ${stageStr} 도달\n` +
     `💀 ${killCount}마리 바이러스 제거\n` +
@@ -3382,7 +3578,7 @@ function shareResult() {
 
   const btn = document.getElementById('share-btn');
   if (navigator.share) {
-    navigator.share({ title: '네온 서바이버즈 v0.02', text }).catch(() => {});
+    navigator.share({ title: '네온 서바이버즈 v0.03', text }).catch(() => {});
   } else if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(text).then(() => {
       if (btn) { btn.textContent = '✓ 클립보드 복사!'; setTimeout(() => { btn.textContent = '📤 결과 공유'; }, 2500); }

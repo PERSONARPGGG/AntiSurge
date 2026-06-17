@@ -70,6 +70,7 @@ body {
 }
 
 .menu-content {
+  position: relative;
   text-align: center;
   max-width: 600px;
   padding: 2.5rem;
@@ -1069,6 +1070,18 @@ body {
   border-radius: 8px;
   padding: 0.5rem 1rem;
   opacity: 0.55;
+  transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.coming-soon-card[onclick] {
+  opacity: 1;
+  cursor: pointer;
+}
+.coming-soon-card[onclick]:hover {
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.2);
+}
+.coming-soon-card[onclick]:active {
+  transform: scale(0.97);
 }
 .cs-icon { font-size: 1.1rem; }
 .cs-label { font-family: 'Orbitron', monospace; font-size: 0.65rem; color: #94a3b8; letter-spacing: 0.05em; }
@@ -2007,3 +2020,29 @@ body {
   text-align: center;
   border-top: 1px solid rgba(57, 255, 20, 0.1);
 }
+
+/* ===== 메뉴 설정 버튼 (우상단 플로팅) ===== */
+.menu-settings-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.15rem;
+  color: #00f0ff;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.menu-settings-btn:hover {
+  background: rgba(0, 240, 255, 0.18);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+  transform: rotate(30deg);
+}
+.menu-settings-btn:active { transform: scale(0.92) rotate(30deg); }
