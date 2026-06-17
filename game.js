@@ -16,6 +16,7 @@ const STATE_LEVEL_UP     = 'LEVEL_UP';
 const STATE_STAGE_CLEAR  = 'STAGE_CLEAR';
 const STATE_STAGE_BONUS  = 'STAGE_BONUS';
 const STATE_GAME_OVER    = 'GAME_OVER';
+const STATE_SHOP         = 'SHOP';
 
 // ============================================================
 // 클래스 정의
@@ -92,6 +93,10 @@ const COMBO_WINDOW = 3500; // ms
 // 리롤 잔여 횟수
 let rerollUses = 2;
 
+// 골드 & 상점
+let shopTimer = 0;
+let goldCoins = [];
+
 // ============================================================
 // 3. 업그레이드 / 레어리티 상수
 // ============================================================
@@ -156,6 +161,28 @@ const FIELD_ITEM_TYPES = {
   shield:  { icon: '🛡️', color: '#00f0ff', name: '실드 버블',  effect: '5초간 피격 무적' },
   surge:   { icon: '⚡', color: '#39ff14', name: '오버클럭',   effect: '8초간 이동속도 2배' }
 };
+
+// ============================================================
+// 패시브 아이템 정의
+// ============================================================
+const PASSIVE_DEFS = {
+  regen:     { name: '회생 코어',   icon: '🔋', desc: ['체력 3초마다 +1 자동 회복',           '회복량 3배 증가 (+3/3s)'] },
+  shield:    { name: '방어막 칩',   icon: '💠', desc: ['받는 피해 10% 감소',                  '피해 감소 22%로 강화'] },
+  nanobots:  { name: '나노봇 군단', icon: '🦠', desc: ['젬 흡수 시 20% 확률로 HP +3 회복',    '확률 40%, 회복량 +5로 증가'] },
+  overclock: { name: '과부하 회로', icon: '⚙️', desc: ['모든 무기 피해량 +12%',               '피해량 추가 +28% (합계 +40%)'] },
+  resonance: { name: '공명 코어',   icon: '🔮', desc: ['젬 XP +20% 추가 획득',               'XP +45%로 증가'] },
+  thorns:    { name: '복수의 가시', icon: '⚔️', desc: ['피격 시 반경 120 내 적에게 15 피해',  '피해 25, 반경 160으로 강화'] }
+};
+
+// 상점 아이템 풀
+const SHOP_ITEMS = [
+  { id: 'shop_hp',     icon: '💊', name: '긴급 수리 키트',  desc: 'HP를 최대치의 50% 즉시 회복',     cost: 8 },
+  { id: 'shop_damage', icon: '🔥', name: '공격 강화 모듈',  desc: '모든 무기 피해량 영구 +20%',       cost: 18 },
+  { id: 'shop_speed',  icon: '🏃', name: '이동 부스터',     desc: '이동 속도 영구 +15%',             cost: 14 },
+  { id: 'shop_magnet', icon: '🧲', name: '자력 강화 칩',    desc: 'XP 자석 범위 영구 +40%',          cost: 14 },
+  { id: 'shop_reroll', icon: '🔄', name: '리롤 모듈',       desc: '레벨업 리롤 횟수 +2 추가',         cost: 20 },
+  { id: 'shop_maxhp',  icon: '❤️', name: '코어 확장',       desc: '최대 HP +30 영구 증가 & 즉시 회복', cost: 22 }
+];
 
 // 보스 이름 테이블
 const BOSS_NAMES = [
@@ -451,6 +478,16 @@ class Player {
     this.attackSurgeTimer = 0;
     this.attackSurgeMult  = 1.0;
 
+    // 패시브 아이템
+    this.passives        = { regen: 0, shield: 0, nanobots: 0, overclock: 0, resonance: 0, thorns: 0 };
+    this.regenTimer      = 0;
+    this.damageReduction = 0.0;
+    this.passiveXpMult   = 1.0;
+    this.thornsTrigger   = false;
+
+    // 골드
+    this.gold = 0;
+
     this.weapons = {
       flare:   new FlareWeapon(this),
       orbiter: new OrbiterWeapon(this),
@@ -483,6 +520,31 @@ class Player {
       if (this.attackSurgeTimer <= 0) {
         this.damageMultiplier /= this.attackSurgeMult;
         this.attackSurgeMult   = 1.0;
+      }
+    }
+
+    // 패시브: 회생 코어
+    if (this.passives.regen > 0 && this.hp < this.maxHp) {
+      this.regenTimer += dt;
+      const interval = 3000;
+      const healAmt  = this.passives.regen === 2 ? 3 : 1;
+      if (this.regenTimer >= interval) {
+        this.regenTimer = 0;
+        this.hp = Math.min(this.hp + healAmt, this.maxHp);
+      }
+    } else {
+      this.regenTimer = 0;
+    }
+
+    // 패시브: 복수의 가시 (피격 지연 처리)
+    if (this.thornsTrigger) {
+      this.thornsTrigger = false;
+      const thornDmg = this.passives.thorns === 2 ? 25 : 15;
+      const thornR   = this.passives.thorns === 2 ? 160 : 120;
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        if (dist(this.x, this.y, enemies[i].x, enemies[i].y) < thornR) {
+          if (enemies[i].takeDamage(thornDmg, 'thorns')) killCount++;
+        }
       }
     }
 
@@ -529,6 +591,7 @@ class Player {
     let mult = getXpMultiplier();
     const cls = CLASS_DEFS[this.classId];
     if (cls) mult *= cls.xpBonus;
+    mult *= this.passiveXpMult;
     this.xp += amount * mult;
     if (this.xp >= this.nextLevelXp) {
       this.xp -= this.nextLevelXp;
@@ -545,11 +608,13 @@ class Player {
 
   takeDamage(amount) {
     if (this.shieldTimer > 0) {
-      // 무적 상태 — 시각 표시만
       addFloatingText(this.x, this.y - this.radius, 'BLOCKED', '#00f0ff', 12);
       return;
     }
-    this.hp -= amount;
+    let dmg = amount;
+    if (this.damageReduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - this.damageReduction)));
+    this.hp -= dmg;
+    if (this.passives.thorns > 0) this.thornsTrigger = true;
     playHitSound();
     createDamageOverlayParticles(this.x, this.y);
     triggerScreenShake(5, 250);
@@ -930,6 +995,13 @@ class Enemy {
       fieldItems.push(new FieldItem(this.x, this.y, dropType));
     }
 
+    // 골드 드롭
+    let goldAmt = 0;
+    if      (this.type === 'bruiser') goldAmt = 2 + Math.floor(Math.random() * 3);
+    else if (this.type === 'rusher'  && Math.random() < 0.4) goldAmt = 1 + (Math.random() < 0.3 ? 1 : 0);
+    else if (this.type === 'swarm'   && Math.random() < 0.2) goldAmt = 1;
+    if (goldAmt > 0) spawnGoldCoins(this.x, this.y, goldAmt);
+
     let idx = enemies.indexOf(this);
     if (idx !== -1) enemies.splice(idx, 1);
   }
@@ -1109,6 +1181,7 @@ class Boss {
     }
     // killCount는 무기 코드/충돌 판정에서 집계 (여기서는 제외)
     playBossDeathSound();
+    spawnGoldCoins(this.x, this.y, 12 + Math.floor(Math.random() * 9));
     activeBoss = null;
     isBossStage = false;
     triggerStageClear();
@@ -1252,6 +1325,11 @@ class Gem {
     let d = dist(this.x, this.y, player.x, player.y);
     if (d < player.radius + this.radius) {
       player.gainXp(this.value);
+      if (player.passives.nanobots > 0) {
+        const chance = player.passives.nanobots === 2 ? 0.4 : 0.2;
+        const heal   = player.passives.nanobots === 2 ? 5 : 3;
+        if (Math.random() < chance) player.hp = Math.min(player.hp + heal, player.maxHp);
+      }
       playGemSound();
       let idx = gems.indexOf(this);
       if (idx !== -1) gems.splice(idx, 1);
@@ -1277,6 +1355,53 @@ class Gem {
     ctx.closePath(); ctx.fill();
     ctx.restore();
   }
+}
+
+// ============================================================
+// 골드 코인 클래스
+// ============================================================
+class GoldCoin {
+  constructor(x, y) {
+    this.x = x + (Math.random() - 0.5) * 50;
+    this.y = y + (Math.random() - 0.5) * 50;
+    this.radius    = 5;
+    this.speed     = 0;
+    this.collected = false;
+    this.bobTimer  = Math.random() * Math.PI * 2;
+  }
+  update(dt) {
+    if (!player || this.collected) return;
+    this.bobTimer += dt * 0.004;
+    const d = dist(this.x, this.y, player.x, player.y);
+    if (d < player.radius + this.radius) {
+      this.collected = true;
+      player.gold++;
+      playSynthSound([880, 1046], 0.06, 'sine', 0.04);
+      return;
+    }
+    if (d < player.magnetRadius * 0.6) {
+      const dx = player.x - this.x, dy = player.y - this.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      this.speed = Math.min(this.speed + 0.4 * (dt / 16.66), 10);
+      this.x += (dx / len) * this.speed * (dt / 16.66);
+      this.y += (dy / len) * this.speed * (dt / 16.66);
+    }
+  }
+  draw(ctx, camera) {
+    const bob = Math.sin(this.bobTimer) * 3;
+    const bx  = this.x - camera.x, by = this.y - camera.y + bob;
+    ctx.save();
+    ctx.shadowBlur = 10; ctx.shadowColor = '#ffd700';
+    ctx.fillStyle  = '#ffd700';
+    ctx.beginPath(); ctx.arc(bx, by, this.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(bx - 1.5, by - 1.5, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function spawnGoldCoins(x, y, count) {
+  for (let i = 0; i < count; i++) goldCoins.push(new GoldCoin(x, y));
 }
 
 class Particle {
@@ -1730,6 +1855,7 @@ function showScreen(state) {
   levelUpModal.classList.remove('active');
   gameOverModal.classList.remove('active');
   document.getElementById('stage-bonus-modal').classList.remove('active');
+  document.getElementById('shop-modal').classList.remove('active');
   if (state === STATE_MENU) { menuScreen.classList.add('active'); stopBGM(); }
   else if (state === STATE_PLAYING || state === STATE_STAGE_CLEAR || state === STATE_STAGE_BONUS) {
     gameScreen.classList.add('active');
@@ -1754,6 +1880,8 @@ function startGame() {
   screenShake       = { x: 0, y: 0, intensity: 0, duration: 0 };
   comboCount = 0; comboTimer = 0;
   fieldItemTimer  = 0;
+  shopTimer       = 0;
+  goldCoins       = [];
   rerollUses      = (CLASS_DEFS[selectedClass] || CLASS_DEFS.hacker).rerolls;
   enemySpawnTimer = 0;
   hideComboDisplay();
@@ -1776,7 +1904,8 @@ function startGame() {
 // ============================================================
 function gameLoop(time) {
   if (gameState !== STATE_PLAYING && gameState !== STATE_LEVEL_UP &&
-      gameState !== STATE_STAGE_CLEAR && gameState !== STATE_STAGE_BONUS) return;
+      gameState !== STATE_STAGE_CLEAR && gameState !== STATE_STAGE_BONUS &&
+      gameState !== STATE_SHOP) return;
   let dt = time - lastTime;
   if (dt > 100) dt = 16.66;
   lastTime = time;
@@ -1845,6 +1974,20 @@ function update(dt) {
   // 콤보
   updateComboSystem(dt);
 
+  // 골드 코인 업데이트
+  for (let i = goldCoins.length - 1; i >= 0; i--) {
+    goldCoins[i].update(dt);
+    if (goldCoins[i].collected) goldCoins.splice(i, 1);
+  }
+
+  // 상점 타이머 (2분마다, 보스/클리어 중 제외)
+  shopTimer += dt;
+  if (shopTimer >= 120000 && !isBossStage && !isStageClearAnim) {
+    shopTimer = 0;
+    triggerShopModal();
+    return;
+  }
+
   // 화면 진동
   updateScreenShake(dt);
 
@@ -1882,6 +2025,7 @@ function draw() {
   if (activeBoss) activeBoss.draw(ctx, camera);
 
   for (let item of fieldItems) item.draw(ctx, camera);
+  for (let coin of goldCoins)  coin.draw(ctx, camera);
 
   player.draw(ctx, camera);
 
@@ -1958,6 +2102,26 @@ function updateHUD() {
       wc.appendChild(slot);
     }
   }
+
+  // 골드 표시
+  const goldEl = document.getElementById('gold-count');
+  if (goldEl) goldEl.innerText = player.gold;
+
+  // 패시브 슬롯
+  const pc = document.getElementById('passive-list');
+  if (pc) {
+    pc.innerHTML = '';
+    for (let key in PASSIVE_DEFS) {
+      const lvl = player.passives[key];
+      if (lvl > 0) {
+        const slot = document.createElement('div');
+        slot.className = 'passive-slot';
+        slot.title     = `${PASSIVE_DEFS[key].name} Lv.${lvl}`;
+        slot.innerHTML = `${PASSIVE_DEFS[key].icon}<span class="passive-level">${lvl}</span>`;
+        pc.appendChild(slot);
+      }
+    }
+  }
 }
 
 // ============================================================
@@ -2012,6 +2176,15 @@ function generateUpgradeChoices() {
     pool.push({ type:'stat', id:stat.id, name:stat.name, icon:stat.icon, desc:stat.desc });
   });
 
+  // 패시브 풀
+  for (let key in PASSIVE_DEFS) {
+    const pd  = PASSIVE_DEFS[key];
+    const lvl = player.passives[key];
+    if (lvl < 2) {
+      pool.push({ type:'passive', key, name:pd.name, icon:pd.icon, desc:pd.desc[lvl], isUpgrade: lvl > 0, nextLevel: lvl + 1 });
+    }
+  }
+
   let choices = [];
   let tempPool = [...pool];
 
@@ -2044,16 +2217,20 @@ function renderUpgradeCards(choices) {
 
     // 기본 스타일 클래스
     let baseClass = 'new-weapon';
-    if (choice.type === 'stat')      baseClass = 'stat-boost';
-    else if (choice.isUpgrade)       baseClass = 'weapon-upgrade';
-    else if (choice.type === 'legendary') baseClass = 'new-weapon';
+    if      (choice.type === 'stat')                        baseClass = 'stat-boost';
+    else if (choice.type === 'passive' && choice.isUpgrade) baseClass = 'passive-upgrade';
+    else if (choice.type === 'passive')                     baseClass = 'new-passive';
+    else if (choice.isUpgrade)                              baseClass = 'weapon-upgrade';
+    else if (choice.type === 'legendary')                   baseClass = 'new-weapon';
 
     card.className = `upgrade-card ${baseClass} rarity-${choice.rarity || 'common'}`;
 
     let tagText  = '신규 무기';
-    if (choice.type === 'stat')       tagText = '시스템 강화';
-    else if (choice.isUpgrade)        tagText = `업그레이드 Lv.${choice.nextLevel}`;
-    else if (choice.type === 'legendary') tagText = '⭐ 전설';
+    if      (choice.type === 'stat')                        tagText = '시스템 강화';
+    else if (choice.type === 'passive' && !choice.isUpgrade) tagText = '패시브 신규';
+    else if (choice.type === 'passive' && choice.isUpgrade)  tagText = `패시브 Lv${choice.nextLevel}`;
+    else if (choice.isUpgrade)                               tagText = `업그레이드 Lv.${choice.nextLevel}`;
+    else if (choice.type === 'legendary')                    tagText = '⭐ 전설';
 
     let descText = choice.desc;
     if (choice.rarityMult > 1.0 && choice.type === 'stat') {
@@ -2124,7 +2301,119 @@ function applyUpgrade(choice) {
         player.magnetRadius *= 1 + 0.3 * mult; break;
     }
     playSynthSound([800, 1000], 0.1, 'triangle', 0.05);
+  } else if (choice.type === 'passive') {
+    player.passives[choice.key] = choice.nextLevel;
+    applyPassiveEffect(choice.key, choice.nextLevel);
+    playSynthSound([500, 900, 1200], 0.12, 'triangle', 0.05);
   }
+}
+
+function applyPassiveEffect(key, level) {
+  switch (key) {
+    case 'overclock':
+      player.damageMultiplier *= level === 2 ? (1.4 / 1.12) : 1.12;
+      addFloatingText(player.x, player.y - 40, `⚙️ 과부하 회로 Lv${level}!`, '#ffe600', 14);
+      break;
+    case 'resonance':
+      player.passiveXpMult = level === 2 ? 1.45 : 1.2;
+      addFloatingText(player.x, player.y - 40, `🔮 공명 코어 Lv${level}!`, '#b026ff', 14);
+      break;
+    case 'shield':
+      player.damageReduction = level === 2 ? 0.22 : 0.10;
+      addFloatingText(player.x, player.y - 40, `💠 방어막 Lv${level}!`, '#00f0ff', 14);
+      break;
+    case 'regen':
+      addFloatingText(player.x, player.y - 40, `🔋 회생 코어 Lv${level}!`, '#39ff14', 14);
+      break;
+    case 'nanobots':
+      addFloatingText(player.x, player.y - 40, `🦠 나노봇 Lv${level}!`, '#b026ff', 14);
+      break;
+    case 'thorns':
+      addFloatingText(player.x, player.y - 40, `⚔️ 복수의 가시 Lv${level}!`, '#ff4466', 14);
+      break;
+  }
+}
+
+// ============================================================
+// 상점 시스템
+// ============================================================
+function triggerShopModal() {
+  gameState = STATE_SHOP;
+  const modal    = document.getElementById('shop-modal');
+  const goldDisp = document.getElementById('shop-gold-display');
+  if (goldDisp) goldDisp.textContent = `보유 골드: 💰 ${player.gold}G`;
+  const shuffled = [...SHOP_ITEMS].sort(() => Math.random() - 0.5).slice(0, 3);
+  renderShopItems(shuffled);
+  modal.classList.add('active');
+}
+
+function renderShopItems(items) {
+  const list     = document.getElementById('shop-items-list');
+  const goldDisp = document.getElementById('shop-gold-display');
+  if (goldDisp) goldDisp.textContent = `보유 골드: 💰 ${player.gold}G`;
+  list.innerHTML = '';
+  items.forEach(item => {
+    const canAfford = player.gold >= item.cost;
+    const btn = document.createElement('button');
+    btn.className = `shop-item-card${canAfford ? '' : ' shop-cant-afford'}`;
+    btn.innerHTML = `
+      <div class="shop-item-icon">${item.icon}</div>
+      <div class="shop-item-details">
+        <div class="shop-item-name">${item.name}</div>
+        <div class="shop-item-desc">${item.desc}</div>
+      </div>
+      <div class="shop-item-cost ${canAfford ? 'can-afford' : 'cant-afford'}">💰 ${item.cost}G</div>
+    `;
+    if (canAfford) {
+      btn.addEventListener('click', () => {
+        applyShopItem(item);
+        renderShopItems(items);
+      });
+    }
+    list.appendChild(btn);
+  });
+}
+
+function applyShopItem(item) {
+  if (player.gold < item.cost) return;
+  player.gold -= item.cost;
+  switch (item.id) {
+    case 'shop_hp': {
+      const heal = Math.floor(player.maxHp * 0.5);
+      player.hp = Math.min(player.hp + heal, player.maxHp);
+      addFloatingText(player.x, player.y - 40, `+${heal} HP`, '#ff4466', 16);
+      break;
+    }
+    case 'shop_damage':
+      player.damageMultiplier *= 1.2;
+      addFloatingText(player.x, player.y - 40, '🔥 피해 +20%', '#ff6600', 14);
+      break;
+    case 'shop_speed':
+      player.speed *= 1.15;
+      addFloatingText(player.x, player.y - 40, '🏃 속도 +15%', '#39ff14', 14);
+      break;
+    case 'shop_magnet':
+      player.magnetRadius *= 1.4;
+      addFloatingText(player.x, player.y - 40, '🧲 자석 +40%', '#b026ff', 14);
+      break;
+    case 'shop_reroll':
+      rerollUses += 2;
+      addFloatingText(player.x, player.y - 40, '🔄 리롤 +2', '#ffe600', 14);
+      break;
+    case 'shop_maxhp':
+      player.maxHp += 30;
+      player.hp = Math.min(player.hp + 30, player.maxHp);
+      addFloatingText(player.x, player.y - 40, '❤️ 최대 HP +30', '#ff4466', 14);
+      break;
+  }
+  playSynthSound([440, 880], 0.1, 'sine', 0.06);
+}
+
+function closeShopModal() {
+  document.getElementById('shop-modal').classList.remove('active');
+  gameState = STATE_PLAYING;
+  shopTimer = 0;
+  lastTime  = performance.now();
 }
 
 function applyLegendaryUpgrade(id) {

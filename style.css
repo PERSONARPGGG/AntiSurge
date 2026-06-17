@@ -1171,3 +1171,133 @@ body {
 }
 .evo-label { font-family: 'Orbitron', monospace; font-size: 0.7rem; letter-spacing: 0.15em; color: #ffe600; text-shadow: 0 0 8px #ffe600; }
 .evo-name  { font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: 900; color: #ffffff; text-shadow: 0 0 12px #ffe600; }
+
+/* ===== 골드 HUD ===== */
+.gold-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.neon-text-yellow {
+  color: var(--color-neon-yellow);
+  text-shadow: 0 0 8px var(--color-neon-yellow);
+  font-family: 'Orbitron', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* ===== HUD 우측 슬롯 그룹 ===== */
+.hud-right-slots {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* ===== 패시브 슬롯 ===== */
+.passive-list {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 28px;
+}
+.passive-slot {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  background: rgba(10, 10, 20, 0.8);
+  border: 1px solid rgba(176, 38, 255, 0.5);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  box-shadow: 0 0 6px rgba(176, 38, 255, 0.3);
+}
+.passive-level {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: 0.5rem;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  color: #b026ff;
+  background: rgba(5, 5, 15, 0.95);
+  border-radius: 3px;
+  padding: 0 2px;
+  line-height: 1.4;
+}
+
+/* 패시브 카드 스타일 */
+.upgrade-card.new-passive {
+  border-color: rgba(176, 38, 255, 0.5);
+  background: rgba(20, 5, 30, 0.85);
+}
+.upgrade-card.new-passive:hover {
+  border-color: #b026ff;
+  box-shadow: 0 0 20px rgba(176, 38, 255, 0.4);
+}
+.upgrade-card.passive-upgrade {
+  border-color: rgba(176, 38, 255, 0.7);
+  background: rgba(30, 5, 45, 0.85);
+}
+.upgrade-card.passive-upgrade:hover {
+  border-color: #b026ff;
+  box-shadow: 0 0 24px rgba(176, 38, 255, 0.5);
+}
+
+/* ===== 상점 모달 ===== */
+.shop-panel { max-width: 520px; }
+.shop-gold-display {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  color: #ffd700;
+  text-shadow: 0 0 8px #ffd700;
+  margin-bottom: 0.3rem;
+  text-align: center;
+}
+.shop-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+.shop-item-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 215, 0, 0.04);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  color: #e2e8f0;
+  font-family: 'Rajdhani', sans-serif;
+  width: 100%;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  pointer-events: auto;
+}
+.shop-item-card:hover:not(.shop-cant-afford) {
+  background: rgba(255, 215, 0, 0.08);
+  border-color: #ffd700;
+  transform: translateX(4px);
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.3);
+}
+.shop-item-card.shop-cant-afford {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.shop-item-icon    { font-size: 1.8rem; flex-shrink: 0; }
+.shop-item-details { flex: 1; text-align: left; }
+.shop-item-name    { font-family: 'Orbitron', monospace; font-size: 0.78rem; font-weight: 700; color: #ffd700; }
+.shop-item-desc    { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+.shop-item-cost    { font-family: 'Orbitron', monospace; font-size: 0.88rem; white-space: nowrap; flex-shrink: 0; }
+.shop-item-cost.can-afford  { color: #ffd700; text-shadow: 0 0 6px #ffd700; }
+.shop-item-cost.cant-afford { color: #475569; }
+.shop-close-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.8rem;
+}

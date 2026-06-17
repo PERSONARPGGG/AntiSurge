@@ -129,6 +129,10 @@
           <span class="hud-label">VIRUS KILLED</span>
           <span id="kill-count" class="neon-text-green">0</span>
         </div>
+        <div class="gold-container">
+          <span class="hud-label">GOLD</span>
+          <span id="gold-count" class="neon-text-yellow">0</span>
+        </div>
       </div>
 
       <!-- XP 바 -->
@@ -156,7 +160,7 @@
         </div>
       </div>
 
-      <!-- HP 바 + 무기 슬롯 -->
+      <!-- HP 바 + 무기 슬롯 + 패시브 슬롯 -->
       <div class="hud-bottom">
         <div class="hp-container">
           <span class="hud-label">SYSTEM HEALTH</span>
@@ -165,7 +169,10 @@
             <span id="hp-text">100 / 100</span>
           </div>
         </div>
-        <div id="weapons-list" class="weapons-list"></div>
+        <div class="hud-right-slots">
+          <div id="weapons-list" class="weapons-list"></div>
+          <div id="passive-list" class="passive-list"></div>
+        </div>
       </div>
     </div>
 
@@ -249,6 +256,19 @@
       <div class="result-actions">
         <button id="retry-btn" class="neon-btn font-sm">시스템 재가동</button>
         <button id="home-btn" class="neon-btn font-sm neon-btn-purple">메인 화면으로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 상점 모달 -->
+  <div id="shop-modal" class="modal">
+    <div class="modal-content glass-panel shop-panel">
+      <h2 class="neon-title-sm">🛒 데이터 마켓</h2>
+      <p id="shop-gold-display" class="shop-gold-display">보유 골드: 💰 0G</p>
+      <p class="modal-desc">아이템을 구매하세요. 여러 개 구매 가능합니다.</p>
+      <div id="shop-items-list" class="shop-items-list"></div>
+      <div class="shop-close-row">
+        <button class="neon-btn font-sm" onclick="closeShopModal()">계속 진행</button>
       </div>
     </div>
   </div>
