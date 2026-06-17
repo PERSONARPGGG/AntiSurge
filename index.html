@@ -2,9 +2,20 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>네온 서바이버즈 (Neon Survivors) - 사이버 생존 게임</title>
   <meta name="description" content="사이버펑크 네온 스타일의 2D 탑다운 자동 공격 생존 게임, 네온 서바이버즈를 브라우저에서 즐겨보세요!">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#00f0ff">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NeonSurvivors">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
@@ -35,6 +46,7 @@
       </div>
 
       <button id="start-btn" class="neon-btn">백신 프로그램 가동 (시작)</button>
+      <button class="neon-btn font-sm neon-btn-fs" onclick="toggleFullscreen()" style="margin-top:0.4rem">⛶ 전체화면</button>
       <button class="neon-btn neon-btn-purple font-sm" onclick="openMetaModal()" style="margin-top:0.6rem">
         ⚡ 영구 업그레이드 <span class="meta-badge">💾 <span id="meta-cores-badge">0</span></span>
       </button>
@@ -133,6 +145,7 @@
         <div class="timer-container">
           <span id="game-timer" class="neon-text-pink">00:00</span>
           <button id="mute-btn" class="mute-btn" title="배경음악 끄기 (M)">🎵</button>
+          <button id="fullscreen-btn" class="mute-btn" title="전체화면" onclick="toggleFullscreen()">⛶</button>
         </div>
 
         <div class="kills-container">

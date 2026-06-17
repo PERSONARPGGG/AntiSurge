@@ -3322,6 +3322,28 @@ function buildWeaponContributionList() {
 }
 
 // ============================================================
+// 전체화면
+// ============================================================
+function toggleFullscreen() {
+  const el = document.documentElement;
+  const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!fsEl) {
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (req) req.call(el, { navigationUI: 'hide' }).catch(() => {});
+  } else {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+  }
+  const btn = document.getElementById('fullscreen-btn');
+  if (btn) btn.textContent = fsEl ? '⛶' : '⛶';
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fullscreen-btn');
+  if (btn) btn.textContent = document.fullscreenElement ? '✕⛶' : '⛶';
+});
+
+// ============================================================
 // 결과 공유
 // ============================================================
 function shareResult() {
