@@ -1531,3 +1531,52 @@ body {
   display: none;
 }
 @media (pointer: coarse) { .touch-hint { display: block; } }
+
+/* ===== 일시정지 오버레이 ===== */
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 3, 12, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 180;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.pause-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.pause-content {
+  text-align: center;
+}
+.pause-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #00f0ff;
+  text-shadow: 0 0 20px #00f0ff, 0 0 40px #00f0ff;
+  letter-spacing: 0.15em;
+  animation: pausePulse 1.5s ease-in-out infinite;
+}
+@keyframes pausePulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+.pause-hint {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.8rem;
+  letter-spacing: 0.08em;
+}
+
+/* ===== 스테이지 보너스 카드 키보드 포커스 ===== */
+.bonus-card.card-kb-focus {
+  border-color: #ffe600 !important;
+  box-shadow: 0 0 20px rgba(255, 230, 0, 0.45) !important;
+  transform: translateY(-4px) !important;
+}

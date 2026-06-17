@@ -17,6 +17,7 @@ const STATE_STAGE_CLEAR  = 'STAGE_CLEAR';
 const STATE_STAGE_BONUS  = 'STAGE_BONUS';
 const STATE_GAME_OVER    = 'GAME_OVER';
 const STATE_SHOP         = 'SHOP';
+const STATE_PAUSED       = 'PAUSED';
 
 // ============================================================
 // 클래스 정의
@@ -101,6 +102,17 @@ let goldCoins = [];
 let saveData            = { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0 };
 let achieveCheckTimer   = 0;
 let levelUpSelectedIdx  = 0;
+
+// ─── 레벨업 버그 방지 ───
+// stage clear 중 gem→XP→levelUp이 여러번 겹치면 큐에 적재
+let pendingLevelUps    = 0;
+let levelUpInProgress  = false;
+
+// ─── 스테이지 보너스 키보드 포커스 ───
+let bonusSelectedIdx   = 0;
+
+// ─── 일시정지 ───
+let prevStateBeforePause = null;
 
 // 오브젝트 상한 (멀티 대비 성능 캡)
 const MAX_ENEMIES     = 120;
@@ -675,8 +687,14 @@ class Player {
   levelUp() {
     this.level++;
     this.nextLevelXp = Math.floor(this.nextLevelXp * 1.35) + 8;
-    playLevelUpSound();
-    triggerLevelUpModal();
+    if (!levelUpInProgress) {
+      levelUpInProgress = true;
+      playLevelUpSound();
+      triggerLevelUpModal();
+    } else {
+      // 같은 프레임 내 다중 레벨업 → 큐에 적재
+      pendingLevelUps++;
+    }
   }
 
   takeDamage(amount) {
@@ -1616,8 +1634,15 @@ function triggerStageClear() {
 
   setTimeout(() => {
     hideStageOverlay();
-    showStageBonusModal();
+    showStageBonusSafe();
   }, 2200);
+}
+
+// 레벨업 모달이 열려 있으면 대기 후 보너스 모달 표시
+function showStageBonusSafe() {
+  if (gameState === STATE_GAME_OVER || gameState === STATE_MENU) return;
+  if (levelUpInProgress) { setTimeout(showStageBonusSafe, 60); return; }
+  showStageBonusModal();
 }
 
 function advanceToNextStage() {
@@ -1652,6 +1677,7 @@ const STAGE_BONUSES = [
 
 function showStageBonusModal() {
   gameState = STATE_STAGE_BONUS;
+  bonusSelectedIdx = 0;
   const modal = document.getElementById('stage-bonus-modal');
   const list  = document.getElementById('stage-bonus-list');
   list.innerHTML = '';
@@ -1663,6 +1689,12 @@ function showStageBonusModal() {
     list.appendChild(btn);
   });
   modal.classList.add('active');
+  const cards = [...list.querySelectorAll('.bonus-card')];
+  updateBonusFocus(cards);
+}
+
+function updateBonusFocus(cards) {
+  cards.forEach((c, i) => c.classList.toggle('card-kb-focus', i === bonusSelectedIdx));
 }
 
 function applyStageClearBonus(id) {
@@ -2099,6 +2131,39 @@ resizeCanvas();
 
 // 키보드
 window.addEventListener('keydown', e => {
+  // ESC / P: 일시정지 토글
+  if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+    if (gameState === STATE_PLAYING || gameState === STATE_STAGE_CLEAR || gameState === STATE_PAUSED) {
+      e.preventDefault();
+      togglePause();
+      return;
+    }
+  }
+
+  // 스테이지 보너스 모달 키보드 조작
+  if (gameState === STATE_STAGE_BONUS) {
+    const bonusCards = [...document.querySelectorAll('#stage-bonus-list .bonus-card')];
+    if (bonusCards.length) {
+      if (['ArrowLeft','ArrowUp','a','A','w','W'].includes(e.key)) {
+        e.preventDefault();
+        bonusSelectedIdx = (bonusSelectedIdx - 1 + bonusCards.length) % bonusCards.length;
+        updateBonusFocus(bonusCards);
+        return;
+      }
+      if (['ArrowRight','ArrowDown','d','D','s','S'].includes(e.key)) {
+        e.preventDefault();
+        bonusSelectedIdx = (bonusSelectedIdx + 1) % bonusCards.length;
+        updateBonusFocus(bonusCards);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        bonusCards[bonusSelectedIdx]?.click();
+        return;
+      }
+    }
+  }
+
   // 레벨업 모달 키보드 조작
   if (gameState === STATE_LEVEL_UP) {
     const cards = [...document.querySelectorAll('#card-container .upgrade-card')];
@@ -2200,12 +2265,16 @@ function startGame() {
   goldCoins         = [];
   achieveCheckTimer = 0;
   rerollUses        = (CLASS_DEFS[selectedClass] || CLASS_DEFS.hacker).rerolls;
-  // 비트/이벤트 리셋
+  // 비트/이벤트/레벨업 리셋
   beatKickTimes    = []; beatWindowActive = false; beatChain = 0; beatChainTimer = 0;
   activeFieldEvent = null;
   fieldEventTimer  = 0;
   fieldEventInterval = 40000 + Math.random() * 20000;
   touchDX = 0; touchDY = 0; isTouching = false;
+  pendingLevelUps  = 0; levelUpInProgress = false;
+  bonusSelectedIdx = 0; prevStateBeforePause = null;
+  const po = document.getElementById('pause-overlay');
+  if (po) po.classList.remove('active');
   enemySpawnTimer   = 0;
   hideComboDisplay();
   hideStageOverlay();
@@ -2229,7 +2298,7 @@ function startGame() {
 function gameLoop(time) {
   if (gameState !== STATE_PLAYING && gameState !== STATE_LEVEL_UP &&
       gameState !== STATE_STAGE_CLEAR && gameState !== STATE_STAGE_BONUS &&
-      gameState !== STATE_SHOP) return;
+      gameState !== STATE_SHOP && gameState !== STATE_PAUSED) return;
   let dt = time - lastTime;
   if (dt > 100) dt = 16.66;
   lastTime = time;
@@ -2744,13 +2813,48 @@ function renderUpgradeCards(choices) {
 
     card.addEventListener('click', () => {
       applyUpgrade(choice);
-      levelUpModal.classList.remove('active');
-      gameState = STATE_PLAYING;
-      lastTime  = performance.now();
+      closeLevelUpModal();
     });
 
     container.appendChild(card);
   });
+}
+
+// 레벨업 모달 닫기 — 대기 중인 레벨업 있으면 순차 처리
+function closeLevelUpModal() {
+  levelUpModal.classList.remove('active');
+  if (pendingLevelUps > 0) {
+    pendingLevelUps--;
+    playLevelUpSound();
+    triggerLevelUpModal(); // 다음 레벨업 모달 열기
+  } else {
+    levelUpInProgress = false;
+    // 스테이지 클리어 중이면 STATE_STAGE_CLEAR 복구, 아니면 STATE_PLAYING
+    gameState = isStageClearAnim ? STATE_STAGE_CLEAR : STATE_PLAYING;
+    lastTime  = performance.now();
+  }
+}
+
+// ─── 일시정지 시스템 ───
+function pauseGame() {
+  if (gameState !== STATE_PLAYING && gameState !== STATE_STAGE_CLEAR) return;
+  prevStateBeforePause = gameState;
+  gameState = STATE_PAUSED;
+  const overlay = document.getElementById('pause-overlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+function resumeGame() {
+  if (gameState !== STATE_PAUSED) return;
+  gameState = prevStateBeforePause || STATE_PLAYING;
+  const overlay = document.getElementById('pause-overlay');
+  if (overlay) overlay.classList.remove('active');
+  lastTime = performance.now();
+}
+
+function togglePause() {
+  if (gameState === STATE_PAUSED) resumeGame();
+  else pauseGame();
 }
 
 function showEvolutionNotification(icon, name) {
