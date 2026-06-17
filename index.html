@@ -329,6 +329,51 @@
     </div>
   </div>
 
+  <!-- ⚡ 개발자 패널 (비밀번호: 7501) -->
+  <div id="dev-panel" class="dev-panel">
+    <div class="dev-header">
+      <span class="dev-title">⚡ DEV CONSOLE <span class="dev-ver">v0.01</span></span>
+      <span class="dev-close" onclick="closeDevPanel()">✕</span>
+    </div>
+    <div class="dev-status">
+      <span class="dev-stat"><span class="dev-label">FPS</span><span id="dev-fps" class="dev-val">--</span></span>
+      <span class="dev-stat"><span class="dev-label">ENT</span><span id="dev-entity-count" class="dev-val">--</span></span>
+      <span class="dev-stat"><span class="dev-label">STAGE</span><span id="dev-stage-display" class="dev-val">--</span></span>
+    </div>
+    <div class="dev-section-title">// 플레이어</div>
+    <div class="dev-row">
+      <button id="dev-godmode-btn" class="dev-btn" onclick="devToggleGodMode()">🛡 무적: OFF</button>
+      <button class="dev-btn" onclick="devLevelUp()">⬆ 레벨업</button>
+    </div>
+    <div class="dev-row">
+      <button class="dev-btn" onclick="devAddXP(500)">🔵 XP +500</button>
+      <button class="dev-btn" onclick="devAddGold(999)">💰 골드 +999</button>
+    </div>
+    <div class="dev-row">
+      <button class="dev-btn" onclick="devAddCores(10)">💾 코어 +10</button>
+    </div>
+    <div class="dev-section-title">// 전투</div>
+    <div class="dev-row">
+      <button class="dev-btn dev-btn-red" onclick="devKillAll()">💀 적 전멸</button>
+      <button class="dev-btn dev-btn-red" onclick="devSpawnBoss()">👑 보스 소환</button>
+    </div>
+    <div class="dev-section-title">// 필드 이벤트</div>
+    <div class="dev-row">
+      <button class="dev-btn" onclick="devTriggerEvent()">⚡ 랜덤 이벤트</button>
+      <button class="dev-btn" onclick="devClearEvent()">✕ 이벤트 해제</button>
+    </div>
+    <div class="dev-section-title">// 스테이지 이동</div>
+    <div class="dev-row">
+      <input id="dev-stage-input" class="dev-input" type="number" value="10" min="1" max="200" placeholder="스테이지">
+      <button class="dev-btn dev-btn-green" onclick="devJumpStage()">▶ JUMP</button>
+    </div>
+    <div class="dev-section-title">// 저장 데이터</div>
+    <div class="dev-row">
+      <button class="dev-btn dev-btn-red" onclick="devResetSave()">🗑 저장 초기화</button>
+    </div>
+    <div class="dev-footer">키보드: 7501 입력 시 토글</div>
+  </div>
+
   <script src="game.js"></script>
 </body>
 </html>

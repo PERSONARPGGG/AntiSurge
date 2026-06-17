@@ -114,6 +114,26 @@ let bonusSelectedIdx   = 0;
 // ─── 일시정지 ───
 let prevStateBeforePause = null;
 
+// ─── 배경 별 효과 (시각적) ───
+const bgStars = Array.from({ length: 130 }, () => ({
+  xNorm:     Math.random(),
+  yNorm:     Math.random(),
+  speedNorm: 0.000025 + Math.random() * 0.00006,
+  size:      0.4 + Math.random() * 1.6,
+  alpha:     0.18 + Math.random() * 0.52,
+  color:     Math.random() < 0.07 ? '#b026ff' : Math.random() < 0.1 ? '#ffe600' : '#00f0ff'
+}));
+let bgScanY = Math.random(); // 스캔 라인 위치 (0-1 normalized)
+
+// ─── 개발자 모드 ───
+let devMode       = false;
+let devGodMode    = false;
+let devKeyBuffer  = '';
+let devKeyTimer   = null;
+let devFpsCount   = 0;
+let devLastFpsTs  = 0;
+let devCurrentFps = 60;
+
 // 오브젝트 상한 (멀티 대비 성능 캡)
 const MAX_ENEMIES     = 120;
 const MAX_PROJECTILES = 200;
@@ -698,6 +718,10 @@ class Player {
   }
 
   takeDamage(amount) {
+    if (devGodMode) {
+      addFloatingText(this.x, this.y - this.radius - 5, '♦GOD♦', '#39ff14', 9);
+      return;
+    }
     if (this.shieldTimer > 0) {
       addFloatingText(this.x, this.y - this.radius, 'BLOCKED', '#00f0ff', 12);
       return;
@@ -2090,25 +2114,88 @@ function checkCollisions() {
 }
 
 // ============================================================
-// 20. 맵 격자 렌더링
+// 20. 배경 + 맵 격자 렌더링
 // ============================================================
+function drawBackground(ctx, w, h, dt) {
+  // 베이스 다크
+  ctx.fillStyle = '#01010a';
+  ctx.fillRect(0, 0, w, h);
+
+  // 중앙 방사형 미세 글로우
+  const grad = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.55);
+  grad.addColorStop(0, 'rgba(0, 18, 45, 0.4)');
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  // 흘러가는 별 입자
+  const elapsed = (dt || 16.66) / 1000;
+  for (const s of bgStars) {
+    s.xNorm -= s.speedNorm * elapsed;
+    if (s.xNorm < -0.01) { s.xNorm = 1.02 + Math.random() * 0.05; s.yNorm = Math.random(); }
+    ctx.globalAlpha = s.alpha;
+    ctx.fillStyle   = s.color;
+    ctx.beginPath();
+    ctx.arc(s.xNorm * w, s.yNorm * h, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // 수평 스캔 라인 (느리게 흘러내림)
+  bgScanY = (bgScanY + 0.00010 * (dt || 16.66)) % 1;
+  const scanY    = bgScanY * h;
+  const scanGrad = ctx.createLinearGradient(0, scanY - 28, 0, scanY + 28);
+  scanGrad.addColorStop(0,   'rgba(0,240,255,0)');
+  scanGrad.addColorStop(0.5, 'rgba(0,240,255,0.022)');
+  scanGrad.addColorStop(1,   'rgba(0,240,255,0)');
+  ctx.fillStyle = scanGrad;
+  ctx.fillRect(0, scanY - 28, w, 56);
+}
+
+function drawVignette(ctx, w, h) {
+  ctx.save();
+  const vGrad = ctx.createRadialGradient(w * 0.5, h * 0.5, Math.min(w, h) * 0.22,
+                                          w * 0.5, h * 0.5, Math.max(w, h) * 0.82);
+  vGrad.addColorStop(0, 'rgba(0,0,0,0)');
+  vGrad.addColorStop(1, 'rgba(0,0,10,0.6)');
+  ctx.fillStyle = vGrad;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
 function drawGrid(ctx, camera, width, height) {
   ctx.save();
-  ctx.strokeStyle = '#1e1b4b';
-  ctx.lineWidth   = 1;
-  ctx.globalAlpha = 0.6;
   const gridSize = 100;
   let startX = Math.floor(camera.x / gridSize) * gridSize;
   let startY = Math.floor(camera.y / gridSize) * gridSize;
+
+  // 소격자선 (미세 사이언)
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.07)';
+  ctx.lineWidth   = 0.5;
   for (let x = startX; x < startX + width + gridSize; x += gridSize) {
     ctx.beginPath(); ctx.moveTo(x - camera.x, 0); ctx.lineTo(x - camera.x, height); ctx.stroke();
   }
   for (let y = startY; y < startY + height + gridSize; y += gridSize) {
     ctx.beginPath(); ctx.moveTo(0, y - camera.y); ctx.lineTo(width, y - camera.y); ctx.stroke();
   }
-  ctx.strokeStyle = 'rgba(255, 0, 127, 0.4)';
-  ctx.lineWidth   = 4;
-  ctx.globalAlpha = 1.0;
+
+  // 대격자선 (500 단위, 조금 더 밝게)
+  const majorGrid = 500;
+  let mx = Math.floor(camera.x / majorGrid) * majorGrid;
+  let my = Math.floor(camera.y / majorGrid) * majorGrid;
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.14)';
+  ctx.lineWidth   = 0.8;
+  for (let x = mx; x < mx + width + majorGrid; x += majorGrid) {
+    ctx.beginPath(); ctx.moveTo(x - camera.x, 0); ctx.lineTo(x - camera.x, height); ctx.stroke();
+  }
+  for (let y = my; y < my + height + majorGrid; y += majorGrid) {
+    ctx.beginPath(); ctx.moveTo(0, y - camera.y); ctx.lineTo(width, y - camera.y); ctx.stroke();
+  }
+
+  // 맵 경계 (네온 핑크 글로우)
+  ctx.shadowBlur  = 12; ctx.shadowColor = '#ff007f';
+  ctx.strokeStyle = 'rgba(255, 0, 127, 0.75)';
+  ctx.lineWidth   = 2.5;
   ctx.strokeRect(-camera.x, -camera.y, MAP_WIDTH, MAP_HEIGHT);
   ctx.restore();
 }
@@ -2194,6 +2281,24 @@ window.addEventListener('keydown', e => {
     if (rerollBtn && !rerollBtn.disabled) rerollBtn.click();
     return;
   }
+  // 개발자 모드 "7501" 버퍼 감지 (입력 필드 제외)
+  if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+    const digit = e.key;
+    if (digit >= '0' && digit <= '9') {
+      clearTimeout(devKeyTimer);
+      devKeyBuffer += digit;
+      if (devKeyBuffer.length > 4) devKeyBuffer = devKeyBuffer.slice(-4);
+      if (devKeyBuffer === '7501') {
+        devKeyBuffer = '';
+        toggleDevPanel();
+      } else {
+        devKeyTimer = setTimeout(() => { devKeyBuffer = ''; }, 2000);
+      }
+    } else {
+      devKeyBuffer = '';
+    }
+  }
+
   keys[e.key] = true;
   if (e.key === 'm' || e.key === 'M') toggleBGM();
 });
@@ -2305,7 +2410,24 @@ function gameLoop(time) {
 
   if (gameState === STATE_PLAYING || gameState === STATE_STAGE_CLEAR) update(dt);
 
-  draw();
+  draw(dt);
+
+  // 개발자 FPS 카운터
+  devFpsCount++;
+  if (time - devLastFpsTs >= 500) {
+    devCurrentFps = Math.round(devFpsCount * 1000 / (time - devLastFpsTs));
+    devFpsCount   = 0;
+    devLastFpsTs  = time;
+    if (devMode) {
+      const fpsEl = document.getElementById('dev-fps');
+      if (fpsEl) fpsEl.textContent = devCurrentFps;
+      const entEl = document.getElementById('dev-entity-count');
+      if (entEl) entEl.textContent = `E${enemies.length}/P${projectiles.length}/G${gems.length}`;
+      const stEl = document.getElementById('dev-stage-display');
+      if (stEl) stEl.textContent = currentStage ?? '--';
+    }
+  }
+
   requestAnimationFrame(gameLoop);
 }
 
@@ -2420,8 +2542,11 @@ function update(dt) {
 // ============================================================
 // 23. 그리기
 // ============================================================
-function draw() {
+function draw(dt) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 배경 (화면 공간, 흔들림 없음)
+  drawBackground(ctx, canvas.width, canvas.height, dt);
 
   // 화면 진동 적용
   ctx.save();
@@ -2472,6 +2597,9 @@ function draw() {
   ctx.restore(); // 화면 진동 해제
 
   if (player) drawMinimap(ctx);
+
+  // 비네트 오버레이 (화면 가장자리 어둡게)
+  drawVignette(ctx, canvas.width, canvas.height);
 }
 
 // ============================================================
@@ -3119,6 +3247,116 @@ function buildWeaponContributionList() {
   }
 
   if (c.innerHTML === '') c.innerHTML = '<p style="color:#64748b;font-size:0.9rem">기록된 공격 이력이 없습니다.</p>';
+}
+
+// ============================================================
+// ⚡ 개발자 모드 (비밀번호: 7501)
+// ============================================================
+function toggleDevPanel() {
+  devMode = !devMode;
+  const panel = document.getElementById('dev-panel');
+  if (panel) panel.classList.toggle('active', devMode);
+  if (devMode) { devLastFpsTs = performance.now(); devFpsCount = 0; }
+}
+
+function closeDevPanel() {
+  devMode = false;
+  document.getElementById('dev-panel')?.classList.remove('active');
+}
+
+function devToggleGodMode() {
+  devGodMode = !devGodMode;
+  const btn = document.getElementById('dev-godmode-btn');
+  if (btn) { btn.textContent = `🛡 무적: ${devGodMode ? 'ON ✓' : 'OFF'}`; btn.style.color = devGodMode ? '#39ff14' : ''; }
+  if (player) addFloatingText(player.x, player.y - 40, `GOD MODE ${devGodMode ? 'ON' : 'OFF'}`, '#39ff14', 14);
+}
+
+function devLevelUp() {
+  if (!player || gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
+  player.level++;
+  player.nextLevelXp = Math.floor(player.nextLevelXp * 1.35) + 8;
+  if (!levelUpInProgress) { levelUpInProgress = true; playLevelUpSound(); triggerLevelUpModal(); }
+  else pendingLevelUps++;
+}
+
+function devAddXP(amount) {
+  if (!player) return;
+  player.gainXp(amount);
+  addFloatingText(player.x, player.y - 40, `DEV +${amount} XP`, '#00f0ff', 13);
+}
+
+function devAddGold(amount) {
+  if (!player) return;
+  player.gold += amount;
+  addFloatingText(player.x, player.y - 40, `DEV +${amount} G`, '#ffe600', 13);
+}
+
+function devAddCores(amount) {
+  saveData.dataCores += amount;
+  saveSaveData();
+  updateMenuMetaBadge();
+  if (player) addFloatingText(player.x, player.y - 40, `DEV +${amount} 💾`, '#b026ff', 13);
+}
+
+function devKillAll() {
+  if (gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
+  const n = enemies.length;
+  for (let e of enemies) createExplosionParticles(e.x, e.y, e.color, 5);
+  enemies = [];
+  if (player) addFloatingText(player.x, player.y - 40, `DEV: 적 ${n}마리 제거`, '#ff4466', 13);
+}
+
+function devSpawnBoss() {
+  if (!player || gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
+  if (activeBoss) { if (player) addFloatingText(player.x, player.y-40,'보스 이미 존재','#ff4466',12); return; }
+  isBossStage = true; spawnBossEnemy();
+  addFloatingText(player.x, player.y - 40, 'DEV: 보스 소환!', '#ff0044', 14);
+}
+
+function devTriggerEvent() {
+  if (gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
+  if (activeFieldEvent) endFieldEvent();
+  activeFieldEvent = null;
+  triggerFieldEvent();
+}
+
+function devClearEvent() { if (activeFieldEvent) endFieldEvent(); }
+
+function devJumpStage() {
+  if (gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
+  const input  = document.getElementById('dev-stage-input');
+  const target = Math.max(1, Math.min(200, parseInt(input?.value) || 1));
+
+  document.getElementById('stage-bonus-modal')?.classList.remove('active');
+  document.getElementById('shop-modal')?.classList.remove('active');
+  document.getElementById('level-up-modal')?.classList.remove('active');
+  hideStageOverlay(); hideFieldEventBanner();
+
+  currentStage      = target;
+  stageKillProgress = 0;
+  enemies = []; projectiles = []; activeBoss = null;
+  isStageClearAnim  = false; levelUpInProgress = false; pendingLevelUps = 0;
+  activeFieldEvent  = null;
+  isEndlessMode     = target > 100;
+
+  if (target % 10 === 0) {
+    isBossStage = true; stageKillGoal = 0;
+    gameState   = STATE_PLAYING;
+    setTimeout(() => spawnBossEnemy(), 400);
+  } else {
+    isBossStage   = false;
+    stageKillGoal = getStageKillGoal(target);
+    gameState     = STATE_PLAYING;
+  }
+  if (player) addFloatingText(player.x, player.y - 50, `⚡ DEV JUMP → STAGE ${target}`, '#39ff14', 16);
+}
+
+function devResetSave() {
+  if (!confirm('⚠ 모든 저장 데이터를 초기화합니까?\n(메타 업그레이드, 업적, 최고기록 전부 삭제)')) return;
+  localStorage.removeItem(SAVE_KEY);
+  saveData = loadSaveData();
+  updateMenuMetaBadge();
+  alert('저장 초기화 완료');
 }
 
 // ============================================================
