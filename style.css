@@ -1732,6 +1732,170 @@ body {
   transform: translateY(-4px) !important;
 }
 
+/* ===== 설정 모달 ===== */
+.settings-panel {
+  min-width: 280px;
+  max-width: 380px;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.7rem;
+  background: rgba(0, 240, 255, 0.04);
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  border-radius: 6px;
+  gap: 1rem;
+}
+
+.settings-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.settings-btn {
+  white-space: nowrap;
+  min-width: 110px;
+  text-align: center;
+}
+
+/* ===== 초대 모드 모달 ===== */
+.invite-panel {
+  min-width: 290px;
+  max-width: 420px;
+}
+
+.beta-tag {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-family: 'Orbitron', monospace;
+  color: #ffe600;
+  border: 1px solid rgba(255, 230, 0, 0.5);
+  border-radius: 3px;
+  padding: 1px 5px;
+  vertical-align: middle;
+  margin-left: 6px;
+  letter-spacing: 0.05em;
+}
+
+.invite-beta-note {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-align: center;
+  margin: 0.5rem 0 0.9rem;
+  line-height: 1.5;
+}
+
+.cs-badge-beta {
+  background: rgba(255, 230, 0, 0.15) !important;
+  color: #ffe600 !important;
+  border-color: rgba(255, 230, 0, 0.4) !important;
+}
+
+.cs-invite {
+  border-color: rgba(176, 38, 255, 0.35) !important;
+}
+.cs-invite:hover {
+  border-color: #b026ff !important;
+  box-shadow: 0 0 16px rgba(176, 38, 255, 0.35) !important;
+}
+
+.invite-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.invite-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.invite-join-row {
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.invite-code-inp {
+  width: 130px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.invite-divider {
+  font-family: 'Rajdhani', sans-serif;
+  color: #475569;
+  font-size: 0.8rem;
+  text-align: center;
+  width: 100%;
+}
+
+.invite-room {
+  text-align: center;
+  padding: 0.3rem 0;
+}
+
+.room-code-box {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem;
+  color: #94a3b8;
+  margin-bottom: 0.4rem;
+}
+
+.room-code {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.4rem;
+  letter-spacing: 0.18em;
+  margin-left: 6px;
+}
+
+.mp-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.6rem 0;
+  min-height: 40px;
+  padding: 0.4rem 0.6rem;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(0,240,255,0.1);
+  border-radius: 6px;
+}
+
+.mp-player-item {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+
+.invite-room-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+
 /* ===== 개발자 패널 ===== */
 .dev-panel {
   position: fixed;

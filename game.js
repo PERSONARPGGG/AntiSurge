@@ -185,6 +185,18 @@ let devFpsCount   = 0;
 let devLastFpsTs  = 0;
 let devCurrentFps = 60;
 
+// ─── 멀티플레이어 (초대 모드 베타) ───
+let mpMode     = false;
+let mpIsHost   = false;
+let mpRoomCode = '';
+let mpMyId     = '';
+let mpMyColor  = '#00f0ff';
+let mpPlayers  = {};
+let mpChannel  = null;
+let mpSyncTimer = 0;
+const MP_SYNC_MS = 150;
+const MP_COLORS  = ['#00f0ff','#b026ff','#39ff14','#ff4466','#ffe600','#ff8800'];
+
 // 오브젝트 상한 (멀티 대비 성능 캡)
 const MAX_ENEMIES     = 120;
 const MAX_PROJECTILES = 200;
@@ -2609,6 +2621,9 @@ function update(dt) {
 
   // HUD 동기화
   updateHUD();
+
+  // MP 상태 동기화
+  if (mpMode) syncMpState(dt);
 }
 
 // ============================================================
@@ -2648,6 +2663,9 @@ function draw(dt) {
 
   player.draw(ctx, camera);
 
+  // MP 고스트 플레이어
+  if (mpMode) drawMultiplayerGhosts(ctx, camera);
+
   // 비트 윈도우 비주얼 — 플레이어 주위 펄스 링
   if (beatWindowActive && player) {
     const chainAlpha = Math.min(0.35 + beatChain * 0.06, 0.85);
@@ -2669,6 +2687,9 @@ function draw(dt) {
   ctx.restore(); // 화면 진동 해제
 
   if (player) drawMinimap(ctx);
+
+  // MP 스코어보드
+  if (mpMode) drawMpScoreboard(ctx, canvas.width, canvas.height);
 
   // 비네트 오버레이 (화면 가장자리 어둡게)
   drawVignette(ctx, canvas.width, canvas.height);
@@ -3338,10 +3359,7 @@ function toggleFullscreen() {
   if (btn) btn.textContent = fsEl ? '⛶' : '⛶';
 }
 
-document.addEventListener('fullscreenchange', () => {
-  const btn = document.getElementById('fullscreen-btn');
-  if (btn) btn.textContent = document.fullscreenElement ? '✕⛶' : '⛶';
-});
+document.addEventListener('fullscreenchange', () => {});
 
 // ============================================================
 // 결과 공유
@@ -3590,6 +3608,233 @@ function distToSegment(px, py, x1, y1, x2, y2) {
   if (l2 === 0) return dist(px, py, x1, y1);
   let t  = Math.max(0, Math.min(1, ((px-x1)*(x2-x1) + (py-y1)*(y2-y1)) / l2));
   return dist(px, py, x1 + t*(x2-x1), y1 + t*(y2-y1));
+}
+
+// ============================================================
+// ⚙ 설정 모달
+// ============================================================
+function openSettingsModal() {
+  const modal = document.getElementById('settings-modal');
+  if (modal) modal.classList.add('active');
+  const btn = document.getElementById('settings-mute-btn');
+  if (btn) btn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
+}
+
+function closeSettingsModal() {
+  const modal = document.getElementById('settings-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function settingsToggleMute() {
+  toggleBGM();
+  const btn = document.getElementById('settings-mute-btn');
+  if (btn) btn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
+}
+
+// ============================================================
+// 🎮 초대 모드 (BroadcastChannel 베타)
+// ============================================================
+function openInviteModal() {
+  const modal = document.getElementById('invite-modal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeInviteModal() {
+  const modal = document.getElementById('invite-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function mpGenCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function mpSetupChannel() {
+  if (mpChannel) mpChannel.close();
+  mpChannel = new BroadcastChannel('ns_room_' + mpRoomCode);
+  mpChannel.onmessage = mpHandleMsg;
+  mpMode = true;
+  mpPlayers[mpMyId] = {
+    x: 0, y: 0, hp: 100, maxHp: 100, level: 1, kills: 0,
+    color: mpMyColor, name: mpIsHost ? 'HOST' : 'PLAYER', lastUpdate: Date.now()
+  };
+  mpUpdatePlayerList();
+}
+
+function mpCreateRoom() {
+  mpRoomCode = mpGenCode();
+  mpMyId     = 'H_' + Date.now();
+  mpIsHost   = true;
+  mpMyColor  = MP_COLORS[0];
+  mpSetupChannel();
+  _mpShowRoom();
+}
+
+function mpJoinFromInput() {
+  const code = (document.getElementById('invite-code-input')?.value || '').trim().toUpperCase();
+  if (code.length !== 6) { alert('초대 코드는 6자리입니다.'); return; }
+  mpJoinRoom(code);
+}
+
+function mpJoinRoom(code) {
+  mpRoomCode = code;
+  mpMyId     = 'P_' + Date.now();
+  mpIsHost   = false;
+  mpMyColor  = MP_COLORS[1 + Math.floor(Math.random() * (MP_COLORS.length - 1))];
+  mpSetupChannel();
+  mpBroadcast({ type: 'join', id: mpMyId, color: mpMyColor, name: 'PLAYER' });
+  _mpShowRoom();
+}
+
+function mpHandleMsg(e) {
+  const msg = e.data;
+  if (!msg?.type) return;
+
+  if (msg.type === 'join') {
+    mpPlayers[msg.id] = { x: 0, y: 0, hp: 100, maxHp: 100, level: 1, kills: 0,
+      color: msg.color, name: msg.name || 'PLAYER', lastUpdate: Date.now() };
+    mpBroadcast({ type: 'join_ack', id: mpMyId, color: mpMyColor,
+      name: mpPlayers[mpMyId]?.name || 'HOST' });
+    mpUpdatePlayerList();
+  } else if (msg.type === 'join_ack') {
+    if (!mpPlayers[msg.id]) {
+      mpPlayers[msg.id] = { x: 0, y: 0, hp: 100, maxHp: 100, level: 1, kills: 0,
+        color: msg.color, name: msg.name || 'PLAYER', lastUpdate: Date.now() };
+      mpUpdatePlayerList();
+    }
+  } else if (msg.type === 'state') {
+    if (msg.id === mpMyId) return;
+    if (!mpPlayers[msg.id]) mpPlayers[msg.id] = { color: '#ffffff', name: 'PLAYER' };
+    Object.assign(mpPlayers[msg.id], msg.state, { lastUpdate: Date.now() });
+  } else if (msg.type === 'start') {
+    if (!mpIsHost) { closeInviteModal(); startGame(); }
+  } else if (msg.type === 'leave') {
+    delete mpPlayers[msg.id];
+    mpUpdatePlayerList();
+  }
+}
+
+function mpBroadcast(data) {
+  if (mpChannel) mpChannel.postMessage(data);
+}
+
+function _mpShowRoom() {
+  document.getElementById('invite-lobby').style.display = 'none';
+  document.getElementById('invite-room').style.display  = 'block';
+  document.getElementById('room-code-text').textContent = mpRoomCode;
+  mpUpdatePlayerList();
+}
+
+function mpUpdatePlayerList() {
+  const list = document.getElementById('mp-player-list');
+  if (!list) return;
+  const count = Object.keys(mpPlayers).length;
+  list.innerHTML = Object.entries(mpPlayers).map(([id, p]) =>
+    `<div class="mp-player-item" style="color:${p.color}">● ${(p.name||'P').slice(0,10)}${id === mpMyId ? ' (나)' : ''}</div>`
+  ).join('') || '<div class="mp-player-item" style="color:#475569">대기 중...</div>';
+  const startBtn = document.getElementById('mp-start-btn');
+  if (startBtn) startBtn.disabled = !mpIsHost || count < 2;
+}
+
+function mpStartGame() {
+  if (!mpIsHost) return;
+  mpBroadcast({ type: 'start' });
+  closeInviteModal();
+  startGame();
+}
+
+function mpLeaveRoom() {
+  mpBroadcast({ type: 'leave', id: mpMyId });
+  if (mpChannel) { mpChannel.close(); mpChannel = null; }
+  mpMode = false; mpIsHost = false; mpRoomCode = ''; mpMyId = ''; mpPlayers = {};
+  document.getElementById('invite-lobby').style.display = 'block';
+  document.getElementById('invite-room').style.display  = 'none';
+  const inp = document.getElementById('invite-code-input');
+  if (inp) inp.value = '';
+}
+
+function syncMpState(dt) {
+  if (!mpChannel || !player) return;
+  mpSyncTimer += dt;
+  if (mpSyncTimer < MP_SYNC_MS) return;
+  mpSyncTimer = 0;
+  const me = mpPlayers[mpMyId] || {};
+  me.x = player.x; me.y = player.y;
+  me.hp = player.hp; me.maxHp = player.maxHp;
+  me.level = player.level; me.kills = killCount;
+  me.color = mpMyColor; me.lastUpdate = Date.now();
+  mpPlayers[mpMyId] = me;
+  mpBroadcast({ type: 'state', id: mpMyId, state: {
+    x: player.x, y: player.y, hp: player.hp, maxHp: player.maxHp,
+    level: player.level, kills: killCount, color: mpMyColor, name: me.name || 'ME'
+  }});
+  const now = Date.now();
+  for (const id in mpPlayers) {
+    if (id !== mpMyId && mpPlayers[id].lastUpdate && now - mpPlayers[id].lastUpdate > 5000)
+      delete mpPlayers[id];
+  }
+}
+
+function drawMultiplayerGhosts(ctx, camera) {
+  for (const [id, p] of Object.entries(mpPlayers)) {
+    if (id === mpMyId) continue;
+    const sx = p.x - camera.x;
+    const sy = p.y - camera.y;
+    if (sx < -60 || sy < -60 || sx > canvas.width + 60 || sy > canvas.height + 60) continue;
+    ctx.save();
+    ctx.globalAlpha = 0.75;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 14, 0, Math.PI * 2);
+    ctx.fillStyle = p.color + '33';
+    ctx.fill();
+    ctx.strokeStyle = p.color;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = p.color;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 10px Orbitron, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = p.color;
+    ctx.shadowBlur = 6;
+    ctx.fillText((p.name || 'P').slice(0, 8), sx, sy - 20);
+    if (p.maxHp > 0) {
+      const bw = 28, bh = 3, ratio = Math.max(0, p.hp / p.maxHp);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(sx - bw / 2, sy + 17, bw, bh);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(sx - bw / 2, sy + 17, bw * ratio, bh);
+    }
+    ctx.restore();
+  }
+}
+
+function drawMpScoreboard(ctx, w, h) {
+  const entries = Object.entries(mpPlayers).sort((a, b) => b[1].kills - a[1].kills);
+  if (entries.length === 0) return;
+  const panelW = 160, rowH = 18, padX = 8, padY = 6;
+  const panelH = padY * 2 + rowH * (entries.length + 1);
+  const px = w - panelW - 10, py = 60;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillRect(px, py, panelW, panelH);
+  ctx.strokeStyle = 'rgba(0,240,255,0.25)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(px, py, panelW, panelH);
+  ctx.font = 'bold 9px Orbitron, monospace';
+  ctx.fillStyle = '#00f0ff';
+  ctx.textAlign = 'left';
+  ctx.fillText('PLAYERS', px + padX, py + padY + 8);
+  entries.forEach(([id, p], i) => {
+    ctx.fillStyle = p.color;
+    ctx.font = '9px Rajdhani, monospace';
+    const tag = id === mpMyId ? '▶' : '●';
+    ctx.fillText(
+      `${tag} ${(p.name || 'P').slice(0, 7).padEnd(7)}  Lv${p.level}  ${p.kills}K`,
+      px + padX, py + padY + rowH + rowH * i + 12
+    );
+  });
+  ctx.restore();
 }
 
 // 저장 데이터 로드 (스크립트 초기화 시)
