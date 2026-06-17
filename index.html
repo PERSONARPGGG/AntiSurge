@@ -12,6 +12,13 @@
 </head>
 <body>
 
+  <!-- 모바일 세로 경고 -->
+  <div class="landscape-hint">
+    <div style="font-size:2.5rem">📱↺</div>
+    <div>가로 모드로 회전해주세요</div>
+    <div style="font-size:0.7rem;color:#64748b">NEON SURVIVORS는 가로 모드에 최적화되어 있습니다</div>
+  </div>
+
   <!-- 메인 메뉴 화면 -->
   <div id="menu-screen" class="screen active">
     <div class="menu-content">
@@ -179,6 +186,15 @@
       </div>
     </div>
 
+    <!-- 필드 이벤트 배너 -->
+    <div id="field-event-banner" class="field-event-banner">
+      <span class="fev-icon">⚡</span>
+      <div class="fev-info">
+        <div class="fev-name">EVENT</div>
+        <div class="fev-desc"></div>
+      </div>
+    </div>
+
     <!-- 업적 팝업 -->
     <div id="achievement-popup" class="achievement-popup">
       <span class="ach-icon-el">🏆</span>
@@ -192,6 +208,7 @@
 
     <!-- 게임 캔버스 -->
     <canvas id="game-canvas"></canvas>
+    <div class="touch-hint">드래그: 이동</div>
 
     <!-- 콤보 표시 (플로팅) -->
     <div id="combo-display" class="combo-display">
@@ -263,6 +280,7 @@
       </div>
 
       <div id="cores-earned-row" class="cores-earned-row"></div>
+      <div id="best-record-row" class="best-record-row"></div>
 
       <div class="result-details">
         <h3>[ 업그레이드 이력 및 무기 기여도 ]</h3>

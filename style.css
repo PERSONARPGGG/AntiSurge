@@ -1426,3 +1426,108 @@ body {
   justify-content: center;
   margin-top: 0.8rem;
 }
+
+/* ===== 최고 기록 표시 ===== */
+.best-record-row {
+  text-align: center;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0.2rem 0 0.6rem;
+  padding: 0.3rem;
+  letter-spacing: 0.04em;
+}
+
+/* ===== 필드 이벤트 배너 ===== */
+.field-event-banner {
+  --fev-color: #00f0ff;
+  position: absolute;
+  top: 108px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(3, 3, 12, 0.95);
+  border: 1px solid var(--fev-color);
+  border-top: 3px solid var(--fev-color);
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 150;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+  min-width: 210px;
+  max-width: 340px;
+}
+.field-event-banner.active {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.fev-icon { font-size: 1.45rem; flex-shrink: 0; }
+.fev-info { flex: 1; min-width: 0; }
+.fev-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem; font-weight: 700;
+  color: var(--fev-color);
+  letter-spacing: 0.1em;
+}
+.fev-desc { font-size: 0.66rem; color: #cbd5e1; margin-top: 1px; }
+
+/* ===== 모바일 가로 지원 ===== */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  #hud { padding: 3px 7px; }
+  .hud-top { gap: 0.4rem; }
+  .hud-label { font-size: 0.48rem; }
+  #player-level, #stage-number, #kill-count, #gold-count, #game-timer { font-size: 0.82rem; }
+  .xp-bar-container { height: 3px; }
+  .stage-bar-row { gap: 3px; }
+  .hud-bottom { padding: 2px 6px; }
+  .hp-bar-outer { height: 9px; }
+  #hp-text { font-size: 0.52rem; }
+  .weapon-slot { width: 24px; height: 24px; font-size: 0.7rem; }
+  .passive-slot { width: 20px; height: 20px; font-size: 0.62rem; }
+  .boss-name-text { font-size: 0.62rem; }
+  .neon-title-sm { font-size: 1rem; }
+  .card-container { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .upgrade-card { min-width: 130px; padding: 0.5rem; }
+  .card-icon { font-size: 1.4rem; }
+  .card-name { font-size: 0.78rem; }
+  .card-desc { font-size: 0.63rem; }
+  .result-stats { grid-template-columns: repeat(4, 1fr); gap: 0.35rem; }
+  .stat-card { padding: 0.35rem; }
+  .stat-value { font-size: 0.95rem; }
+}
+
+/* 세로 모드 경고 (모바일) */
+.landscape-hint {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #050510;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #00f0ff;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  text-align: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+@media screen and (max-width: 600px) and (orientation: portrait) {
+  .landscape-hint { display: flex; }
+}
+
+/* 터치 조작 힌트 */
+.touch-hint {
+  position: absolute;
+  bottom: 145px;
+  left: 12px;
+  font-size: 0.58rem;
+  color: rgba(0, 240, 255, 0.3);
+  font-family: 'Orbitron', monospace;
+  pointer-events: none;
+  display: none;
+}
+@media (pointer: coarse) { .touch-hint { display: block; } }

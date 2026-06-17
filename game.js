@@ -98,9 +98,44 @@ let shopTimer = 0;
 let goldCoins = [];
 
 // 메타 / 업적
-let saveData            = { dataCores: 0, metaLevels: {}, achievements: [] };
+let saveData            = { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0 };
 let achieveCheckTimer   = 0;
 let levelUpSelectedIdx  = 0;
+
+// 오브젝트 상한 (멀티 대비 성능 캡)
+const MAX_ENEMIES     = 120;
+const MAX_PROJECTILES = 200;
+const MAX_PARTICLES   = 180;
+
+// ─── 리듬 비트 시스템 ───
+const BEAT_WINDOW_SEC  = 0.11;   // ±110ms 비트 윈도우
+let beatKickTimes      = [];     // 예약된 킥 오디오 타임스탬프
+let beatWindowActive   = false;
+let beatChain          = 0;      // 연속 비트 킬 카운트
+let beatChainTimer     = 0;
+const BEAT_CHAIN_DECAY = 4000;   // ms
+
+// ─── 랜덤 필드 이벤트 시스템 ───
+const FIELD_EVENTS = [
+  { id: 'core_surge',   icon: '💫', name: '코어 서지',    color: '#00f0ff', duration: 6000,
+    desc: 'XP 흡수량 3배! 젬을 최대한 수집하세요.' },
+  { id: 'virus_frenzy', icon: '⚡', name: '바이러스 광란', color: '#ff4400', duration: 9000,
+    desc: '모든 적 이동속도 1.7배! 살아남으세요.' },
+  { id: 'emf_pulse',    icon: '🔵', name: 'EMF 펄스',    color: '#39ff14', duration: 1200,
+    desc: '전자기 펄스 발사! 범위 내 적 2.5초 스턴.' },
+  { id: 'golden_rush',  icon: '💰', name: '골든 러쉬',   color: '#ffe600', duration: 7000,
+    desc: '황금의 시간! 모든 처치 시 골드 3배 드롭.' },
+  { id: 'data_storm',   icon: '🌪️', name: '데이터 폭풍',  color: '#b026ff', duration: 10000,
+    desc: '혼돈의 폭풍! 적들이 불규칙하게 이동합니다.' }
+];
+let fieldEventTimer    = 0;
+let fieldEventInterval = 40000 + Math.random() * 20000;
+let activeFieldEvent   = null;
+
+// ─── 모바일 터치 입력 ───
+let touchStartX = 0, touchStartY = 0;
+let touchDX = 0, touchDY = 0;
+let isTouching = false;
 
 // ============================================================
 // 3. 업그레이드 / 레어리티 상수
@@ -213,6 +248,9 @@ const SHOP_ITEMS = [
   { id: 'shop_reroll', icon: '🔄', name: '리롤 모듈',       desc: '레벨업 리롤 횟수 +2 추가',         cost: 20 },
   { id: 'shop_maxhp',  icon: '❤️', name: '코어 확장',       desc: '최대 HP +30 영구 증가 & 즉시 회복', cost: 22 }
 ];
+
+// 엘리트 몬스터 이름 (스테이지 8+부터 등장)
+const ELITE_NAMES = ['ELITE-α', 'ELITE-β', 'ELITE-Γ', 'ELITE-Δ', 'ELITE-Ω'];
 
 // 보스 이름 테이블
 const BOSS_NAMES = [
@@ -392,6 +430,8 @@ function bgmPlayKick(t) {
   g.gain.setValueAtTime(0.85, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
   osc.start(t); osc.stop(t + 0.2);
+  // 비트 시스템: 킥 타임스탬프 기록
+  beatKickTimes.push(t);
 }
 
 function bgmPlaySnare(t) {
@@ -535,7 +575,10 @@ class Player {
     if (keys['s'] || keys['S'] || keys['ArrowDown'])  dy += 1;
     if (keys['a'] || keys['A'] || keys['ArrowLeft'])  dx -= 1;
     if (keys['d'] || keys['D'] || keys['ArrowRight']) dx += 1;
-    if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+    // 모바일 터치 입력 병합
+    if (isTouching && (Math.abs(touchDX) > 0.05 || Math.abs(touchDY) > 0.05)) {
+      dx = touchDX; dy = touchDY;
+    } else if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
 
     let spd = this.speed * (this.surgeTimer > 0 ? 2.0 : 1.0);
     this.x += dx * spd * (dt / 16.66);
@@ -670,6 +713,7 @@ class FlareWeapon extends BaseWeapon {
   }
   fire() {
     if (enemies.length === 0 && !activeBoss) return;
+    if (projectiles.length >= MAX_PROJECTILES) return;
     let targets = [...enemies];
     if (activeBoss) targets.push(activeBoss);
     let target = null, minDist = Infinity;
@@ -939,6 +983,8 @@ class Enemy {
   constructor(x, y, type) {
     this.x = x; this.y = y; this.type = type;
     this.speedMultiplier = 1.0;
+    this.stunTimer = 0;
+    this.stormDX = 0; this.stormDY = 0; this.stormTimer = 0;
     switch (type) {
       case 'swarm':
         this.radius = 12; this.color = '#00ff66'; this.baseSpeed = 1.6;
@@ -949,6 +995,12 @@ class Enemy {
       case 'bruiser':
         this.radius = 22; this.color = '#ff007f'; this.baseSpeed = 0.9;
         this.hp = 85; this.maxHp = 85; this.damage = 18; this.xpValue = 6; break;
+      case 'elite':
+        this.radius = 18; this.color = '#ff6600'; this.baseSpeed = 2.1;
+        this.hp = 140; this.maxHp = 140; this.damage = 20; this.xpValue = 12;
+        this.isElite = true;
+        this.eliteName = ELITE_NAMES[Math.floor(Math.random() * ELITE_NAMES.length)];
+        break;
     }
     // 스테이지 스케일링 적용
     let s = getEnemyStageScale();
@@ -962,10 +1014,33 @@ class Enemy {
 
   update(dt) {
     if (!player) return;
+    // 스턴 처리
+    if (this.stunTimer > 0) {
+      this.stunTimer -= dt;
+      this.flashTimer = 60;
+      return;
+    }
+    // 데이터 폭풍: 불규칙 이동
+    if (activeFieldEvent?.id === 'data_storm') {
+      this.stormTimer -= dt;
+      if (this.stormTimer <= 0) {
+        const a = Math.random() * Math.PI * 2;
+        this.stormDX = Math.cos(a); this.stormDY = Math.sin(a);
+        this.stormTimer = 600 + Math.random() * 800;
+      }
+      let spd = this.baseSpeed * 1.1 * this.speedMultiplier;
+      this.x += this.stormDX * spd * (dt / 16.66);
+      this.y += this.stormDY * spd * (dt / 16.66);
+      this.speedMultiplier = 1.0;
+      if (this.flashTimer > 0) this.flashTimer -= dt;
+      return;
+    }
     let dx = player.x - this.x, dy = player.y - this.y;
     let d  = Math.sqrt(dx*dx + dy*dy);
     if (d > 0) { dx /= d; dy /= d; }
     let spd = this.baseSpeed * this.speedMultiplier;
+    // 바이러스 광란 이벤트
+    if (activeFieldEvent?.id === 'virus_frenzy') spd *= 1.7;
     this.x += dx * spd * (dt / 16.66);
     this.y += dy * spd * (dt / 16.66);
     this.speedMultiplier = 1.0;
@@ -974,19 +1049,32 @@ class Enemy {
 
   draw(ctx, camera) {
     ctx.save();
-    if (this.type === 'bruiser' || this.flashTimer > 0) {
-      ctx.shadowBlur = 10; ctx.shadowColor = this.color;
-    }
+    const showGlow = this.type === 'bruiser' || this.type === 'elite' || this.flashTimer > 0;
+    if (showGlow) { ctx.shadowBlur = this.isElite ? 18 : 10; ctx.shadowColor = this.color; }
     ctx.fillStyle = this.flashTimer > 0 ? '#ffffff' : this.color;
     ctx.beginPath();
     ctx.arc(this.x - camera.x, this.y - camera.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = this.isElite ? '#ffaa00' : '#ffffff';
+    ctx.lineWidth = this.isElite ? 2 : 1; ctx.stroke();
+    // 엘리트: 외곽 링 + 이름
+    if (this.isElite) {
+      ctx.strokeStyle = 'rgba(255,102,0,0.4)'; ctx.lineWidth = 1;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath();
+      ctx.arc(this.x - camera.x, this.y - camera.y, this.radius + 7, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ffaa00'; ctx.font = 'bold 7px Orbitron, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.eliteName, this.x - camera.x, this.y - camera.y - this.radius - 12);
+    }
     if (this.hp < this.maxHp && this.hp > 0) {
       let bw = this.radius * 1.6, bh = 3;
       let bx = this.x - camera.x - bw/2, by = this.y - camera.y - this.radius - 8;
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = '#ff0000'; ctx.fillRect(bx, by, bw * (this.hp / this.maxHp), bh);
+      ctx.fillStyle = this.isElite ? '#ff6600' : '#ff0000';
+      ctx.fillRect(bx, by, bw * (this.hp / this.maxHp), bh);
     }
     ctx.restore();
   }
@@ -1007,30 +1095,45 @@ class Enemy {
   die(sourceKey) {
     if (this.dead) return;
     this.dead = true;
-    createExplosionParticles(this.x, this.y, this.color, 12);
+    createExplosionParticles(this.x, this.y, this.color, this.isElite ? 20 : 12);
     playEnemyExplosionSound();
     if (weaponStats[sourceKey]) weaponStats[sourceKey].kills++;
-    gems.push(new Gem(this.x, this.y, this.xpValue));
+
+    // 리듬 비트 시스템: 비트 윈도우 안에 처치하면 XP 보너스
+    if (beatWindowActive) {
+      beatChain++;
+      beatChainTimer = BEAT_CHAIN_DECAY;
+      const beatMult = Math.min(1.0 + beatChain * 0.25, 4.0);
+      gems.push(new Gem(this.x, this.y, Math.ceil(this.xpValue * beatMult)));
+      addFloatingText(this.x, this.y - this.radius - 14,
+        `♪ BEAT! x${beatMult.toFixed(1)}`, '#ffe600', beatChain >= 5 ? 15 : 12);
+      createBeatParticles(this.x, this.y);
+    } else {
+      gems.push(new Gem(this.x, this.y, this.xpValue));
+    }
 
     // 스테이지 킬 진행
     stageKillProgress++;
     onEnemyKilled();
     checkStageProgress();
 
-    // 필드 아이템 드롭 (bruiser 12%, rusher 4%, swarm 2%)
-    let dropChance = this.type === 'bruiser' ? 0.12 : this.type === 'rusher' ? 0.04 : 0.02;
+    // 필드 아이템 드롭 (elite 20%, bruiser 12%, rusher 4%, swarm 2%)
+    let dropChance = this.isElite ? 0.20 : this.type === 'bruiser' ? 0.12 : this.type === 'rusher' ? 0.04 : 0.02;
     if (Math.random() < dropChance && fieldItems.length < 8) {
       let dropTypes = ['health', 'health', 'magnet', 'surge'];
       let dropType  = dropTypes[Math.floor(Math.random() * dropTypes.length)];
       fieldItems.push(new FieldItem(this.x, this.y, dropType));
     }
 
-    // 골드 드롭
+    // 골드 드롭 (골든 러쉬 이벤트 중엔 3배 + 항상 드롭)
+    let goldMult = activeFieldEvent?.id === 'golden_rush' ? 3 : 1;
     let goldAmt = 0;
-    if      (this.type === 'bruiser') goldAmt = 2 + Math.floor(Math.random() * 3);
+    if (this.isElite) goldAmt = 4 + Math.floor(Math.random() * 4);
+    else if (this.type === 'bruiser') goldAmt = 2 + Math.floor(Math.random() * 3);
+    else if (activeFieldEvent?.id === 'golden_rush') goldAmt = 1;
     else if (this.type === 'rusher'  && Math.random() < 0.4) goldAmt = 1 + (Math.random() < 0.3 ? 1 : 0);
     else if (this.type === 'swarm'   && Math.random() < 0.2) goldAmt = 1;
-    if (goldAmt > 0) spawnGoldCoins(this.x, this.y, goldAmt);
+    if (goldAmt > 0) spawnGoldCoins(this.x, this.y, Math.ceil(goldAmt * goldMult));
 
     let idx = enemies.indexOf(this);
     if (idx !== -1) enemies.splice(idx, 1);
@@ -1451,10 +1554,20 @@ class Particle {
 }
 
 function createExplosionParticles(x, y, color, count) {
-  for (let i = 0; i < count; i++) {
+  const allowed = Math.min(count, MAX_PARTICLES - particles.length);
+  for (let i = 0; i < allowed; i++) {
     let speed = 1.0 + Math.random() * 3.5;
     let angle = Math.random() * Math.PI * 2;
     particles.push(new Particle(x, y, Math.cos(angle)*speed, Math.sin(angle)*speed, color, 250 + Math.random()*250));
+  }
+}
+
+function createBeatParticles(x, y) {
+  if (particles.length >= MAX_PARTICLES - 8) return;
+  for (let i = 0; i < 8; i++) {
+    let speed = 1.5 + Math.random() * 3;
+    let angle = Math.random() * Math.PI * 2;
+    particles.push(new Particle(x, y, Math.cos(angle)*speed, Math.sin(angle)*speed, '#ffe600', 300 + Math.random()*150));
   }
 }
 function createDamageOverlayParticles(x, y) {
@@ -1647,11 +1760,11 @@ function getXpMultiplier() {
   return 2.5;
 }
 
-// 초반 경험치 버프 (스테이지 10 이하)
+// 초반 경험치 버프 (스테이지 10 이하) — 너무 강하지 않게 조정
 function getEarlyGameXpMult() {
-  if (currentStage <= 3)  return 2.5;
-  if (currentStage <= 6)  return 2.0;
-  if (currentStage <= 10) return 1.5;
+  if (currentStage <= 3)  return 1.7;
+  if (currentStage <= 6)  return 1.4;
+  if (currentStage <= 10) return 1.2;
   return 1.0;
 }
 
@@ -1661,14 +1774,17 @@ function getEarlyGameXpMult() {
 function loadSaveData() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return { dataCores: 0, metaLevels: {}, achievements: [] };
+    if (!raw) return { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0 };
     const d = JSON.parse(raw);
     return {
       dataCores:    d.dataCores    || 0,
       metaLevels:   d.metaLevels   || {},
-      achievements: d.achievements || []
+      achievements: d.achievements || [],
+      bestKills:    d.bestKills    || 0,
+      bestStage:    d.bestStage    || 0,
+      bestTime:     d.bestTime     || 0
     };
-  } catch(e) { return { dataCores: 0, metaLevels: {}, achievements: [] }; }
+  } catch(e) { return { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0 }; }
 }
 
 function saveSaveData() {
@@ -1869,10 +1985,11 @@ function updateEnemySpawning(dt) {
 }
 
 function spawnEnemyPack() {
-  if (!player) return;
+  if (!player || enemies.length >= MAX_ENEMIES) return;
   let count = 1 + Math.floor(Math.random() * 2);
   if (gameTime > 120 || currentStage > 5)  count += 1;
   if (gameTime > 240 || currentStage > 15) count += 2;
+  count = Math.min(count, MAX_ENEMIES - enemies.length);
 
   for (let i = 0; i < count; i++) {
     let angle = Math.random() * Math.PI * 2;
@@ -1882,7 +1999,12 @@ function spawnEnemyPack() {
 
     let type = 'swarm';
     let rand = Math.random();
-    if (gameTime > 180 || currentStage > 10) {
+
+    // 엘리트 몬스터: 스테이지 8+ 부터 등장, 스테이지 높을수록 빈도 증가
+    const eliteChance = Math.min((currentStage - 8) * 0.007, 0.15);
+    if (currentStage >= 8 && Math.random() < eliteChance) {
+      type = 'elite';
+    } else if (gameTime > 180 || currentStage > 10) {
       if (rand < 0.25) type = 'bruiser';
       else if (rand < 0.55) type = 'rusher';
     } else if (gameTime > 60 || currentStage > 3) {
@@ -2000,6 +2122,13 @@ window.addEventListener('keydown', e => {
       }
     }
   }
+  // R키: 레벨업 모달에서 리롤
+  if (gameState === STATE_LEVEL_UP && (e.key === 'r' || e.key === 'R')) {
+    e.preventDefault();
+    const rerollBtn = document.getElementById('reroll-btn');
+    if (rerollBtn && !rerollBtn.disabled) rerollBtn.click();
+    return;
+  }
   keys[e.key] = true;
   if (e.key === 'm' || e.key === 'M') toggleBGM();
 });
@@ -2071,6 +2200,12 @@ function startGame() {
   goldCoins         = [];
   achieveCheckTimer = 0;
   rerollUses        = (CLASS_DEFS[selectedClass] || CLASS_DEFS.hacker).rerolls;
+  // 비트/이벤트 리셋
+  beatKickTimes    = []; beatWindowActive = false; beatChain = 0; beatChainTimer = 0;
+  activeFieldEvent = null;
+  fieldEventTimer  = 0;
+  fieldEventInterval = 40000 + Math.random() * 20000;
+  touchDX = 0; touchDY = 0; isTouching = false;
   enemySpawnTimer   = 0;
   hideComboDisplay();
   hideStageOverlay();
@@ -2184,6 +2319,31 @@ function update(dt) {
   // 화면 진동
   updateScreenShake(dt);
 
+  // 리듬 비트 윈도우 갱신
+  if (audioCtx) {
+    const now = audioCtx.currentTime;
+    beatKickTimes    = beatKickTimes.filter(t => t > now - 0.35);
+    beatWindowActive = beatKickTimes.some(t => Math.abs(t - now) < BEAT_WINDOW_SEC);
+  }
+  if (beatChain > 0) {
+    beatChainTimer -= dt;
+    if (beatChainTimer <= 0) { beatChain = 0; }
+  }
+
+  // 랜덤 필드 이벤트 타이머
+  if (!isBossStage && !isStageClearAnim) {
+    fieldEventTimer += dt;
+    if (fieldEventTimer >= fieldEventInterval) {
+      fieldEventTimer    = 0;
+      fieldEventInterval = 40000 + Math.random() * 20000;
+      triggerFieldEvent();
+    }
+    if (activeFieldEvent) {
+      activeFieldEvent.remaining -= dt;
+      if (activeFieldEvent.remaining <= 0) endFieldEvent();
+    }
+  }
+
   // HUD 동기화
   updateHUD();
 }
@@ -2221,6 +2381,21 @@ function draw() {
   for (let coin of goldCoins)  coin.draw(ctx, camera);
 
   player.draw(ctx, camera);
+
+  // 비트 윈도우 비주얼 — 플레이어 주위 펄스 링
+  if (beatWindowActive && player) {
+    const chainAlpha = Math.min(0.35 + beatChain * 0.06, 0.85);
+    const ringR = player.radius + 14 + beatChain * 2;
+    ctx.save();
+    ctx.strokeStyle = `rgba(255, 230, 0, ${chainAlpha})`;
+    ctx.lineWidth   = beatChain >= 3 ? 2.5 : 1.8;
+    ctx.shadowBlur  = 18;
+    ctx.shadowColor = '#ffe600';
+    ctx.beginPath();
+    ctx.arc(player.x - camera.x, player.y - camera.y, ringR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // 플로팅 텍스트
   for (let ft of floatingTexts) ft.draw(ctx, camera);
@@ -2801,6 +2976,19 @@ function endGame(isVictory) {
   const coresEl = document.getElementById('cores-earned-row');
   if (coresEl) coresEl.textContent = `💾 데이터 코어 획득: +${coresEarned}  (보유: ${saveData.dataCores})`;
 
+  // 최고 기록 갱신 체크
+  let isNewRecord = false;
+  if (killCount > saveData.bestKills) { saveData.bestKills = killCount; isNewRecord = true; }
+  if (currentStage > saveData.bestStage) { saveData.bestStage = currentStage; isNewRecord = true; }
+  if (gameTime > saveData.bestTime) { saveData.bestTime = gameTime; }
+  if (isNewRecord) saveSaveData();
+  const bestEl = document.getElementById('best-record-row');
+  if (bestEl) {
+    const bm = Math.floor(saveData.bestTime / 60), bs = saveData.bestTime % 60;
+    bestEl.textContent = `🏆 최고 기록 — STAGE ${saveData.bestStage} · ${saveData.bestKills}마리 · ${bm.toString().padStart(2,'0')}:${bs.toString().padStart(2,'0')}`;
+    bestEl.style.color = isNewRecord ? '#ffe600' : '#94a3b8';
+  }
+
   buildWeaponContributionList();
 }
 
@@ -2830,7 +3018,101 @@ function buildWeaponContributionList() {
 }
 
 // ============================================================
-// 27. 유틸리티
+// 27. 랜덤 필드 이벤트
+// ============================================================
+function triggerFieldEvent() {
+  if (activeFieldEvent) return;
+  const ev = FIELD_EVENTS[Math.floor(Math.random() * FIELD_EVENTS.length)];
+  activeFieldEvent = { ...ev, remaining: ev.duration || 1200 };
+
+  // 즉발 효과: EMF 펄스
+  if (ev.id === 'emf_pulse' && player) {
+    const stunRange = 480;
+    for (let e of enemies) {
+      if (dist(player.x, player.y, e.x, e.y) < stunRange) e.stunTimer = 2500;
+    }
+    if (activeBoss) activeBoss.stunTimer = 1500;
+    createExplosionParticles(player.x, player.y, '#39ff14', 25);
+    triggerScreenShake(7, 400);
+    playSynthSound([120, 600, 40], 0.25, 'sawtooth', 0.1);
+  }
+
+  // 이벤트 배너 표시
+  showFieldEventBanner(ev);
+  playSynthSound([400, 600, 500], 0.12, 'triangle', 0.07);
+}
+
+function endFieldEvent() {
+  if (!activeFieldEvent) return;
+  addFloatingText(player ? player.x : MAP_WIDTH/2, player ? player.y - 50 : MAP_HEIGHT/2,
+    `${activeFieldEvent.icon} 이벤트 종료`, '#94a3b8', 12);
+  activeFieldEvent = null;
+  hideFieldEventBanner();
+}
+
+function showFieldEventBanner(ev) {
+  const el = document.getElementById('field-event-banner');
+  if (!el) return;
+  el.querySelector('.fev-icon').textContent  = ev.icon;
+  el.querySelector('.fev-name').textContent  = ev.name;
+  el.querySelector('.fev-desc').textContent  = ev.desc;
+  el.style.borderColor = ev.color;
+  el.style.setProperty('--fev-color', ev.color);
+  el.classList.add('active');
+  if (ev.duration > 1200) {
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(hideFieldEventBanner, ev.duration);
+  } else {
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(hideFieldEventBanner, 2000);
+  }
+}
+
+function hideFieldEventBanner() {
+  const el = document.getElementById('field-event-banner');
+  if (el) el.classList.remove('active');
+}
+
+// ============================================================
+// 28. 모바일 터치 조작
+// ============================================================
+function initTouchControls() {
+  const canvas = document.getElementById('game-canvas');
+  if (!canvas) return;
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (gameState !== STATE_PLAYING && gameState !== STATE_STAGE_CLEAR) return;
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    touchDX = 0; touchDY = 0;
+    isTouching = true;
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isTouching) return;
+    const t = e.touches[0];
+    let dx = t.clientX - touchStartX;
+    let dy = t.clientY - touchStartY;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const deadzone = 12;
+    if (len < deadzone) { touchDX = 0; touchDY = 0; return; }
+    const maxDist = 80;
+    const clamped = Math.min(len, maxDist) / maxDist;
+    touchDX = (dx / len) * clamped;
+    touchDY = (dy / len) * clamped;
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    isTouching = false; touchDX = 0; touchDY = 0;
+  }, { passive: false });
+}
+
+// ============================================================
+// 유틸리티
 // ============================================================
 function dist(x1, y1, x2, y2) {
   return Math.sqrt((x2-x1)**2 + (y2-y1)**2);
@@ -2846,3 +3128,6 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 // 저장 데이터 로드 (스크립트 초기화 시)
 saveData = loadSaveData();
 updateMenuMetaBadge();
+
+// 터치 컨트롤 초기화
+initTouchControls();
