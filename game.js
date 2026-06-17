@@ -1910,7 +1910,7 @@ function gameLoop(time) {
   if (dt > 100) dt = 16.66;
   lastTime = time;
 
-  if (gameState === STATE_PLAYING) update(dt);
+  if (gameState === STATE_PLAYING || gameState === STATE_STAGE_CLEAR) update(dt);
 
   draw();
   requestAnimationFrame(gameLoop);
@@ -2033,6 +2033,124 @@ function draw() {
   for (let ft of floatingTexts) ft.draw(ctx, camera);
 
   ctx.restore(); // 화면 진동 해제
+
+  if (player) drawMinimap(ctx);
+}
+
+// ============================================================
+// 미니맵
+// ============================================================
+function drawMinimap(ctx) {
+  const SIZE  = 130;
+  const PAD   = 12;
+  const mx    = canvas.width  - SIZE - PAD;
+  const my    = canvas.height - SIZE - PAD;
+  const scaleX = SIZE / MAP_WIDTH;
+  const scaleY = SIZE / MAP_HEIGHT;
+
+  ctx.save();
+
+  // 배경 + 테두리
+  const mmRect = (x, y, w, h, r) => {
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); }
+    else { ctx.rect(x, y, w, h); }
+  };
+
+  ctx.globalAlpha = 0.82;
+  ctx.fillStyle   = 'rgba(3, 3, 12, 0.9)';
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.45)';
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath(); mmRect(mx, my, SIZE, SIZE, 5); ctx.fill(); ctx.stroke();
+  ctx.globalAlpha = 1.0;
+
+  // 라벨
+  ctx.font      = 'bold 7px Orbitron, monospace';
+  ctx.fillStyle = 'rgba(0, 240, 255, 0.55)';
+  ctx.textAlign = 'left';
+  ctx.fillText('RADAR', mx + 5, my + 10);
+
+  // 클립 영역
+  ctx.beginPath(); mmRect(mx, my, SIZE, SIZE, 5); ctx.clip();
+
+  // 격자선
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.07)';
+  ctx.lineWidth   = 0.5;
+  for (let i = 1; i < 5; i++) {
+    const g = SIZE / 5 * i;
+    ctx.beginPath(); ctx.moveTo(mx + g, my); ctx.lineTo(mx + g, my + SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx, my + g); ctx.lineTo(mx + SIZE, my + g); ctx.stroke();
+  }
+
+  // 젬 (최대 40개, 작은 점)
+  ctx.fillStyle = 'rgba(0, 240, 255, 0.35)';
+  const gemLimit = Math.min(gems.length, 40);
+  for (let i = 0; i < gemLimit; i++) {
+    ctx.beginPath();
+    ctx.arc(mx + gems[i].x * scaleX, my + gems[i].y * scaleY, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 골드 코인
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+  for (const c of goldCoins) {
+    ctx.beginPath();
+    ctx.arc(mx + c.x * scaleX, my + c.y * scaleY, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 필드 아이템
+  for (const item of fieldItems) {
+    ctx.fillStyle   = item.color;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.arc(mx + item.x * scaleX, my + item.y * scaleY, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+  }
+
+  // 일반 적
+  for (const e of enemies) {
+    const r = e.type === 'bruiser' ? 2.5 : 1.5;
+    ctx.fillStyle = e.type === 'bruiser' ? '#ff007f' : '#ff3040';
+    ctx.beginPath();
+    ctx.arc(mx + e.x * scaleX, my + e.y * scaleY, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 보스 (펄스)
+  if (activeBoss) {
+    const pulse = (Math.sin(Date.now() * 0.007) + 1) * 0.5;
+    ctx.shadowBlur  = 8;
+    ctx.shadowColor = '#ff0044';
+    ctx.fillStyle   = `rgba(255, ${Math.floor(60 + pulse * 140)}, 0, 1)`;
+    ctx.beginPath();
+    ctx.arc(mx + activeBoss.x * scaleX, my + activeBoss.y * scaleY, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // 카메라 뷰포트 영역 표시
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
+  ctx.lineWidth   = 0.8;
+  ctx.strokeRect(
+    mx + camera.x * scaleX,
+    my + camera.y * scaleY,
+    camera.width  * scaleX,
+    camera.height * scaleY
+  );
+
+  // 플레이어 (흰 테두리 + 파랑 점)
+  const px = mx + player.x * scaleX;
+  const py = my + player.y * scaleY;
+  ctx.shadowBlur  = 10;
+  ctx.shadowColor = '#00f0ff';
+  ctx.fillStyle   = '#00f0ff';
+  ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(px, py, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
 }
 
 // ============================================================
