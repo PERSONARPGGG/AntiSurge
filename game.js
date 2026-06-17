@@ -302,6 +302,20 @@ const LEGENDARY_POOL = [
   { id: 'leg_overclock', name: '초과전압 폭주',      icon: '⚡', desc: '전체 딜 +50%, 이동속도 +25%' }
 ];
 
+// 에픽 부활 퍽 풀
+const REVIVAL_EPICS = [
+  { id: 'rev_restore',   icon: '💾', name: '데이터 복원',   desc: '사망 시 HP 30%로 즉시 부활 (런당 1회)' },
+  { id: 'rev_backup',    icon: '🔄', name: '긴급 백업',     desc: 'HP 15% 이하 시 자동으로 50% 즉시 회복 (런당 1회)' },
+  { id: 'rev_laststand', icon: '🛡', name: '최후의 방어막', desc: 'HP 0 도달 시 실드 4초 + HP 20% 회복 (런당 2회)' },
+  { id: 'rev_counter',   icon: '💥', name: '절명 반격',     desc: 'HP 0 도달 시 주변 적 전체 200 피해 후 HP 30% 회복 (1회)' },
+  { id: 'rev_void',      icon: '🌀', name: '공허의 각성',   desc: 'HP 0 도달 시 8초간 무적 + 피해 2.5배 돌입 (1회)' }
+];
+
+// 스테이지 클리어 시 젬 자석 플래그
+let stageGemMagnet = false;
+// 상점 키보드 포커스
+let shopFocusIdx = 0;
+
 // 필드 아이템 타입
 const FIELD_ITEM_TYPES = {
   health:  { icon: '💊', color: '#ff4466', name: '회복 팩',    effect: 'HP +40 즉시 회복' },
@@ -699,6 +713,12 @@ class Player {
     // 골드
     this.gold = 0;
 
+    // 부활 퍽
+    this.revivals     = { restore: false, backup: false, lastStand: 0, counter: false, void: false };
+    this.voidActive   = false;
+    this.voidTimer    = 0;
+    this._voidDmgMult = 1;
+
     this.weapons = {
       flare:     new FlareWeapon(this),
       orbiter:   new OrbiterWeapon(this),
@@ -750,6 +770,28 @@ class Player {
       }
     } else {
       this.regenTimer = 0;
+    }
+
+    // 부활 퍽: 긴급 백업 (HP 임계값 체크)
+    if (this.revivals.backup && this.hp > 0 && this.hp <= this.maxHp * 0.15) {
+      this.revivals.backup = false;
+      this.hp = Math.ceil(this.maxHp * 0.50);
+      addFloatingText(this.x, this.y - 50, '🔄 긴급 백업!', '#ffe600', 18);
+      createExplosionParticles(this.x, this.y, '#ffe600', 15);
+    }
+    // 부활 퍽: 공허의 각성 타이머
+    if (this.voidActive) {
+      this.voidTimer -= dt;
+      // 공허 활성 중 시각 효과
+      if (Math.random() < 0.08) createExplosionParticles(this.x + (Math.random()-0.5)*40, this.y + (Math.random()-0.5)*40, '#b026ff', 2);
+      if (this.voidTimer <= 0) {
+        this.voidActive = false;
+        this.damageMultiplier /= (this._voidDmgMult || 2.5);
+        this._voidDmgMult = 1;
+        this.hp = Math.max(1, this.hp - Math.floor(this.maxHp * 0.5));
+        addFloatingText(this.x, this.y - 40, '공허 종료', '#b026ff', 14);
+        triggerScreenShake(8, 400);
+      }
     }
 
     // 패시브: 복수의 가시 (피격 지연 처리)
@@ -844,7 +886,49 @@ class Player {
     playHitSound();
     createDamageOverlayParticles(this.x, this.y);
     triggerScreenShake(5, 250);
-    if (this.hp <= 0) { this.hp = 0; endGame(false); }
+    if (this.hp <= 0) {
+      this.hp = 0;
+      // 공허 활성 중: 1HP 유지
+      if (this.voidActive) { this.hp = 1; return; }
+      // 부활 퍽 우선순위 체크
+      if (this.revivals.void) {
+        this.revivals.void = false;
+        this.voidActive = true; this.voidTimer = 8000;
+        this._voidDmgMult = 2.5; this.damageMultiplier *= 2.5;
+        this.hp = 1;
+        addFloatingText(this.x, this.y - 50, '🌀 공허의 각성!', '#b026ff', 20);
+        triggerScreenShake(15, 600);
+        createExplosionParticles(this.x, this.y, '#b026ff', 25);
+        return;
+      }
+      if (this.revivals.lastStand > 0) {
+        this.revivals.lastStand--;
+        this.hp = Math.ceil(this.maxHp * 0.20);
+        this.shieldTimer = 4000;
+        addFloatingText(this.x, this.y - 50, '🛡 최후의 방어막!', '#00f0ff', 20);
+        triggerScreenShake(10, 400);
+        createExplosionParticles(this.x, this.y, '#00f0ff', 15);
+        return;
+      }
+      if (this.revivals.counter) {
+        this.revivals.counter = false;
+        this.hp = Math.ceil(this.maxHp * 0.30);
+        const allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+        for (let e of allT) { if (dist(this.x, this.y, e.x, e.y) < 500 && e.takeDamage(200, 'counter')) killCount++; }
+        addFloatingText(this.x, this.y - 50, '💥 절명 반격!', '#ff4466', 20);
+        createExplosionParticles(this.x, this.y, '#ff4466', 30);
+        triggerScreenShake(20, 600);
+        return;
+      }
+      if (this.revivals.restore) {
+        this.revivals.restore = false;
+        this.hp = Math.ceil(this.maxHp * 0.30);
+        addFloatingText(this.x, this.y - 50, '💾 데이터 복원!', '#39ff14', 20);
+        createExplosionParticles(this.x, this.y, '#39ff14', 15);
+        return;
+      }
+      endGame(false);
+    }
   }
 }
 
@@ -1761,11 +1845,13 @@ class Gem {
       if (idx !== -1) gems.splice(idx, 1);
       return;
     }
-    if (this.isAttracted || d < player.magnetRadius) {
+    if (stageGemMagnet || this.isAttracted || d < player.magnetRadius) {
       this.isAttracted = true;
       let dx = player.x - this.x, dy = player.y - this.y;
       if (d > 0) { dx /= d; dy /= d; }
-      this.speed += 0.35 * (dt / 16.66);
+      const accel = stageGemMagnet ? 3.0 : 0.35;
+      const maxSpd = stageGemMagnet ? 40  : 18;
+      this.speed = Math.min(this.speed + accel * (dt / 16.66), maxSpd);
       this.x += dx * this.speed * (dt / 16.66);
       this.y += dy * this.speed * (dt / 16.66);
     }
@@ -1895,13 +1981,15 @@ function triggerStageClear() {
   isStageClearAnim = true;
   gameState = STATE_STAGE_CLEAR;
 
-  // 남은 적들 젬 드롭 후 제거 (젬은 필드에 유지)
+  // 남은 적들 젬 드롭 후 제거 + 자석 흡입 활성화
   for (let e of enemies) {
     gems.push(new Gem(e.x, e.y, e.xpValue));
     createExplosionParticles(e.x, e.y, e.color, 5);
   }
   enemies = [];
   projectiles = [];
+  stageGemMagnet = true;
+  setTimeout(() => { stageGemMagnet = false; }, 3500);
 
   const isEntry = currentStage === 100;
   showStageOverlay(
@@ -2420,6 +2508,23 @@ function drawBackground(ctx, w, h, dt) {
   scanGrad.addColorStop(1,   `rgba(${th.scanRgb},0)`);
   ctx.fillStyle = scanGrad;
   ctx.fillRect(0, scanY - 28, w, 56);
+
+  // 필드 이벤트 활성 시 배경 오버레이
+  if (activeFieldEvent) {
+    const evtPulse = 0.06 + Math.sin(Date.now() * 0.0035) * 0.035;
+    const evtColor = activeFieldEvent.id === 'golden_rush' ? `rgba(180,120,0,${evtPulse})`
+                   : activeFieldEvent.id === 'core_surge'  ? `rgba(0,120,200,${evtPulse})`
+                   : activeFieldEvent.id === 'emf_pulse'   ? `rgba(0,180,30,${evtPulse})`
+                   : `rgba(200,20,0,${evtPulse + 0.02})`;
+    ctx.fillStyle = evtColor;
+    ctx.fillRect(0, 0, w, h);
+    // 이벤트 테두리 펄스
+    const bPulse = 0.3 + Math.sin(Date.now() * 0.005) * 0.2;
+    ctx.strokeStyle = activeFieldEvent.color
+      ? activeFieldEvent.color.replace(')', `,${bPulse})`).replace('rgb','rgba') : `rgba(255,50,0,${bPulse})`;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, w - 4, h - 4);
+  }
 }
 
 function drawVignette(ctx, w, h) {
@@ -2497,6 +2602,30 @@ window.addEventListener('keydown', e => {
       togglePause();
       return;
     }
+  }
+
+  // 상점 키보드 조작
+  if (gameState === STATE_SHOP) {
+    const shopCards = [...document.querySelectorAll('#shop-items-list .shop-item-card')];
+    if (shopCards.length) {
+      if (['ArrowLeft','ArrowUp','a','A','w','W'].includes(e.key)) {
+        e.preventDefault();
+        shopFocusIdx = (shopFocusIdx - 1 + shopCards.length) % shopCards.length;
+        updateShopFocus(shopCards); return;
+      }
+      if (['ArrowRight','ArrowDown','d','D','s','S'].includes(e.key)) {
+        e.preventDefault();
+        shopFocusIdx = (shopFocusIdx + 1) % shopCards.length;
+        updateShopFocus(shopCards); return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const focused = shopCards[shopFocusIdx];
+        if (focused && !focused.classList.contains('shop-cant-afford')) focused.click();
+        return;
+      }
+    }
+    if (e.key === 'Escape') { e.preventDefault(); closeShopModal(); return; }
   }
 
   // 스테이지 보너스 모달 키보드 조작
@@ -3179,6 +3308,19 @@ function generateUpgradeChoices() {
       continue;
     }
 
+    // 에픽 등급 시 35% 확률로 부활 에픽 제공
+    if (rarity === 'epic' && Math.random() < 0.35) {
+      const available = REVIVAL_EPICS.filter(r => {
+        const key = r.id.replace('rev_', '');
+        return key === 'laststand' ? (player.revivals.lastStand < 4) : !player.revivals[key];
+      });
+      if (available.length > 0) {
+        const rev = available[Math.floor(Math.random() * available.length)];
+        choices.push({ ...rev, type: 'revival', rarity: 'epic', rarityMult: 2.0 });
+        continue;
+      }
+    }
+
     if (tempPool.length === 0) break;
     let idx    = Math.floor(Math.random() * tempPool.length);
     let choice = { ...tempPool.splice(idx, 1)[0], rarity };
@@ -3208,7 +3350,8 @@ function renderUpgradeCards(choices) {
     card.className = `upgrade-card ${baseClass} rarity-${choice.rarity || 'common'}`;
 
     let tagText  = '신규 무기';
-    if      (choice.type === 'stat')                        tagText = '시스템 강화';
+    if      (choice.type === 'revival')                      tagText = '💀 에픽 부활';
+    else if (choice.type === 'stat')                         tagText = '시스템 강화';
     else if (choice.type === 'passive' && !choice.isUpgrade) tagText = '패시브 신규';
     else if (choice.type === 'passive' && choice.isUpgrade)  tagText = `패시브 Lv${choice.nextLevel}`;
     else if (choice.isUpgrade)                               tagText = `업그레이드 Lv.${choice.nextLevel}`;
@@ -3295,6 +3438,11 @@ function applyUpgrade(choice) {
     return;
   }
 
+  if (choice.type === 'revival') {
+    applyRevivalPerk(choice.id);
+    return;
+  }
+
   if (choice.type === 'weapon') {
     let weapon = player.weapons[choice.key];
     weapon.level = choice.nextLevel;
@@ -3354,14 +3502,20 @@ function applyPassiveEffect(key, level) {
 // ============================================================
 // 상점 시스템
 // ============================================================
+function updateShopFocus(cards) {
+  cards.forEach((c, i) => c.classList.toggle('shop-kb-focus', i === shopFocusIdx));
+}
+
 function triggerShopModal() {
   gameState = STATE_SHOP;
+  shopFocusIdx = 0;
   const modal    = document.getElementById('shop-modal');
   const goldDisp = document.getElementById('shop-gold-display');
   if (goldDisp) goldDisp.textContent = `보유 골드: 💰 ${player.gold}G`;
   const shuffled = [...SHOP_ITEMS].sort(() => Math.random() - 0.5).slice(0, 3);
   renderShopItems(shuffled);
   modal.classList.add('active');
+  setTimeout(() => updateShopFocus([...document.querySelectorAll('#shop-items-list .shop-item-card')]), 50);
 }
 
 function renderShopItems(items) {
@@ -3431,6 +3585,29 @@ function closeShopModal() {
   gameState = STATE_PLAYING;
   shopTimer = 0;
   lastTime  = performance.now();
+}
+
+function applyRevivalPerk(id) {
+  if (!player) return;
+  switch (id) {
+    case 'rev_restore':
+      player.revivals.restore = true;
+      addFloatingText(player.x, player.y - 40, '💾 복원 칩 장착!', '#39ff14', 14); break;
+    case 'rev_backup':
+      player.revivals.backup  = true;
+      addFloatingText(player.x, player.y - 40, '🔄 긴급 백업 장착!', '#ffe600', 14); break;
+    case 'rev_laststand':
+      player.revivals.lastStand += 2;
+      addFloatingText(player.x, player.y - 40, `🛡 방어막 장전! (${player.revivals.lastStand}회)`, '#00f0ff', 14); break;
+    case 'rev_counter':
+      player.revivals.counter = true;
+      addFloatingText(player.x, player.y - 40, '💥 절명 반격 장착!', '#ff4466', 14); break;
+    case 'rev_void':
+      player.revivals.void    = true;
+      addFloatingText(player.x, player.y - 40, '🌀 공허 코어 장착!', '#b026ff', 14); break;
+  }
+  playSynthSound([300, 600, 1000, 1500], 0.15, 'sine', 0.07);
+  triggerScreenShake(5, 300);
 }
 
 function applyLegendaryUpgrade(id) {
@@ -3812,8 +3989,19 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 function openSettingsModal() {
   const modal = document.getElementById('settings-modal');
   if (modal) modal.classList.add('active');
-  const btn = document.getElementById('settings-mute-btn');
-  if (btn) btn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
+  const muteBtn = document.getElementById('settings-mute-btn');
+  if (muteBtn) muteBtn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
+  const trackBtn = document.getElementById('settings-bgm-track-btn');
+  if (trackBtn) trackBtn.textContent = bgmTrackId === 0 ? '🎵 신스웨이브' : '🎶 데바 시스템';
+}
+
+function settingsToggleBgmTrack() {
+  bgmTrackId = bgmTrackId === 0 ? 1 : 0;
+  bgmTrackCheckTimer = 0;
+  // BGM이 재생 중이면 재시작해서 즉시 적용
+  if (!bgmMuted && bgmGainNode) { stopBGM(); startBGM(); }
+  const btn = document.getElementById('settings-bgm-track-btn');
+  if (btn) btn.textContent = bgmTrackId === 0 ? '🎵 신스웨이브' : '🎶 데바 시스템';
 }
 
 function closeSettingsModal() {

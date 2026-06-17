@@ -2021,6 +2021,13 @@ body {
   border-top: 1px solid rgba(57, 255, 20, 0.1);
 }
 
+/* ===== 상점 키보드 포커스 ===== */
+.shop-item-card.shop-kb-focus {
+  border-color: #ffe600 !important;
+  box-shadow: 0 0 20px rgba(255, 230, 0, 0.4) !important;
+  transform: translateX(4px);
+}
+
 /* ===== 메뉴 설정 버튼 (우상단 플로팅) ===== */
 .menu-settings-btn {
   position: absolute;
