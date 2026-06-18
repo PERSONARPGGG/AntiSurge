@@ -77,7 +77,9 @@ let isBossStage      = false;
 let isEndlessMode    = false;
 let endlessModeStartTime = 0;
 let isStageClearAnim = false;   // 클리어 연출 진행 중 여부
+let stageClearAnimStartMs = 0;  // 클리어 연출 시작 시각 (Date.now)
 let _gemMagnetTimer  = null;    // stageGemMagnet setTimeout ID
+let gameLoopId       = null;    // requestAnimationFrame ID (루프 재시작 감지용)
 
 // 보스
 let activeBoss = null;
@@ -1844,7 +1846,6 @@ class Boss {
   constructor(x, y) {
     this.x = x; this.y = y;
     this.type   = 'boss';
-    this.radius = 50;
     this.speedMultiplier = 1.0;
     this.flashTimer = 0;
     this.pulseTimer = 0;
@@ -1853,20 +1854,32 @@ class Boss {
     this.shieldTimer  = 0;
 
     let bossIdx = Math.floor(currentStage / 10) - 1;
+    this.isFinalBoss = (currentStage === 100);
+
+    // 반경: 스테이지 높을수록 조금씩 성장
+    this.radius = this.isFinalBoss ? 90 : Math.min(50 + bossIdx * 2, 70);
+
     let scale   = 1 + bossIdx * 0.65;
-    this.maxHp  = Math.floor(450 * scale);
+    // 최종 보스: HP 2.5배 추가
+    this.maxHp  = Math.floor(450 * scale * (this.isFinalBoss ? 2.5 : 1));
     this.hp     = this.maxHp;
     this.damage = Math.floor(22 * (1 + bossIdx * 0.25));
     this.xpValue = 40 + bossIdx * 15;
-    this.baseSpeed = 1.3;
+    this.baseSpeed = this.isFinalBoss ? 1.6 : 1.3;
     this.name   = BOSS_NAMES[Math.min(bossIdx, BOSS_NAMES.length - 1)];
     this.phase  = 1;
     this.bossIdx = bossIdx;
-    this.patternType = BOSS_TYPES[bossIdx % 4];
+    // 최종 보스는 TITAN 패턴 기반 (유도탄 + 전 패턴 동시 활성)
+    this.patternType = this.isFinalBoss
+      ? { id: 'final', label: 'FINAL PROTOCOL', outerColor: '#ffe600', innerColor: '#ff0044', glowColor: '#ffffff' }
+      : BOSS_TYPES[bossIdx % 4];
+
+    // 공격성 스케일: bossIdx 높을수록 쿨다운 최대 60% 단축
+    const ag = Math.max(0.4, 1.0 - bossIdx * 0.06);
 
     // 돌진 공격
     this.chargeTimer    = 0;
-    this.chargeCooldown = this.patternType.id === 'berserker' ? 3500 : 4500;
+    this.chargeCooldown = Math.round((this.isFinalBoss ? 2500 : (this.patternType.id === 'berserker' ? 3500 : 4500)) * ag);
     this.isCharging     = false;
     this.chargeVx = 0; this.chargeVy = 0;
     this.chargeDuration = 0;
@@ -1874,19 +1887,23 @@ class Boss {
 
     // 미니언 소환
     this.minionTimer    = 0;
-    this.minionCooldown = this.patternType.id === 'summoner' ? 5000 : 8000;
+    this.minionCooldown = Math.round((this.isFinalBoss ? 4000 : (this.patternType.id === 'summoner' ? 5000 : 8000)) * ag);
 
-    // 궤도 사격 (sharpshooter)
+    // 궤도 사격
     this.orbShotTimer    = 0;
-    this.orbShotCooldown = 5000;
+    this.orbShotCooldown = Math.round((this.isFinalBoss ? 3500 : 5000) * ag);
 
-    // 유도탄 (titan)
+    // 유도탄
     this.homingTimer    = 0;
-    this.homingCooldown = 6000;
+    this.homingCooldown = Math.round((this.isFinalBoss ? 4000 : 6000) * ag);
 
-    // 방어막 (summoner)
-    this.shieldCooldown = 14000;
+    // 방어막 (summoner + 최종 보스)
+    this.shieldCooldown = Math.round((this.isFinalBoss ? 10000 : 14000) * ag);
     this.shieldCDTimer  = 0;
+
+    // 최종 보스 전용: 엘리트 파동
+    this.eliteWaveTimer    = 0;
+    this.eliteWaveCooldown = 8000;
   }
 
   update(dt) {
@@ -1921,8 +1938,8 @@ class Boss {
       playSynthSound([80, 200], 0.5, 'sawtooth', 0.12);
     }
 
-    // 페이즈 3 전환 (HP 25% 이하, bossIdx >= 2)
-    if (this.phase === 2 && this.bossIdx >= 2 && this.hp <= this.maxHp * 0.25) {
+    // 페이즈 3 전환 (HP 25% 이하, bossIdx >= 2 또는 최종 보스)
+    if (this.phase === 2 && (this.bossIdx >= 2 || this.isFinalBoss) && this.hp <= this.maxHp * 0.25) {
       this.phase = 3;
       this.baseSpeed    *= 1.3;
       this.chargeCooldown  = 1800;
@@ -1972,8 +1989,8 @@ class Boss {
       this.spawnMinions();
     }
 
-    // 궤도 사격 (sharpshooter + 페이즈2 이상 전체 보스)
-    if (this.patternType.id === 'sharpshooter' || this.phase >= 2) {
+    // 궤도 사격 (sharpshooter + 페이즈2 이상 + bossIdx 3 이상 + 최종 보스)
+    if (this.patternType.id === 'sharpshooter' || this.phase >= 2 || this.bossIdx >= 3 || this.isFinalBoss) {
       this.orbShotTimer += dt;
       if (this.orbShotTimer >= this.orbShotCooldown) {
         this.orbShotTimer = 0;
@@ -1981,8 +1998,8 @@ class Boss {
       }
     }
 
-    // 유도탄 (titan + 페이즈3 전체)
-    if (this.patternType.id === 'titan' || this.phase >= 3) {
+    // 유도탄 (titan + 페이즈3 + bossIdx 5 이상 + 최종 보스)
+    if (this.patternType.id === 'titan' || this.phase >= 3 || this.bossIdx >= 5 || this.isFinalBoss) {
       this.homingTimer += dt;
       if (this.homingTimer >= this.homingCooldown) {
         this.homingTimer = 0;
@@ -1990,12 +2007,21 @@ class Boss {
       }
     }
 
-    // 방어막 쿨다운 (summoner)
-    if (this.patternType.id === 'summoner' && !this.shieldActive) {
+    // 방어막 쿨다운 (summoner + 최종 보스)
+    if ((this.patternType.id === 'summoner' || this.isFinalBoss) && !this.shieldActive) {
       this.shieldCDTimer += dt;
       if (this.shieldCDTimer >= this.shieldCooldown) {
         this.shieldCDTimer = 0;
         this.activateShield();
+      }
+    }
+
+    // 최종 보스 전용: 엘리트 파동
+    if (this.isFinalBoss) {
+      this.eliteWaveTimer += dt;
+      if (this.eliteWaveTimer >= this.eliteWaveCooldown) {
+        this.eliteWaveTimer = 0;
+        this.spawnEliteWave();
       }
     }
   }
@@ -2065,6 +2091,21 @@ class Boss {
     playSynthSound([400, 800, 1200], 0.15, 'triangle', 0.08);
   }
 
+  spawnEliteWave() {
+    if (!player) return;
+    const count = this.phase >= 3 ? 8 : (this.phase === 2 ? 6 : 4);
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const r = 180 + Math.random() * 80;
+      const ex = Math.max(20, Math.min(MAP_WIDTH  - 20, this.x + Math.cos(angle) * r));
+      const ey = Math.max(20, Math.min(MAP_HEIGHT - 20, this.y + Math.sin(angle) * r));
+      enemies.push(new Enemy(ex, ey, 'elite'));
+    }
+    addFloatingText(this.x, this.y - this.radius - 20, '☠ ELITE WAVE!', '#ff0044', 15);
+    triggerScreenShake(9, 500);
+    playSynthSound([80, 160, 320], 0.35, 'sawtooth', 0.12);
+  }
+
   spawnMinions() {
     const isSummoner = this.patternType.id === 'summoner';
     const count = this.phase >= 3 ? 6 : (this.phase === 2 ? 4 : (isSummoner ? 3 : 2));
@@ -2082,9 +2123,29 @@ class Boss {
   draw(ctx, camera) {
     ctx.save();
     const pt  = this.patternType;
-    let pulse = Math.sin(this.pulseTimer * 0.006) * 5;
+    let pulse = Math.sin(this.pulseTimer * 0.006) * (this.isFinalBoss ? 8 : 5);
     let drawR = this.radius + pulse;
     let bx = this.x - camera.x, by = this.y - camera.y;
+
+    // 최종 보스: 회전 링 장식
+    if (this.isFinalBoss) {
+      const rot = this.pulseTimer * 0.002;
+      const ringCols = ['#ffe600', '#ff0044', '#00f0ff', '#b026ff'];
+      for (let r = 0; r < 4; r++) {
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.rotate(rot + r * Math.PI / 2);
+        ctx.strokeStyle = ringCols[r];
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.6 + Math.sin(this.pulseTimer * 0.008 + r) * 0.2;
+        ctx.shadowBlur = 20; ctx.shadowColor = ringCols[r];
+        ctx.beginPath();
+        ctx.arc(0, 0, drawR + 12 + r * 8, -0.6, 0.6);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
 
     // 방어막 링
     if (this.shieldActive) {
@@ -2096,39 +2157,48 @@ class Boss {
       ctx.globalAlpha = 1;
     }
 
-    const outerCol = this.phase >= 3 ? '#ffffff' : (this.phase === 2 ? '#ff6600' : pt.outerColor);
-    ctx.shadowBlur  = 35;
-    ctx.shadowColor = this.shieldActive ? '#b026ff' : pt.glowColor;
+    let outerCol;
+    if (this.isFinalBoss) {
+      // 최종 보스: 페이즈별 색상
+      outerCol = this.phase >= 3 ? '#ffffff' : (this.phase === 2 ? '#ff6600' : '#ffe600');
+    } else {
+      outerCol = this.phase >= 3 ? '#ffffff' : (this.phase === 2 ? '#ff6600' : pt.outerColor);
+    }
+    ctx.shadowBlur  = this.isFinalBoss ? 60 : 35;
+    ctx.shadowColor = this.isFinalBoss ? '#ffe600' : (this.shieldActive ? '#b026ff' : pt.glowColor);
     ctx.fillStyle   = this.flashTimer > 0 ? '#ffffff' : outerCol;
     ctx.beginPath(); ctx.arc(bx, by, drawR, 0, Math.PI * 2); ctx.fill();
 
     ctx.shadowBlur  = 15;
-    ctx.fillStyle   = this.phase >= 2 ? '#ff8800' : pt.innerColor;
+    ctx.fillStyle   = this.isFinalBoss
+      ? (this.phase >= 2 ? '#ff2200' : '#ff0044')
+      : (this.phase >= 2 ? '#ff8800' : pt.innerColor);
     ctx.beginPath(); ctx.arc(bx, by, drawR * 0.55, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = this.isFinalBoss ? 3 : 2; ctx.stroke();
 
     // 보스 이름 + 타입 라벨
-    ctx.font      = 'bold 11px Orbitron, sans-serif';
-    ctx.fillStyle = '#fff';
+    ctx.font      = `bold ${this.isFinalBoss ? 13 : 11}px Orbitron, sans-serif`;
+    ctx.fillStyle = this.isFinalBoss ? '#ffe600' : '#fff';
     ctx.textAlign = 'center';
-    ctx.shadowBlur  = 5; ctx.shadowColor = pt.glowColor;
+    ctx.shadowBlur  = this.isFinalBoss ? 12 : 5;
+    ctx.shadowColor = this.isFinalBoss ? '#ffe600' : pt.glowColor;
     ctx.fillText(this.name, bx, by - drawR - 20);
     ctx.font = '8px Orbitron, sans-serif';
-    ctx.fillStyle = pt.glowColor;
+    ctx.fillStyle = this.isFinalBoss ? '#ff0044' : pt.glowColor;
     ctx.fillText(`[${pt.label}]`, bx, by - drawR - 10);
 
     // HP 바
-    let barW = this.radius * 2.5, barH = 6;
+    let barW = this.radius * 2.5, barH = this.isFinalBoss ? 9 : 6;
     let barX = bx - barW / 2, barY = by - drawR - 30;
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(barX, barY, barW, barH);
     let pct = Math.max(this.hp / this.maxHp, 0);
-    ctx.fillStyle = pct > 0.5 ? pt.outerColor : pct > 0.25 ? '#ff6600' : '#ff0000';
+    ctx.fillStyle = pct > 0.5 ? (this.isFinalBoss ? '#ffe600' : pt.outerColor) : pct > 0.25 ? '#ff6600' : '#ff0000';
     ctx.fillRect(barX, barY, barW * pct, barH);
     // 페이즈 경계 표시
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.fillRect(barX + barW * 0.5 - 1, barY, 2, barH);
-    if (this.bossIdx >= 2) ctx.fillRect(barX + barW * 0.25 - 1, barY, 2, barH);
+    if (this.bossIdx >= 2 || this.isFinalBoss) ctx.fillRect(barX + barW * 0.25 - 1, barY, 2, barH);
 
     ctx.restore();
   }
@@ -2487,6 +2557,7 @@ function checkStageProgress() {
 function triggerStageClear() {
   if (isStageClearAnim) return;
   isStageClearAnim = true;
+  stageClearAnimStartMs = Date.now();
   gameState = STATE_STAGE_CLEAR;
 
   // 남은 적들 젬 드롭 후 제거 + 자석 흡입 활성화
@@ -2580,6 +2651,7 @@ function showStageBonusModal() {
   modal.classList.add('active');
   const cards = [...list.querySelectorAll('.bonus-card')];
   updateBonusFocus(cards);
+  ensureGameLoopRunning();
 }
 
 function updateBonusFocus(cards) {
@@ -2619,13 +2691,20 @@ function applyStageClearBonus(id) {
 function showBossWarning() {
   let bossIdx  = Math.floor(currentStage / 10) - 1;
   let bossName = BOSS_NAMES[Math.min(bossIdx, BOSS_NAMES.length - 1)];
-  showStageOverlay(`⚠ BOSS STAGE ${currentStage} ⚠`, bossName, '#ff0044');
+  const isFinal = (currentStage === 100);
+  showStageOverlay(
+    isFinal ? '★★ FINAL BOSS ★★' : `⚠ BOSS STAGE ${currentStage} ⚠`,
+    isFinal ? `☠ ${bossName} ☠` : bossName,
+    isFinal ? '#ffe600' : '#ff0044'
+  );
   triggerScreenShake(6, 400);
 
   setTimeout(() => {
+    if (gameState === STATE_GAME_OVER || gameState === STATE_MENU) return;
     hideStageOverlay();
     spawnBossEnemy();
     gameState = STATE_PLAYING;
+    ensureGameLoopRunning();
   }, 2200);
 }
 
@@ -3290,6 +3369,8 @@ function startGame() {
   isEndlessMode     = false;
   endlessModeStartTime = 0;
   isStageClearAnim  = false;
+  stageClearAnimStartMs = 0;
+  gameLoopId        = null;
   screenShake       = { x: 0, y: 0, intensity: 0, duration: 0 };
   comboCount = 0; comboTimer = 0;
   fieldItemTimer    = 0;
@@ -3323,13 +3404,23 @@ function startGame() {
   bgmTrackCheckTimer = 0;
   startBGM();
   lastTime = performance.now();
-  requestAnimationFrame(gameLoop);
+  gameLoopId = requestAnimationFrame(gameLoop);
 }
 
 // ============================================================
 // 22. 메인 게임 루프
+function ensureGameLoopRunning() {
+  if (gameLoopId !== null) return; // 이미 실행 중
+  if (gameState !== STATE_PLAYING && gameState !== STATE_LEVEL_UP &&
+      gameState !== STATE_STAGE_CLEAR && gameState !== STATE_STAGE_BONUS &&
+      gameState !== STATE_SHOP && gameState !== STATE_PAUSED) return;
+  lastTime = performance.now();
+  gameLoopId = requestAnimationFrame(gameLoop);
+}
+
 // ============================================================
 function gameLoop(time) {
+  gameLoopId = null;
   if (gameState !== STATE_PLAYING && gameState !== STATE_LEVEL_UP &&
       gameState !== STATE_STAGE_CLEAR && gameState !== STATE_STAGE_BONUS &&
       gameState !== STATE_SHOP && gameState !== STATE_PAUSED) return;
@@ -3357,7 +3448,7 @@ function gameLoop(time) {
     }
   }
 
-  requestAnimationFrame(gameLoop);
+  gameLoopId = requestAnimationFrame(gameLoop);
 }
 
 function update(dt) {
@@ -3471,6 +3562,11 @@ function update(dt) {
       activeFieldEvent.remaining -= dt;
       if (activeFieldEvent.remaining <= 0) endFieldEvent();
     }
+  }
+
+  // 스테이지 클리어 연출 고착 감지 (15초 이상 isStageClearAnim=true면 강제 진행)
+  if (isStageClearAnim && Date.now() - stageClearAnimStartMs > 15000) {
+    showStageBonusSafe(200);
   }
 
   // HUD 동기화
@@ -3921,9 +4017,12 @@ function closeLevelUpModal() {
     triggerLevelUpModal(); // 다음 레벨업 모달 열기
   } else {
     levelUpInProgress = false;
-    // 스테이지 클리어 중이면 STATE_STAGE_CLEAR 복구, 아니면 STATE_PLAYING
-    gameState = isStageClearAnim ? STATE_STAGE_CLEAR : STATE_PLAYING;
+    // 보너스 모달이 이미 열려 있으면 gameState 덮어쓰지 않음
+    if (gameState !== STATE_STAGE_BONUS && gameState !== STATE_SHOP) {
+      gameState = isStageClearAnim ? STATE_STAGE_CLEAR : STATE_PLAYING;
+    }
     lastTime  = performance.now();
+    ensureGameLoopRunning();
   }
 }
 
