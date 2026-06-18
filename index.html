@@ -249,6 +249,31 @@
       </div>
     </div>
 
+    <!-- 시너지 발동 배너 -->
+    <div id="synergy-banner" class="synergy-banner">
+      <span id="syn-icon" class="evo-icon">⚡</span>
+      <div class="evo-text">
+        <div class="evo-label" style="color:#ffe600">SYNERGY ACTIVATED!</div>
+        <div id="syn-name" class="evo-name" style="color:#ffe600">번개 폭풍</div>
+      </div>
+    </div>
+
+    <!-- 콤보 마일스톤 배너 -->
+    <div id="combo-milestone-banner" class="combo-milestone-banner"></div>
+
+  </div>
+
+  <!-- 보스 처치 후 저주/축복 선택 모달 -->
+  <div id="curse-modal" class="modal">
+    <div class="modal-content glass-panel curse-panel">
+      <h2 class="neon-title-sm" style="color:#ff4466">⚠ 저주 계약</h2>
+      <p class="modal-desc">보스의 코어를 흡수했습니다. 저주를 감수하고 강력한 보상을 얻으시겠습니까?</p>
+      <div id="curse-offer-card" class="curse-offer-card"></div>
+      <div class="curse-actions">
+        <button id="curse-accept-btn" class="neon-btn font-sm neon-btn-red">💀 저주 수락</button>
+        <button id="curse-decline-btn" class="neon-btn font-sm">✋ 거절</button>
+      </div>
+    </div>
   </div>
 
   <!-- 스테이지 클리어 보너스 모달 -->
@@ -295,7 +320,16 @@
           <div class="stat-label">최종 레벨</div>
           <div id="stat-level" class="stat-value neon-text-green">Lv. 1</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-label">최대 콤보</div>
+          <div id="stat-maxcombo" class="stat-value neon-text-yellow">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">무기 진화</div>
+          <div id="stat-evolutions" class="stat-value neon-text-blue">0</div>
+        </div>
       </div>
+      <div id="stat-synergies-row" class="synergies-result-row"></div>
 
       <div id="cores-earned-row" class="cores-earned-row"></div>
       <div id="best-record-row" class="best-record-row"></div>

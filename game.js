@@ -1,4 +1,4 @@
-// game.js — Neon Survivors v0.01 ALPHA
+// game.js — Neon Survivors v0.07 MAJOR PATCH
 
 // ============================================================
 // 1. 게임 전역 설정 및 상태 상수
@@ -18,6 +18,7 @@ const STATE_STAGE_BONUS  = 'STAGE_BONUS';
 const STATE_GAME_OVER    = 'GAME_OVER';
 const STATE_SHOP         = 'SHOP';
 const STATE_PAUSED       = 'PAUSED';
+const STATE_CURSE        = 'CURSE';
 
 // ============================================================
 // 클래스 정의
@@ -94,6 +95,16 @@ let screenShake = { x: 0, y: 0, intensity: 0, duration: 0 };
 let comboCount = 0;
 let comboTimer = 0;
 const COMBO_WINDOW = 3500; // ms
+let maxCombo = 0;
+
+// 결과 통계
+let evolutionCount = 0;
+let activeSynergies = new Set();
+let pendingBossCurse = false;
+
+// 마인/블랙홀 엔티티
+let mines = [];
+let blackHoles = [];
 
 // 리롤 잔여 횟수
 let rerollUses = 2;
@@ -240,6 +251,100 @@ let fieldEventTimer    = 0;
 let fieldEventInterval = 40000 + Math.random() * 20000;
 let activeFieldEvent   = null;
 
+// ─── 무기 시너지 정의 ───
+const SYNERGY_DEFS = [
+  {
+    id: 'lightning_storm', name: '번개 폭풍', icon: '⚡',
+    desc: '피해량 +20%, 이동속도 +10%',
+    weapons: ['flare', 'zone'],
+    apply: (p) => { p.damageMultiplier *= 1.20; p.speed *= 1.10; }
+  },
+  {
+    id: 'orbital_network', name: '궤도 네트워크', icon: '🌀',
+    desc: '피해량 +20%, 최대 HP +40',
+    weapons: ['orbiter', 'drone'],
+    apply: (p) => { p.damageMultiplier *= 1.20; p.maxHp += 40; p.hp = Math.min(p.hp+40, p.maxHp); }
+  },
+  {
+    id: 'void_collapse', name: '공허 붕괴', icon: '🌑',
+    desc: '피해량 +25%, 자석 범위 +30%',
+    weapons: ['blackhole', 'ring'],
+    apply: (p) => { p.damageMultiplier *= 1.25; p.magnetRadius *= 1.30; }
+  },
+  {
+    id: 'chain_barrage', name: '연쇄 포격', icon: '🔗',
+    desc: '피해량 +20%, 이동속도 +15%',
+    weapons: ['chain', 'missile'],
+    apply: (p) => { p.damageMultiplier *= 1.20; p.speed *= 1.15; }
+  },
+  {
+    id: 'cluster_bomb', name: '집속 폭탄', icon: '💥',
+    desc: '피해량 +20%, 폭발 피해 +30%',
+    weapons: ['mine', 'boomerang'],
+    apply: (p) => { p.damageMultiplier *= 1.20; }
+  },
+  {
+    id: 'ghost_protocol', name: '고스트 프로토콜', icon: '👻',
+    desc: '피해량 +20%, 속도 +12%',
+    weapons: ['laser', 'boomerang'],
+    apply: (p) => { p.damageMultiplier *= 1.20; p.speed *= 1.12; }
+  },
+  {
+    id: 'digital_storm', name: '디지털 폭풍', icon: '🌪',
+    desc: '피해량 +30%, 이동속도 +10%',
+    weapons: ['chain', 'zone'],
+    apply: (p) => { p.damageMultiplier *= 1.30; p.speed *= 1.10; }
+  }
+];
+
+// ─── 저주 정의 ───
+const CURSE_DEFS = [
+  {
+    id: 'curse_hp',
+    debuff: '최대 HP -25%',
+    reward: '보유한 모든 무기 레벨 +1 즉시',
+    debuffFn: (p) => { const lose = Math.floor(p.maxHp * 0.25); p.maxHp -= lose; p.hp = Math.min(p.hp, p.maxHp); },
+    rewardFn: () => {
+      for (let key in player.weapons) {
+        const w = player.weapons[key];
+        if (w.level > 0 && w.level < UPGRADES.weapons[key].maxLevel) { w.level++; weaponStats[key].level = w.level; }
+      }
+      addFloatingText(player.x, player.y-50, '✨ ALL WEAPONS UP!', '#ffe600', 16);
+    }
+  },
+  {
+    id: 'curse_speed',
+    debuff: '이동속도 -25%',
+    reward: '피해량 영구 +50%',
+    debuffFn: (p) => { p.speed *= 0.75; },
+    rewardFn: () => { player.damageMultiplier *= 1.50; addFloatingText(player.x, player.y-50, '🔥 피해 +50%!', '#ff6600', 16); }
+  },
+  {
+    id: 'curse_dmg',
+    debuff: '받는 피해 +40%',
+    reward: '레벨업 카드 +3장, 리롤 +3회',
+    debuffFn: (p) => { p._curseDamageMult = (p._curseDamageMult || 1) * 1.40; },
+    rewardFn: () => {
+      rerollUses += 3;
+      for (let i = 0; i < 3; i++) { pendingLevelUps++; }
+      if (!levelUpInProgress && pendingLevelUps > 0) {
+        pendingLevelUps--;
+        levelUpInProgress = true;
+        playLevelUpSound();
+        triggerLevelUpModal();
+      }
+      addFloatingText(player.x, player.y-50, '📜 카드 +3!', '#b026ff', 16);
+    }
+  },
+  {
+    id: 'curse_magnet',
+    debuff: '젬 자석 범위 -50%',
+    reward: '골드 +40 즉시 획득',
+    debuffFn: (p) => { p.magnetRadius *= 0.50; },
+    rewardFn: () => { player.gold += 40; addFloatingText(player.x, player.y-50, '💰 +40 골드!', '#ffe600', 16); }
+  }
+];
+
 // ─── 모바일 터치 입력 ───
 let touchStartX = 0, touchStartY = 0;
 let touchDX = 0, touchDY = 0;
@@ -304,6 +409,27 @@ const UPGRADES = {
       icon: "🔵",
       desc: ["플레이어 중심 확장 링 발생, 접촉한 적 피해", "링 반경 및 피해량 증가", "링 2개 동시 생성", "피해량 대폭 증가, 확장 속도 상향", "【진화】보이드 노바 — 3중 링, 적 흡입 후 폭발"],
       evolvedName: "보이드 노바",
+      maxLevel: 5
+    },
+    chain: {
+      name: "바이러스 체인",
+      icon: "🔗",
+      desc: ["가장 가까운 적을 전격으로 타격, 인근 1체에 연쇄", "연쇄 횟수 +1 (최대 3체)", "피해량 증가, 연쇄 범위 확장", "연쇄 횟수 +1 (최대 4체)", "【진화】뉴럴 바이러스 — 연쇄 5체, 처치 시 주변 폭발 연쇄"],
+      evolvedName: "뉴럴 바이러스",
+      maxLevel: 5
+    },
+    mine: {
+      name: "랜드마인",
+      icon: "💣",
+      desc: ["발이 지나간 자리에 폭발 마인 설치", "마인 동시 배치 수 +1, 피해 증가", "폭발 반경 확장, 쿨타임 단축", "마인 배치 수 +1 (최대 4개)", "【진화】플라즈마 클러스터 — 폭발 시 소형 마인 3개 산란"],
+      evolvedName: "플라즈마 클러스터",
+      maxLevel: 5
+    },
+    blackhole: {
+      name: "블랙홀 생성기",
+      icon: "🌑",
+      desc: ["전방에 중력장 생성, 적을 흡입하며 지속 피해", "중력장 반경 및 지속시간 증가", "붕괴 시 폭발 피해 2배", "블랙홀 2개 동시 생성", "【진화】이벤트 호라이즌 — 2개 동시, 붕괴 시 즉사 판정"],
+      evolvedName: "이벤트 호라이즌",
       maxLevel: 5
     }
   },
@@ -421,7 +547,10 @@ let weaponStats = {
   boomerang: { level: 0, damage: 0, kills: 0 },
   drone:     { level: 0, damage: 0, kills: 0 },
   missile:   { level: 0, damage: 0, kills: 0 },
-  ring:      { level: 0, damage: 0, kills: 0 }
+  ring:      { level: 0, damage: 0, kills: 0 },
+  chain:     { level: 0, damage: 0, kills: 0 },
+  mine:      { level: 0, damage: 0, kills: 0 },
+  blackhole: { level: 0, damage: 0, kills: 0 }
 };
 
 // ============================================================
@@ -793,7 +922,10 @@ class Player {
       boomerang: new BoomerangWeapon(this),
       drone:     new DroneWeapon(this),
       missile:   new MissileWeapon(this),
-      ring:      new RingWeapon(this)
+      ring:      new RingWeapon(this),
+      chain:     new ChainWeapon(this),
+      mine:      new MineWeapon(this),
+      blackhole: new BlackHoleWeapon(this)
     };
     const startW = cls.startWeapon || 'flare';
     this.weapons[startW].level = 1;
@@ -969,6 +1101,8 @@ class Player {
     let dmg = amount;
     // 코어 과부하 이벤트: 받는 피해 1.5배
     if (activeFieldEvent?.id === 'core_overload') dmg *= 1.5;
+    // 저주: 받는 피해 증가
+    if (this._curseDamageMult) dmg *= this._curseDamageMult;
     if (this.damageReduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - this.damageReduction)));
     this.hp -= dmg;
     if (this.passives.thorns > 0) this.thornsTrigger = true;
@@ -1444,6 +1578,314 @@ class RingWeapon extends BaseWeapon {
     }
     ctx.globalAlpha = 1;
     ctx.restore();
+  }
+}
+
+// ============================================================
+// 7c. 바이러스 체인
+// ============================================================
+class ChainWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); }
+  update(dt) {
+    this.timer += dt;
+    const cds = [2200, 1900, 1900, 1600, 1200];
+    const cd  = cds[Math.min(this.level - 1, cds.length - 1)];
+    if (this.timer >= cd) { this.timer = 0; this.fire(); }
+  }
+  fire() {
+    if (!player) return;
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    if (allT.length === 0) return;
+    let nearest = null, minD = Infinity;
+    for (let e of allT) {
+      const d = dist(this.owner.x, this.owner.y, e.x, e.y);
+      if (d < minD) { minD = d; nearest = e; }
+    }
+    if (!nearest) return;
+    const chainCounts = [2, 3, 3, 4, 5];
+    const chains = chainCounts[Math.min(this.level - 1, chainCounts.length - 1)];
+    const baseDmg = [28, 34, 42, 52, 65][Math.min(this.level - 1, 4)] * this.owner.damageMultiplier;
+    const chainR  = this.level >= 3 ? 200 : 160;
+    let hit = [nearest];
+    for (let c = 1; c < chains; c++) {
+      const last = hit[hit.length - 1];
+      let next = null, nextD = Infinity;
+      for (let e of allT) {
+        if (hit.includes(e)) continue;
+        const d = dist(last.x, last.y, e.x, e.y);
+        if (d < chainR && d < nextD) { nextD = d; next = e; }
+      }
+      if (next) hit.push(next); else break;
+    }
+    playSynthSound([900, 1400, 600], 0.12, 'square', 0.05);
+    for (let i = 0; i < hit.length; i++) {
+      const e    = hit[i];
+      const dmg  = baseDmg * Math.pow(0.75, i);
+      createExplosionParticles(e.x, e.y, '#00f0ff', 4);
+      if (e === activeBoss) {
+        activeBoss.takeDamage(dmg, 'chain');
+        if (weaponStats.chain) weaponStats.chain.damage += dmg;
+      } else {
+        if (e.takeDamage(dmg, 'chain')) {
+          killCount++;
+          if (weaponStats.chain) weaponStats.chain.kills++;
+          // 진화: 뉴럴 바이러스 — 처치 시 주변 폭발
+          if (this.level === 5) {
+            const nearbyForChain = enemies.filter(en => en !== e && dist(e.x, e.y, en.x, en.y) < 130);
+            for (let nb of nearbyForChain) {
+              if (nb.takeDamage(dmg * 0.6, 'chain')) { killCount++; if (weaponStats.chain) weaponStats.chain.kills++; }
+            }
+            createExplosionParticles(e.x, e.y, '#00f0ff', 10);
+          }
+        }
+        if (weaponStats.chain) weaponStats.chain.damage += dmg;
+      }
+      if (i < hit.length - 1) {
+        addFloatingText((e.x + hit[i+1].x)/2, (e.y + hit[i+1].y)/2 - 10, '⚡', '#00f0ff', 13);
+      }
+    }
+    addFloatingText(nearest.x, nearest.y - nearest.radius - 12, `⚡×${hit.length}`, '#00f0ff', 10);
+  }
+}
+
+// ============================================================
+// 7d. 랜드마인 엔티티 및 무기
+// ============================================================
+class Mine {
+  constructor(x, y, damage, explodeR, isEvoSub) {
+    this.x = x; this.y = y;
+    this.damage    = damage;
+    this.explodeR  = explodeR;
+    this.triggerR  = Math.max(22, explodeR * 0.38);
+    this.isEvoSub  = isEvoSub; // 진화 산란 마인 여부
+    this.life      = isEvoSub ? 6000 : 15000;
+    this.armTimer  = 400;
+    this.armed     = false;
+    this.exploded  = false;
+  }
+  update(dt) {
+    if (this.exploded) return;
+    this.life -= dt;
+    if (this.life <= 0) { this.exploded = true; return; }
+    if (!this.armed) { this.armTimer -= dt; if (this.armTimer <= 0) this.armed = true; return; }
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    for (let e of allT) {
+      if (dist(this.x, this.y, e.x, e.y) < this.triggerR + e.radius) { this.explode(); return; }
+    }
+  }
+  explode() {
+    this.exploded = true;
+    createExplosionParticles(this.x, this.y, '#ff8800', 20);
+    triggerScreenShake(4, 250);
+    playSynthSound([180, 80], 0.18, 'sawtooth', 0.08, true);
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      if (dist(this.x, this.y, enemies[i].x, enemies[i].y) < this.explodeR + enemies[i].radius) {
+        if (enemies[i].takeDamage(this.damage, 'mine')) {
+          killCount++;
+          if (weaponStats.mine) weaponStats.mine.kills++;
+        }
+        if (weaponStats.mine) weaponStats.mine.damage += this.damage;
+      }
+    }
+    if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < this.explodeR + activeBoss.radius) {
+      activeBoss.takeDamage(this.damage * 0.6, 'mine');
+      if (weaponStats.mine) weaponStats.mine.damage += this.damage * 0.6;
+    }
+    // 진화: 플라즈마 클러스터 — 소형 마인 3개 산란
+    if (!this.isEvoSub) {
+      const ownerWeapon = player && player.weapons.mine;
+      if (ownerWeapon && ownerWeapon.level === 5) {
+        for (let i = 0; i < 3; i++) {
+          const a = (i / 3) * Math.PI * 2 + Math.random();
+          mines.push(new Mine(this.x + Math.cos(a)*35, this.y + Math.sin(a)*35,
+            this.damage * 0.55, this.explodeR * 0.65, true));
+        }
+      }
+    }
+    addFloatingText(this.x, this.y - 20, '💥 MINE!', '#ff8800', 11);
+  }
+  draw(ctx, camera) {
+    if (this.exploded) return;
+    const sx = this.x - camera.x, sy = this.y - camera.y;
+    const pulse = 0.65 + Math.sin(Date.now() / 180) * 0.35;
+    ctx.save();
+    ctx.globalAlpha = this.armed ? pulse : 0.4;
+    ctx.shadowBlur  = this.armed ? 14 : 5;
+    ctx.shadowColor = '#ff8800';
+    ctx.fillStyle   = this.armed ? '#ff8800' : '#664400';
+    ctx.beginPath(); ctx.arc(sx, sy, this.isEvoSub ? 5 : 7, 0, Math.PI * 2); ctx.fill();
+    if (this.armed) {
+      ctx.globalAlpha   = 0.18;
+      ctx.strokeStyle   = '#ff8800';
+      ctx.lineWidth     = 1;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.arc(sx, sy, this.triggerR, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
+class MineWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); this.placeTimer = 0; }
+  update(dt) {
+    this.timer += dt;
+    const cds = [4000, 3500, 3000, 2800, 2400];
+    const cd  = cds[Math.min(this.level - 1, cds.length - 1)];
+    if (this.timer >= cd) { this.timer = 0; this.placeMines(); }
+  }
+  placeMines() {
+    if (!player) return;
+    const counts = [1, 2, 2, 3, 4];
+    const count  = counts[Math.min(this.level - 1, counts.length - 1)];
+    const dmgs   = [55, 70, 85, 105, 130];
+    const dmg    = dmgs[Math.min(this.level - 1, dmgs.length - 1)] * this.owner.damageMultiplier;
+    const radii  = [90, 100, 120, 130, 140];
+    const explR  = radii[Math.min(this.level - 1, radii.length - 1)];
+    for (let i = 0; i < count; i++) {
+      const spread = count > 1 ? (i - (count-1)/2) * 24 : 0;
+      mines.push(new Mine(this.owner.x + spread, this.owner.y + (Math.random()-0.5)*16, dmg, explR, false));
+    }
+    playSynthSound([400, 200], 0.08, 'triangle', 0.04);
+  }
+}
+
+// ============================================================
+// 7e. 블랙홀 엔티티 및 무기
+// ============================================================
+class BlackHole {
+  constructor(x, y, pullR, dmg, lifetime, isEvolved) {
+    this.x = x; this.y = y;
+    this.pullR     = pullR;
+    this.dmg       = dmg;
+    this.lifetime  = lifetime;
+    this.maxLife   = lifetime;
+    this.isEvolved = isEvolved;
+    this.dmgTimer  = 0;
+    this.dmgInt    = 600;
+    this.dead      = false;
+  }
+  update(dt) {
+    if (this.dead) return;
+    this.lifetime -= dt;
+    this.dmgTimer  += dt;
+    const pullStr = 2.8 * (dt / 16.66);
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    for (let e of allT) {
+      const dx = this.x - e.x, dy = this.y - e.y;
+      const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+      if (d < this.pullR) {
+        const force = (1 - d / this.pullR) * pullStr;
+        e.x += (dx / d) * force;
+        e.y += (dy / d) * force;
+        if (this.dmgTimer >= this.dmgInt && d < this.pullR * 0.4) {
+          if (e === activeBoss) {
+            activeBoss.takeDamage(this.dmg * 0.4, 'blackhole');
+            if (weaponStats.blackhole) weaponStats.blackhole.damage += this.dmg * 0.4;
+          } else {
+            if (e.takeDamage(this.dmg, 'blackhole')) {
+              killCount++;
+              if (weaponStats.blackhole) weaponStats.blackhole.kills++;
+            }
+            if (weaponStats.blackhole) weaponStats.blackhole.damage += this.dmg;
+          }
+        }
+      }
+    }
+    if (this.dmgTimer >= this.dmgInt) this.dmgTimer = 0;
+    if (this.lifetime <= 0) this.collapse();
+  }
+  collapse() {
+    this.dead = true;
+    const collapseR = this.pullR * 0.55;
+    const collapseDmg = this.isEvolved ? 9999 : this.dmg * 6;
+    createExplosionParticles(this.x, this.y, '#b026ff', 32);
+    createExplosionParticles(this.x, this.y, '#ffffff', 12);
+    triggerScreenShake(12, 700);
+    playSynthSound([55, 140, 380], 0.28, 'sawtooth', 0.12);
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      if (dist(this.x, this.y, enemies[i].x, enemies[i].y) < collapseR + enemies[i].radius) {
+        if (enemies[i].takeDamage(collapseDmg, 'blackhole')) {
+          killCount++;
+          if (weaponStats.blackhole) weaponStats.blackhole.kills++;
+        }
+        if (weaponStats.blackhole) weaponStats.blackhole.damage += collapseDmg;
+      }
+    }
+    if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < collapseR + activeBoss.radius) {
+      const bd = Math.min(collapseDmg, activeBoss.maxHp * 0.4);
+      activeBoss.takeDamage(bd, 'blackhole');
+      if (weaponStats.blackhole) weaponStats.blackhole.damage += bd;
+    }
+    addFloatingText(this.x, this.y - 30, '🌑 붕괴!', '#b026ff', 13);
+  }
+  draw(ctx, camera) {
+    if (this.dead) return;
+    const sx = this.x - camera.x, sy = this.y - camera.y;
+    const prog = this.lifetime / this.maxLife;
+    const rot  = (Date.now() / 600) % (Math.PI * 2);
+    ctx.save();
+    // 인력 범위 링
+    ctx.globalAlpha = 0.22 * prog;
+    ctx.strokeStyle = '#b026ff';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 8]);
+    ctx.beginPath(); ctx.arc(sx, sy, this.pullR, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    // 회전 파티클
+    ctx.globalAlpha = 0.7 * prog;
+    for (let i = 0; i < 5; i++) {
+      const a   = rot + i * (Math.PI * 2 / 5);
+      const orb = this.pullR * 0.22;
+      ctx.shadowBlur  = 10; ctx.shadowColor = i % 2 === 0 ? '#b026ff' : '#00f0ff';
+      ctx.fillStyle   = i % 2 === 0 ? '#b026ff' : '#00f0ff';
+      ctx.beginPath();
+      ctx.arc(sx + Math.cos(a)*orb, sy + Math.sin(a)*orb, 3.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // 코어
+    ctx.globalAlpha = 0.9 * prog;
+    ctx.shadowBlur  = 22; ctx.shadowColor = '#b026ff';
+    ctx.fillStyle   = '#0d001a';
+    ctx.beginPath(); ctx.arc(sx, sy, 13, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#b026ff'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
+class BlackHoleWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); }
+  update(dt) {
+    this.timer += dt;
+    const cds = [8000, 7000, 6000, 5500, 4500];
+    const cd  = cds[Math.min(this.level - 1, cds.length - 1)];
+    if (this.timer >= cd) { this.timer = 0; this.summon(); }
+  }
+  summon() {
+    if (!player) return;
+    const counts  = [1, 1, 1, 2, 2];
+    const count   = this.level === 5 ? 2 : counts[Math.min(this.level - 1, counts.length - 1)];
+    const radii   = [160, 190, 200, 210, 230];
+    const pullR   = radii[Math.min(this.level - 1, radii.length - 1)];
+    const dmgs    = [18, 22, 28, 34, 42];
+    const dmg     = dmgs[Math.min(this.level - 1, dmgs.length - 1)] * this.owner.damageMultiplier;
+    const lives   = [3500, 4000, 4500, 5000, 5500];
+    const life    = lives[Math.min(this.level - 1, lives.length - 1)];
+    const isEvo   = this.level === 5;
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const r   = 120 + Math.random() * 100;
+      blackHoles.push(new BlackHole(
+        this.owner.x + Math.cos(ang) * r,
+        this.owner.y + Math.sin(ang) * r,
+        pullR, dmg, life, isEvo
+      ));
+    }
+    playSynthSound([60, 30], 0.22, 'sawtooth', 0.1);
+    triggerScreenShake(5, 300);
+    addFloatingText(this.owner.x, this.owner.y - 30, '🌑 블랙홀 생성!', '#b026ff', 11);
   }
 }
 
@@ -2233,6 +2675,7 @@ class Boss {
     spawnGoldCoins(this.x, this.y, 12 + Math.floor(Math.random() * 9));
     activeBoss = null;
     isBossStage = false;
+    pendingBossCurse = true;
     triggerStageClear();
   }
 }
@@ -2636,6 +3079,12 @@ const STAGE_BONUSES = [
 ];
 
 function showStageBonusModal() {
+  // 보스 처치 후 저주 계약 먼저 제시
+  if (pendingBossCurse) {
+    pendingBossCurse = false;
+    showCurseModal();
+    return;
+  }
   gameState = STATE_STAGE_BONUS;
   bonusSelectedIdx = 0;
   const modal = document.getElementById('stage-bonus-modal');
@@ -2741,7 +3190,48 @@ function hideStageOverlay() {
 function onEnemyKilled() {
   comboCount++;
   comboTimer = COMBO_WINDOW;
+  if (comboCount > maxCombo) maxCombo = comboCount;
+  checkComboMilestone(comboCount);
   updateComboDisplay();
+}
+
+function checkComboMilestone(count) {
+  if (!player) return;
+  const banner = document.getElementById('combo-milestone-banner');
+  if (count === 10) {
+    showComboMilestoneBanner('🔥 KILLING SPREE! x10', '#ff8800');
+    player.damageMultiplier *= 1.25;
+    setTimeout(() => { if (player) player.damageMultiplier /= 1.25; }, 5000);
+    addFloatingText(player.x, player.y - 60, '🔥 피해 +25% (5초)!', '#ff8800', 14);
+    playSynthSound([400, 800, 1200], 0.18, 'sawtooth', 0.07);
+  } else if (count === 25) {
+    showComboMilestoneBanner('💀 MASSACRE! x25', '#ff4466');
+    triggerScreenShake(10, 600);
+    createExplosionParticles(player.x, player.y, '#ff4466', 25);
+    player.damageMultiplier *= 1.4;
+    setTimeout(() => { if (player) player.damageMultiplier /= 1.4; }, 7000);
+    addFloatingText(player.x, player.y - 60, '💀 피해 +40% (7초)!', '#ff4466', 16);
+    playSynthSound([200, 600, 1400], 0.22, 'sawtooth', 0.09);
+  } else if (count === 50) {
+    showComboMilestoneBanner('☢ CYBER RAMPAGE! x50', '#ffe600');
+    triggerScreenShake(18, 900);
+    // 화면 내 모든 적 50 피해
+    for (let e of [...enemies]) { if (e.takeDamage(50, 'combo')) killCount++; }
+    createExplosionParticles(player.x, player.y, '#ffe600', 35);
+    addFloatingText(player.x, player.y - 70, '☢ 전체 폭발!', '#ffe600', 20);
+    playSynthSound([100, 300, 800, 1600], 0.28, 'sawtooth', 0.12);
+  }
+}
+
+function showComboMilestoneBanner(text, color) {
+  const el = document.getElementById('combo-milestone-banner');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = color;
+  el.style.textShadow = `0 0 20px ${color}, 0 0 40px ${color}`;
+  el.classList.add('active');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('active'), 2000);
 }
 
 function updateComboSystem(dt) {
@@ -3372,7 +3862,9 @@ function startGame() {
   stageClearAnimStartMs = 0;
   gameLoopId        = null;
   screenShake       = { x: 0, y: 0, intensity: 0, duration: 0 };
-  comboCount = 0; comboTimer = 0;
+  comboCount = 0; comboTimer = 0; maxCombo = 0;
+  evolutionCount = 0; activeSynergies = new Set(); pendingBossCurse = false;
+  mines = []; blackHoles = [];
   fieldItemTimer    = 0;
   shopTimer         = 0;
   goldCoins         = [];
@@ -3413,7 +3905,8 @@ function ensureGameLoopRunning() {
   if (gameLoopId !== null) return; // 이미 실행 중
   if (gameState !== STATE_PLAYING && gameState !== STATE_LEVEL_UP &&
       gameState !== STATE_STAGE_CLEAR && gameState !== STATE_STAGE_BONUS &&
-      gameState !== STATE_SHOP && gameState !== STATE_PAUSED) return;
+      gameState !== STATE_SHOP && gameState !== STATE_PAUSED &&
+      gameState !== STATE_CURSE) return;
   lastTime = performance.now();
   gameLoopId = requestAnimationFrame(gameLoop);
 }
@@ -3423,7 +3916,8 @@ function gameLoop(time) {
   gameLoopId = null;
   if (gameState !== STATE_PLAYING && gameState !== STATE_LEVEL_UP &&
       gameState !== STATE_STAGE_CLEAR && gameState !== STATE_STAGE_BONUS &&
-      gameState !== STATE_SHOP && gameState !== STATE_PAUSED) return;
+      gameState !== STATE_SHOP && gameState !== STATE_PAUSED &&
+      gameState !== STATE_CURSE) return;
   let dt = time - lastTime;
   if (dt > 100) dt = 16.66;
   lastTime = time;
@@ -3508,6 +4002,18 @@ function update(dt) {
 
   // 필드 아이템
   updateFieldItems(dt);
+
+  // 마인 업데이트
+  for (let i = mines.length - 1; i >= 0; i--) {
+    mines[i].update(dt);
+    if (mines[i].exploded) mines.splice(i, 1);
+  }
+
+  // 블랙홀 업데이트
+  for (let i = blackHoles.length - 1; i >= 0; i--) {
+    blackHoles[i].update(dt);
+    if (blackHoles[i].dead) blackHoles.splice(i, 1);
+  }
 
   // 적 스폰
   updateEnemySpawning(dt);
@@ -3613,6 +4119,8 @@ function draw(dt) {
 
   for (let item of fieldItems) item.draw(ctx, camera);
   for (let coin of goldCoins)  coin.draw(ctx, camera);
+  for (let m of mines) m.draw(ctx, camera);
+  for (let bh of blackHoles) bh.draw(ctx, camera);
 
   player.draw(ctx, camera);
 
@@ -4048,6 +4556,73 @@ function togglePause() {
   else pauseGame();
 }
 
+// ============================================================
+// 저주/축복 시스템
+// ============================================================
+function showCurseModal() {
+  gameState = STATE_CURSE;
+  const curse = CURSE_DEFS[Math.floor(Math.random() * CURSE_DEFS.length)];
+  const modal = document.getElementById('curse-modal');
+  const card  = document.getElementById('curse-offer-card');
+  if (!modal || !card) { gameState = STATE_STAGE_BONUS; showStageBonusModal(); return; }
+  card.innerHTML = `
+    <div class="curse-debuff">💀 저주: ${curse.debuff}</div>
+    <div class="curse-reward">✨ 보상: ${curse.reward}</div>
+  `;
+  document.getElementById('curse-accept-btn').onclick = () => applyCurseChoice(curse, true);
+  document.getElementById('curse-decline-btn').onclick = () => applyCurseChoice(curse, false);
+  modal.classList.add('active');
+  ensureGameLoopRunning();
+}
+
+function applyCurseChoice(curse, accepted) {
+  document.getElementById('curse-modal').classList.remove('active');
+  if (accepted && player) {
+    curse.debuffFn(player);
+    curse.rewardFn();
+    addFloatingText(player.x, player.y - 40, '⚠ 저주 수락!', '#ff4466', 15);
+    playSynthSound([150, 80, 200], 0.2, 'sawtooth', 0.1);
+    triggerScreenShake(8, 400);
+  } else {
+    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, '✋ 저주 거절', '#94a3b8', 13);
+  }
+  gameState = STATE_STAGE_BONUS;
+  showStageBonusModal();
+}
+
+// ============================================================
+// 무기 시너지 시스템
+// ============================================================
+function checkSynergies() {
+  if (!player) return;
+  for (const syn of SYNERGY_DEFS) {
+    if (activeSynergies.has(syn.id)) continue;
+    const allActive = syn.weapons.every(key => {
+      if (key in player.weapons) return player.weapons[key].level > 0;
+      if (key in player.passives) return player.passives[key] > 0;
+      return false;
+    });
+    if (allActive) {
+      activeSynergies.add(syn.id);
+      syn.apply(player);
+      showSynergyBanner(syn.icon, syn.name);
+      addFloatingText(player.x, player.y - 55, `✨ 시너지: ${syn.name}!`, '#ffe600', 14);
+      triggerScreenShake(6, 400);
+      playSynthSound([600, 900, 1400, 800], 0.18, 'sine', 0.07);
+    }
+  }
+}
+
+function showSynergyBanner(icon, name) {
+  const banner = document.getElementById('synergy-banner');
+  if (!banner) return;
+  document.getElementById('syn-icon').textContent = icon;
+  document.getElementById('syn-name').textContent = name;
+  banner.classList.add('active');
+  clearTimeout(banner._timer);
+  banner._timer = setTimeout(() => banner.classList.remove('active'), 2800);
+}
+
 function showEvolutionNotification(icon, name) {
   const banner = document.getElementById('evolution-banner');
   if (!banner) return;
@@ -4077,11 +4652,13 @@ function applyUpgrade(choice) {
     weapon.level = choice.nextLevel;
     weaponStats[choice.key].level = choice.nextLevel;
     if (choice.nextLevel === 5) {
+      evolutionCount++;
       let evolvedName = UPGRADES.weapons[choice.key].evolvedName || UPGRADES.weapons[choice.key].name;
       showEvolutionNotification(UPGRADES.weapons[choice.key].icon, evolvedName);
     } else {
       playSynthSound([600, 1200], 0.15, 'sine', 0.05);
     }
+    checkSynergies();
   } else if (choice.type === 'stat') {
     switch (choice.id) {
       case 'stat_hp':
@@ -4309,6 +4886,22 @@ function endGame(isVictory) {
   document.getElementById('stat-kills').innerText  = killCount;
   document.getElementById('stat-level').innerText  = `Lv. ${player.level}`;
   document.getElementById('stat-stage').innerText  = `S${currentStage}${isEndlessMode ? ' ∞' : ''}`;
+  const mcEl = document.getElementById('stat-maxcombo');
+  if (mcEl) mcEl.innerText = maxCombo;
+  const evoEl = document.getElementById('stat-evolutions');
+  if (evoEl) evoEl.innerText = evolutionCount;
+  const synRow = document.getElementById('stat-synergies-row');
+  if (synRow) {
+    if (activeSynergies.size > 0) {
+      const names = [...activeSynergies].map(id => {
+        const s = SYNERGY_DEFS.find(d => d.id === id);
+        return s ? `${s.icon} ${s.name}` : id;
+      }).join('  ·  ');
+      synRow.textContent = `시너지 발동: ${names}`;
+    } else {
+      synRow.textContent = '';
+    }
+  }
 
   checkAchievements();
   const coresEarned = earnDataCores();

@@ -2053,3 +2053,90 @@ body {
   transform: rotate(30deg);
 }
 .menu-settings-btn:active { transform: scale(0.92) rotate(30deg); }
+
+/* ===== 시너지 배너 ===== */
+.synergy-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -120%) scale(0.8);
+  background: rgba(5,5,15,0.92);
+  border: 2px solid #ffe600;
+  border-radius: 14px;
+  padding: 1.2rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  box-shadow: 0 0 40px rgba(255,230,0,0.5);
+}
+.synergy-banner.active {
+  opacity: 1;
+  transform: translate(-50%, -120%) scale(1);
+}
+
+/* ===== 콤보 마일스톤 배너 ===== */
+.combo-milestone-banner {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  font-family: 'Orbitron', monospace;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #ffe600;
+  text-shadow: 0 0 20px #ffe600, 0 0 40px #ff8800;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 210;
+  white-space: nowrap;
+  letter-spacing: 0.12em;
+}
+.combo-milestone-banner.active {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ===== 저주 모달 ===== */
+.curse-panel { max-width: 460px; }
+.curse-offer-card {
+  background: rgba(255,30,30,0.07);
+  border: 1px solid rgba(255,60,60,0.35);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  margin: 0.8rem 0;
+  text-align: left;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.82rem;
+}
+.curse-offer-card .curse-debuff { color: #ff4466; margin-bottom: 0.4rem; }
+.curse-offer-card .curse-reward { color: #39ff14; }
+.curse-actions {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+.neon-btn-red {
+  border-color: #ff4466;
+  color: #ff4466;
+}
+.neon-btn-red:hover {
+  background: rgba(255,68,102,0.15);
+  box-shadow: 0 0 16px rgba(255,68,102,0.45);
+}
+
+/* ===== 결과 화면 시너지 행 ===== */
+.synergies-result-row {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.75rem;
+  color: #ffe600;
+  text-align: center;
+  margin: 0.4rem 0;
+  min-height: 1.2rem;
+  letter-spacing: 0.05em;
+}
