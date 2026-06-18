@@ -77,6 +77,7 @@ let isBossStage      = false;
 let isEndlessMode    = false;
 let endlessModeStartTime = 0;
 let isStageClearAnim = false;   // 클리어 연출 진행 중 여부
+let _gemMagnetTimer  = null;    // stageGemMagnet setTimeout ID
 
 // 보스
 let activeBoss = null;
@@ -199,8 +200,9 @@ const MP_SYNC_MS = 150;
 const MP_COLORS  = ['#00f0ff','#b026ff','#39ff14','#ff4466','#ffe600','#ff8800'];
 
 // 오브젝트 상한 (멀티 대비 성능 캡)
-const MAX_ENEMIES     = 120;
-const MAX_PROJECTILES = 200;
+const MAX_ENEMIES        = 120;
+const MAX_PROJECTILES    = 200;
+const MAX_BOSS_PROJ      = 40;
 const MAX_PARTICLES   = 180;
 
 // ─── 리듬 비트 시스템 ───
@@ -722,8 +724,10 @@ function stopBGM() {
   if (bgmSchedulerTimer) { clearTimeout(bgmSchedulerTimer); bgmSchedulerTimer = null; }
   if (bgmAudioElement)   { bgmAudioElement.pause(); bgmAudioElement = null; }
   if (bgmGainNode) {
-    try { bgmGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.08); } catch(e) {}
-    setTimeout(() => { if (bgmGainNode) { bgmGainNode.disconnect(); bgmGainNode = null; } }, 200);
+    const oldGain = bgmGainNode;
+    bgmGainNode = null; // 즉시 null로 교체 (레이스 컨디션 방지)
+    try { oldGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.08); } catch(e) {}
+    setTimeout(() => { try { oldGain.disconnect(); } catch(e) {} }, 220);
   }
 }
 
@@ -2022,6 +2026,7 @@ class Boss {
     const shotCount = this.phase >= 3 ? 12 : (this.phase >= 2 ? 10 : 8);
     const spd = 5.5;
     const dmg = this.damage * 0.6;
+    if (bossProjectiles.length >= MAX_BOSS_PROJ) return;
     addFloatingText(this.x, this.y - 60, '🔵 궤도 사격!', this.patternType.glowColor, 12);
     playSynthSound([500, 300, 700], 0.12, 'triangle', 0.07);
     for (let i = 0; i < shotCount; i++) {
@@ -2038,6 +2043,7 @@ class Boss {
     if (!player) return;
     const count = this.phase >= 3 ? 3 : (this.phase >= 2 ? 2 : 1);
     const dmg = this.damage * 0.8;
+    if (bossProjectiles.length >= MAX_BOSS_PROJ) return;
     addFloatingText(this.x, this.y - 60, '🎯 유도탄!', '#ff8800', 12);
     playSynthSound([150, 400], 0.15, 'sawtooth', 0.08);
     for (let i = 0; i < count; i++) {
@@ -2491,7 +2497,8 @@ function triggerStageClear() {
   enemies = [];
   projectiles = [];
   stageGemMagnet = true;
-  setTimeout(() => { stageGemMagnet = false; }, 3500);
+  if (_gemMagnetTimer) clearTimeout(_gemMagnetTimer);
+  _gemMagnetTimer = setTimeout(() => { stageGemMagnet = false; _gemMagnetTimer = null; }, 3500);
 
   const isEntry = currentStage === 100;
   showStageOverlay(
@@ -3274,6 +3281,8 @@ function startGame() {
   activeLasersArr = []; fieldItems = []; floatingTexts = [];
   bossProjectiles = [];
   activeBoss  = null;
+  if (_gemMagnetTimer) { clearTimeout(_gemMagnetTimer); _gemMagnetTimer = null; }
+  stageGemMagnet = false;
   currentStage = 1;
   stageKillProgress = 0;
   stageKillGoal     = getStageKillGoal(1);
@@ -3310,7 +3319,7 @@ function startGame() {
   camera.x = player.x - camera.width  / 2;
   camera.y = player.y - camera.height / 2;
 
-  bgmTrackId = 0;
+  bgmTrackId = Math.floor(Math.random() * 3); // 3트랙 중 랜덤 선택
   bgmTrackCheckTimer = 0;
   startBGM();
   lastTime = performance.now();
@@ -3467,13 +3476,7 @@ function update(dt) {
   // HUD 동기화
   updateHUD();
 
-  // BGM 트랙 체크 (스테이지 기반)
-  bgmTrackCheckTimer += dt;
-  if (bgmTrackCheckTimer >= 4000) {
-    bgmTrackCheckTimer = 0;
-    const wantTrack = (isEndlessMode || currentStage >= 50) ? 1 : 0;
-    if (wantTrack !== bgmTrackId) bgmTrackId = wantTrack;
-  }
+  // BGM 트랙은 설정 모달에서 수동 선택만 허용 — 자동 override 없음
 
   // MP 상태 동기화
   if (mpMode) syncMpState(dt);
