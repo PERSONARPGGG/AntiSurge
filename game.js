@@ -322,18 +322,12 @@ const CURSE_DEFS = [
   {
     id: 'curse_dmg',
     debuff: '받는 피해 +40%',
-    reward: '레벨업 카드 +3장, 리롤 +3회',
+    reward: '리롤 +5회, 골드 +30 즉시',
     debuffFn: (p) => { p._curseDamageMult = (p._curseDamageMult || 1) * 1.40; },
     rewardFn: () => {
-      rerollUses += 3;
-      for (let i = 0; i < 3; i++) { pendingLevelUps++; }
-      if (!levelUpInProgress && pendingLevelUps > 0) {
-        pendingLevelUps--;
-        levelUpInProgress = true;
-        playLevelUpSound();
-        triggerLevelUpModal();
-      }
-      addFloatingText(player.x, player.y-50, '📜 카드 +3!', '#b026ff', 16);
+      rerollUses += 5;
+      if (player) player.gold += 30;
+      addFloatingText(player.x, player.y-50, '🔄 리롤 +5 · 💰 +30G!', '#b026ff', 15);
     }
   },
   {
@@ -1619,26 +1613,23 @@ class ChainWeapon extends BaseWeapon {
     }
     playSynthSound([900, 1400, 600], 0.12, 'square', 0.05);
     for (let i = 0; i < hit.length; i++) {
-      const e    = hit[i];
-      const dmg  = baseDmg * Math.pow(0.75, i);
+      const e   = hit[i];
+      const dmg = baseDmg * Math.pow(0.75, i);
       createExplosionParticles(e.x, e.y, '#00f0ff', 4);
       if (e === activeBoss) {
         activeBoss.takeDamage(dmg, 'chain');
-        if (weaponStats.chain) weaponStats.chain.damage += dmg;
       } else {
         if (e.takeDamage(dmg, 'chain')) {
           killCount++;
-          if (weaponStats.chain) weaponStats.chain.kills++;
           // 진화: 뉴럴 바이러스 — 처치 시 주변 폭발
           if (this.level === 5) {
             const nearbyForChain = enemies.filter(en => en !== e && dist(e.x, e.y, en.x, en.y) < 130);
             for (let nb of nearbyForChain) {
-              if (nb.takeDamage(dmg * 0.6, 'chain')) { killCount++; if (weaponStats.chain) weaponStats.chain.kills++; }
+              if (nb.takeDamage(dmg * 0.6, 'chain')) killCount++;
             }
             createExplosionParticles(e.x, e.y, '#00f0ff', 10);
           }
         }
-        if (weaponStats.chain) weaponStats.chain.damage += dmg;
       }
       if (i < hit.length - 1) {
         addFloatingText((e.x + hit[i+1].x)/2, (e.y + hit[i+1].y)/2 - 10, '⚡', '#00f0ff', 13);
@@ -1680,16 +1671,11 @@ class Mine {
     playSynthSound([180, 80], 0.18, 'sawtooth', 0.08, true);
     for (let i = enemies.length - 1; i >= 0; i--) {
       if (dist(this.x, this.y, enemies[i].x, enemies[i].y) < this.explodeR + enemies[i].radius) {
-        if (enemies[i].takeDamage(this.damage, 'mine')) {
-          killCount++;
-          if (weaponStats.mine) weaponStats.mine.kills++;
-        }
-        if (weaponStats.mine) weaponStats.mine.damage += this.damage;
+        if (enemies[i].takeDamage(this.damage, 'mine')) killCount++;
       }
     }
     if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < this.explodeR + activeBoss.radius) {
       activeBoss.takeDamage(this.damage * 0.6, 'mine');
-      if (weaponStats.mine) weaponStats.mine.damage += this.damage * 0.6;
     }
     // 진화: 플라즈마 클러스터 — 소형 마인 3개 산란
     if (!this.isEvoSub) {
@@ -1782,13 +1768,8 @@ class BlackHole {
         if (this.dmgTimer >= this.dmgInt && d < this.pullR * 0.4) {
           if (e === activeBoss) {
             activeBoss.takeDamage(this.dmg * 0.4, 'blackhole');
-            if (weaponStats.blackhole) weaponStats.blackhole.damage += this.dmg * 0.4;
           } else {
-            if (e.takeDamage(this.dmg, 'blackhole')) {
-              killCount++;
-              if (weaponStats.blackhole) weaponStats.blackhole.kills++;
-            }
-            if (weaponStats.blackhole) weaponStats.blackhole.damage += this.dmg;
+            if (e.takeDamage(this.dmg, 'blackhole')) killCount++;
           }
         }
       }
@@ -1806,17 +1787,11 @@ class BlackHole {
     playSynthSound([55, 140, 380], 0.28, 'sawtooth', 0.12);
     for (let i = enemies.length - 1; i >= 0; i--) {
       if (dist(this.x, this.y, enemies[i].x, enemies[i].y) < collapseR + enemies[i].radius) {
-        if (enemies[i].takeDamage(collapseDmg, 'blackhole')) {
-          killCount++;
-          if (weaponStats.blackhole) weaponStats.blackhole.kills++;
-        }
-        if (weaponStats.blackhole) weaponStats.blackhole.damage += collapseDmg;
+        if (enemies[i].takeDamage(collapseDmg, 'blackhole')) killCount++;
       }
     }
     if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < collapseR + activeBoss.radius) {
-      const bd = Math.min(collapseDmg, activeBoss.maxHp * 0.4);
-      activeBoss.takeDamage(bd, 'blackhole');
-      if (weaponStats.blackhole) weaponStats.blackhole.damage += bd;
+      activeBoss.takeDamage(Math.min(collapseDmg, activeBoss.maxHp * 0.4), 'blackhole');
     }
     addFloatingText(this.x, this.y - 30, '🌑 붕괴!', '#b026ff', 13);
   }
@@ -3010,6 +2985,8 @@ function triggerStageClear() {
   }
   enemies = [];
   projectiles = [];
+  mines = [];
+  blackHoles = [];
   stageGemMagnet = true;
   if (_gemMagnetTimer) clearTimeout(_gemMagnetTimer);
   _gemMagnetTimer = setTimeout(() => { stageGemMagnet = false; _gemMagnetTimer = null; }, 3500);
@@ -4676,6 +4653,7 @@ function applyUpgrade(choice) {
     player.passives[choice.key] = choice.nextLevel;
     applyPassiveEffect(choice.key, choice.nextLevel);
     playSynthSound([500, 900, 1200], 0.12, 'triangle', 0.05);
+    checkSynergies();
   }
 }
 
