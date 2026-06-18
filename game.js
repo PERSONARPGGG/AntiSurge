@@ -59,12 +59,13 @@ let killCount = 0;
 
 // 엔티티 배열
 let player;
-let enemies    = [];
-let projectiles = [];
-let gems       = [];
-let particles  = [];
-let fieldItems = [];
+let enemies       = [];
+let projectiles   = [];
+let gems          = [];
+let particles     = [];
+let fieldItems    = [];
 let floatingTexts = [];
+let bossProjectiles = [];
 
 // ============================================================
 // 2. 스테이지 시스템
@@ -212,16 +213,24 @@ const BEAT_CHAIN_DECAY = 4000;   // ms
 
 // ─── 랜덤 필드 이벤트 시스템 ───
 const FIELD_EVENTS = [
-  { id: 'core_surge',   icon: '💫', name: '코어 서지',    color: '#00f0ff', duration: 6000,
+  { id: 'core_surge',      icon: '💫', name: '코어 서지',     color: '#00f0ff', duration: 6000,
     desc: 'XP 흡수량 3배! 젬을 최대한 수집하세요.' },
-  { id: 'virus_frenzy', icon: '⚡', name: '바이러스 광란', color: '#ff4400', duration: 9000,
+  { id: 'virus_frenzy',    icon: '⚡', name: '바이러스 광란',  color: '#ff4400', duration: 9000,
     desc: '모든 적 이동속도 1.7배! 살아남으세요.' },
-  { id: 'emf_pulse',    icon: '🔵', name: 'EMF 펄스',    color: '#39ff14', duration: 1200,
+  { id: 'emf_pulse',       icon: '🔵', name: 'EMF 펄스',     color: '#39ff14', duration: 1200,
     desc: '전자기 펄스 발사! 범위 내 적 2.5초 스턴.' },
-  { id: 'golden_rush',  icon: '💰', name: '골든 러쉬',   color: '#ffe600', duration: 7000,
+  { id: 'golden_rush',     icon: '💰', name: '골든 러쉬',     color: '#ffe600', duration: 7000,
     desc: '황금의 시간! 모든 처치 시 골드 3배 드롭.' },
-  { id: 'data_storm',   icon: '🌪️', name: '데이터 폭풍',  color: '#b026ff', duration: 10000,
-    desc: '혼돈의 폭풍! 적들이 불규칙하게 이동합니다.' }
+  { id: 'data_storm',      icon: '🌪️', name: '데이터 폭풍',   color: '#b026ff', duration: 10000,
+    desc: '혼돈의 폭풍! 적들이 불규칙하게 이동합니다.' },
+  { id: 'elite_invasion',  icon: '👾', name: '엘리트 침공',   color: '#ff6600', duration: 12000,
+    desc: '정예 바이러스 8기 긴급 침투! 20% 속도 강화 상태입니다.' },
+  { id: 'virus_surge',     icon: '🦠', name: '바이러스 급증', color: '#ff0066', duration: 1200,
+    desc: '바이러스 대량 출현! 25기가 동시에 쏟아집니다.' },
+  { id: 'core_overload',   icon: '🔥', name: '코어 과부하',   color: '#ff8800', duration: 8000,
+    desc: '공격력 3배 상승! 하지만 받는 피해도 1.5배 증가합니다.' },
+  { id: 'phantom_shift',   icon: '👁', name: '팬텀 시프트',   color: '#8800ff', duration: 7000,
+    desc: '적들의 추적 AI 오작동! 혼란 상태로 무작위 이동합니다.' }
 ];
 let fieldEventTimer    = 0;
 let fieldEventInterval = 40000 + Math.random() * 20000;
@@ -277,6 +286,20 @@ const UPGRADES = {
       icon: "🛸",
       desc: ["자율 드론 소환, 인근 적에게 탄막 발사", "드론 발사 속도 증가", "드론 추가 소환 (+1)", "피해량 및 사거리 대폭 증가", "【진화】헥사 드론 — 드론 3기, 3발 동시 사격"],
       evolvedName: "헥사 드론",
+      maxLevel: 5
+    },
+    missile: {
+      name: "사이버 미사일",
+      icon: "🚀",
+      desc: ["적 추적 미사일 발사, 충돌 시 범위 폭발", "발사 간격 단축, 폭발 피해 증가", "미사일 2발 동시 발사", "피해량 대폭 증가, 유도력 강화", "【진화】쿼드 런처 — 4발 동시 발사, 대형 폭발"],
+      evolvedName: "쿼드 런처",
+      maxLevel: 5
+    },
+    ring: {
+      name: "플라즈마 링",
+      icon: "🔵",
+      desc: ["플레이어 중심 확장 링 발생, 접촉한 적 피해", "링 반경 및 피해량 증가", "링 2개 동시 생성", "피해량 대폭 증가, 확장 속도 상향", "【진화】보이드 노바 — 3중 링, 적 흡입 후 폭발"],
+      evolvedName: "보이드 노바",
       maxLevel: 5
     }
   },
@@ -354,12 +377,15 @@ const ACHIEVEMENTS = [
 // 패시브 아이템 정의
 // ============================================================
 const PASSIVE_DEFS = {
-  regen:     { name: '회생 코어',   icon: '🔋', desc: ['체력 3초마다 +1 자동 회복',           '회복량 3배 증가 (+3/3s)'] },
-  shield:    { name: '방어막 칩',   icon: '💠', desc: ['받는 피해 10% 감소',                  '피해 감소 22%로 강화'] },
-  nanobots:  { name: '나노봇 군단', icon: '🦠', desc: ['젬 흡수 시 20% 확률로 HP +3 회복',    '확률 40%, 회복량 +5로 증가'] },
-  overclock: { name: '과부하 회로', icon: '⚙️', desc: ['모든 무기 피해량 +12%',               '피해량 추가 +28% (합계 +40%)'] },
-  resonance: { name: '공명 코어',   icon: '🔮', desc: ['젬 XP +20% 추가 획득',               'XP +45%로 증가'] },
-  thorns:    { name: '복수의 가시', icon: '⚔️', desc: ['피격 시 반경 120 내 적에게 15 피해',  '피해 25, 반경 160으로 강화'] }
+  regen:     { name: '회생 코어',   icon: '🔋', desc: ['체력 3초마다 +1 자동 회복',             '회복량 3배 증가 (+3/3s)'] },
+  shield:    { name: '방어막 칩',   icon: '💠', desc: ['받는 피해 10% 감소',                    '피해 감소 22%로 강화'] },
+  nanobots:  { name: '나노봇 군단', icon: '🦠', desc: ['젬 흡수 시 20% 확률로 HP +3 회복',      '확률 40%, 회복량 +5로 증가'] },
+  overclock: { name: '과부하 회로', icon: '⚙️', desc: ['모든 무기 피해량 +12%',                 '피해량 추가 +28% (합계 +40%)'] },
+  resonance: { name: '공명 코어',   icon: '🔮', desc: ['젬 XP +20% 추가 획득',                 'XP +45%로 증가'] },
+  thorns:    { name: '복수의 가시', icon: '⚔️', desc: ['피격 시 반경 120 내 적에게 15 피해',    '피해 25, 반경 160으로 강화'] },
+  critical:  { name: '크리티컬 코어', icon: '💥', desc: ['15% 확률로 피해 2.5배 치명타 발생',   '치명타 확률 25%, 피해 3배로 강화'] },
+  explosive: { name: '폭발 연쇄',   icon: '💣', desc: ['처치 시 30% 확률 반경 120 연쇄폭발',   '확률 50%, 반경 160, 피해 증가'] },
+  barrier:   { name: '전기 방벽',   icon: '🛡', desc: ['5초마다 반경 150 내 적 1.5초 스턴',    '3초마다 발동, 스턴 2.5초로 강화'] }
 };
 
 // 상점 아이템 풀
@@ -389,7 +415,9 @@ let weaponStats = {
   zone:      { level: 0, damage: 0, kills: 0 },
   laser:     { level: 0, damage: 0, kills: 0 },
   boomerang: { level: 0, damage: 0, kills: 0 },
-  drone:     { level: 0, damage: 0, kills: 0 }
+  drone:     { level: 0, damage: 0, kills: 0 },
+  missile:   { level: 0, damage: 0, kills: 0 },
+  ring:      { level: 0, damage: 0, kills: 0 }
 };
 
 // ============================================================
@@ -545,6 +573,29 @@ const BGM2_PAD = [
 const BGM2_KICK  = [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0];
 const BGM2_SNARE = [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0];
 
+// ─── BGM Track 3: GHOST PROTOCOL (Dm, industrial / heavy, 138 BPM) ───
+const BGM3_BASS = [
+  38,null,38,null,41,null,null,null,38,null,38,null,43,null,41,null,
+  36,null,null,null,36,null,41,null,38,null,38,null,43,null,null,null,
+  38,null,null,null,36,null,38,null,41,null,null,null,43,null,45,null,
+  46,null,null,null,43,null,null,null,38,null,36,null,38,null,null,null
+];
+const BGM3_LEAD = [
+  74,null,77,null,null,null,74,null,72,null,null,null,70,null,null,null,
+  72,null,70,null,69,null,null,null,72,null,null,null,74,null,null,null,
+  77,null,null,null,74,null,72,null,74,null,77,null,79,null,null,null,
+  77,null,74,null,null,null,77,null,79,null,77,null,74,null,72,null
+];
+const BGM3_PAD = [
+  50,null,null,null,null,null,null,null,53,null,null,null,null,null,null,null,
+  50,null,null,null,null,null,null,null,53,null,null,null,null,null,null,null,
+  48,null,null,null,null,null,null,null,55,null,null,null,null,null,null,null,
+  50,null,null,null,null,null,null,null,53,null,null,null,null,null,null,null
+];
+const BGM3_KICK  = [1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,1,0,1,0,1,0];
+const BGM3_SNARE = [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,1,0];
+const BGM3_HIHAT = [1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1];
+
 function initBGMBuffers() {
   if (!audioCtx) return;
   const sr = audioCtx.sampleRate;
@@ -614,21 +665,29 @@ function bgmSchedule() {
   while (bgmNextNoteTime < audioCtx.currentTime + BGM_SCHEDULE_AHEAD) {
     const step  = bgmCurrentStep % BGM_TOTAL_STEPS;
     const t     = bgmNextNoteTime;
-    const isT2  = bgmTrackId === 1;
-    const bass  = isT2 ? BGM2_BASS  : BGM_BASS;
-    const lead  = isT2 ? BGM2_LEAD  : BGM_LEAD;
-    const pad   = isT2 ? BGM2_PAD   : BGM_PAD;
-    const kick  = isT2 ? BGM2_KICK  : BGM_KICK;
-    const snare = isT2 ? BGM2_SNARE : BGM_SNARE;
-    if (bass[step]  !== null) bgmPlayTone(midiToFreq(bass[step] - 12), BGM_STEP * 1.7, 'sawtooth', isT2 ? 0.22 : 0.17, t);
+    let bass, lead, pad, kick, snare, hihat, bassVol, leadVol, leadType;
+    if (bgmTrackId === 2) {
+      bass = BGM3_BASS; lead = BGM3_LEAD; pad = BGM3_PAD;
+      kick = BGM3_KICK; snare = BGM3_SNARE; hihat = BGM3_HIHAT;
+      bassVol = 0.25; leadVol = 0.08; leadType = 'sawtooth';
+    } else if (bgmTrackId === 1) {
+      bass = BGM2_BASS; lead = BGM2_LEAD; pad = BGM2_PAD;
+      kick = BGM2_KICK; snare = BGM2_SNARE; hihat = null;
+      bassVol = 0.22; leadVol = 0.07; leadType = 'sawtooth';
+    } else {
+      bass = BGM_BASS; lead = BGM_LEAD; pad = BGM_PAD;
+      kick = BGM_KICK; snare = BGM_SNARE; hihat = BGM_HIHAT;
+      bassVol = 0.17; leadVol = 0.055; leadType = 'square';
+    }
+    if (bass[step]  !== null) bgmPlayTone(midiToFreq(bass[step] - 12), BGM_STEP * 1.7, 'sawtooth', bassVol, t);
     if (pad[step]   !== null) {
       bgmPlayTone(midiToFreq(pad[step]),     BGM_STEP * 3.8, 'sawtooth', 0.05, t);
       bgmPlayTone(midiToFreq(pad[step] + 7), BGM_STEP * 3.8, 'sawtooth', 0.03, t);
     }
-    if (lead[step]  !== null) bgmPlayTone(midiToFreq(lead[step]), BGM_STEP * 0.85, isT2 ? 'sawtooth' : 'square', isT2 ? 0.07 : 0.055, t);
+    if (lead[step]  !== null) bgmPlayTone(midiToFreq(lead[step]), BGM_STEP * 0.85, leadType, leadVol, t);
     if (kick[step])  bgmPlayKick(t);
     if (snare[step]) bgmPlaySnare(t);
-    if (!isT2 && BGM_HIHAT[step]) bgmPlayHihat(t);
+    if (hihat && hihat[step]) bgmPlayHihat(t);
     bgmCurrentStep++;
     bgmNextNoteTime += BGM_STEP;
   }
@@ -704,8 +763,9 @@ class Player {
     this.attackSurgeMult  = 1.0;
 
     // 패시브 아이템
-    this.passives        = { regen: 0, shield: 0, nanobots: 0, overclock: 0, resonance: 0, thorns: 0 };
+    this.passives        = { regen: 0, shield: 0, nanobots: 0, overclock: 0, resonance: 0, thorns: 0, critical: 0, explosive: 0, barrier: 0 };
     this.regenTimer      = 0;
+    this.barrierTimer    = 0;
     this.damageReduction = 0.0;
     this.passiveXpMult   = 1.0;
     this.thornsTrigger   = false;
@@ -725,7 +785,9 @@ class Player {
       zone:      new ZoneWeapon(this),
       laser:     new LaserWeapon(this),
       boomerang: new BoomerangWeapon(this),
-      drone:     new DroneWeapon(this)
+      drone:     new DroneWeapon(this),
+      missile:   new MissileWeapon(this),
+      ring:      new RingWeapon(this)
     };
     const startW = cls.startWeapon || 'flare';
     this.weapons[startW].level = 1;
@@ -770,6 +832,25 @@ class Player {
       }
     } else {
       this.regenTimer = 0;
+    }
+
+    // 패시브: 전기 방벽 — 주기적으로 주변 적 스턴
+    if (this.passives.barrier > 0) {
+      this.barrierTimer += dt;
+      const barrierCD  = this.passives.barrier === 2 ? 3000 : 5000;
+      const barrierR   = 150;
+      const stunDur    = this.passives.barrier === 2 ? 2500 : 1500;
+      if (this.barrierTimer >= barrierCD) {
+        this.barrierTimer = 0;
+        for (let e of enemies) {
+          if (dist(this.x, this.y, e.x, e.y) < barrierR) e.stunTimer = stunDur;
+        }
+        if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < barrierR)
+          activeBoss.stunTimer = Math.min(stunDur * 0.4, 800);
+        createExplosionParticles(this.x, this.y, '#00f0ff', 18);
+        playSynthSound([300, 900, 200], 0.12, 'triangle', 0.07);
+        addFloatingText(this.x, this.y - 40, '🛡 전기 방벽!', '#00f0ff', 13);
+      }
     }
 
     // 부활 퍽: 긴급 백업 (HP 임계값 체크)
@@ -880,6 +961,8 @@ class Player {
       return;
     }
     let dmg = amount;
+    // 코어 과부하 이벤트: 받는 피해 1.5배
+    if (activeFieldEvent?.id === 'core_overload') dmg *= 1.5;
     if (this.damageReduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - this.damageReduction)));
     this.hp -= dmg;
     if (this.passives.thorns > 0) this.thornsTrigger = true;
@@ -1242,6 +1325,122 @@ class DroneWeapon extends BaseWeapon {
   }
 }
 
+// 7. 신규 무기 — 사이버 미사일
+class MissileWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); this.cooldown = 3000; }
+  update(dt) {
+    this.timer += dt;
+    const cds = [3000, 2500, 2500, 2200, 1800];
+    const cd  = cds[Math.min(this.level - 1, cds.length - 1)] ?? 3000;
+    if (this.timer >= cd) { this.timer = 0; this.fire(); }
+  }
+  fire() {
+    if (!player || projectiles.length >= MAX_PROJECTILES) return;
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    if (allT.length === 0) return;
+    const target = allT.reduce((best, e) => {
+      const d = dist(this.owner.x, this.owner.y, e.x, e.y);
+      return (!best || d < best.d) ? { e, d } : best;
+    }, null);
+    if (!target) return;
+    const counts = [1, 1, 2, 2, 4];
+    const count  = counts[Math.min(this.level - 1, counts.length - 1)];
+    const dmgs   = [55, 65, 65, 85, 90];
+    const dmg    = dmgs[Math.min(this.level - 1, dmgs.length - 1)] * this.owner.damageMultiplier;
+    const angle  = Math.atan2(target.e.y - this.owner.y, target.e.x - this.owner.x);
+    const isEvo  = this.level === 5;
+    playSynthSound([300, 600, 900], 0.12, 'sawtooth', 0.06);
+    for (let i = 0; i < count; i++) {
+      const spread = count > 1 ? (i - (count-1)/2) * 0.22 : 0;
+      const a = angle + spread;
+      projectiles.push(new MissileProjectile(
+        this.owner.x, this.owner.y,
+        Math.cos(a) * 5, Math.sin(a) * 5,
+        dmg, isEvo ? 10 : 7, '#ff6600', 'missile', isEvo
+      ));
+    }
+  }
+  draw(ctx, camera) {
+    if (this.level === 0) return;
+    // 사거리 표시 없음 — 유도탄이라 범위 없음
+  }
+}
+
+// 7b. 신규 무기 — 플라즈마 링
+class RingWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); this.rings = []; }
+  update(dt) {
+    this.timer += dt;
+    const cds = [3500, 3000, 2500, 2200, 1800];
+    const cd  = cds[Math.min(this.level - 1, cds.length - 1)] ?? 3500;
+    if (this.timer >= cd) { this.timer = 0; this.spawnRings(); }
+
+    for (let i = this.rings.length - 1; i >= 0; i--) {
+      const ring = this.rings[i];
+      ring.life -= dt;
+      if (ring.life <= 0) { this.rings.splice(i, 1); continue; }
+      const prog = 1 - ring.life / ring.maxLife;
+      const prevR = ring.currentRadius;
+      ring.currentRadius = ring.maxRadius * prog;
+
+      // 반경 통과 시 적에게 피해 (hitEnemies로 중복 방지)
+      const dmgs = [25, 30, 35, 40, 50];
+      const dmg  = dmgs[Math.min(this.level - 1, dmgs.length - 1)] * this.owner.damageMultiplier;
+      let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+      for (let e of allT) {
+        if (ring.hitEnemies.has(e)) continue;
+        const d = dist(ring.x, ring.y, e.x, e.y);
+        if (d <= ring.currentRadius + e.radius && d >= prevR - e.radius) {
+          ring.hitEnemies.add(e);
+          const killed = e === activeBoss
+            ? activeBoss.takeDamage(dmg, 'ring')
+            : e.takeDamage(dmg, 'ring');
+          if (killed && e !== activeBoss) killCount++;
+          // 보이드 노바 진화: 링 안으로 당기기
+          if (this.level === 5 && e !== activeBoss) {
+            const dx = ring.x - e.x, dy = ring.y - e.y;
+            const dd = Math.sqrt(dx*dx + dy*dy) || 1;
+            e.x += (dx / dd) * 5;
+            e.y += (dy / dd) * 5;
+          }
+        }
+      }
+    }
+  }
+  spawnRings() {
+    const count    = this.level >= 3 ? (this.level === 5 ? 3 : 2) : 1;
+    const maxRs    = [200, 280, 300, 330, 360];
+    const maxR     = maxRs[Math.min(this.level - 1, maxRs.length - 1)];
+    const dur      = 1400;
+    playSynthSound([200, 800, 400], 0.15, 'sine', 0.07);
+    for (let i = 0; i < count; i++) {
+      this.rings.push({
+        x: this.owner.x, y: this.owner.y,
+        currentRadius: 0, maxRadius: maxR + i * 40,
+        life: dur - i * 120, maxLife: dur - i * 120,
+        hitEnemies: new Set()
+      });
+    }
+  }
+  draw(ctx, camera) {
+    if (this.level === 0 || this.rings.length === 0) return;
+    ctx.save();
+    for (const ring of this.rings) {
+      const alpha = (ring.life / ring.maxLife) * 0.85;
+      const col   = this.level === 5 ? '#b026ff' : '#00f0ff';
+      ctx.globalAlpha = alpha;
+      ctx.shadowBlur  = 20; ctx.shadowColor = col;
+      ctx.strokeStyle = col;
+      ctx.lineWidth   = this.level === 5 ? 4 : 2.5;
+      ctx.beginPath();
+      ctx.arc(ring.x - camera.x, ring.y - camera.y, ring.currentRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
 // ============================================================
 // 8. 투사체 및 레이저
 // ============================================================
@@ -1308,6 +1507,75 @@ class BoomerangProjectile extends Projectile {
     ctx.arc(0, 0, 12, 0.6, Math.PI * 2 - 0.6);
     ctx.stroke();
     ctx.restore();
+  }
+}
+
+// 미사일 투사체 — 유도 + 폭발
+class MissileProjectile extends Projectile {
+  constructor(x, y, vx, vy, damage, radius, color, weaponKey, isEvo) {
+    super(x, y, vx, vy, damage, radius, color, 1, weaponKey);
+    this.speed   = Math.sqrt(vx*vx + vy*vy);
+    this.life    = 4500;
+    this.isEvo   = isEvo;
+    this.trail   = [];
+  }
+  update(dt) {
+    // 가장 가까운 적 추적
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    let target = null, minD = Infinity;
+    for (let e of allT) {
+      const d = dist(this.x, this.y, e.x, e.y);
+      if (d < minD) { minD = d; target = e; }
+    }
+    if (target) {
+      const dx = target.x - this.x, dy = target.y - this.y;
+      const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+      const tx = (dx / d) * this.speed;
+      const ty = (dy / d) * this.speed;
+      const steer = this.isEvo ? 0.06 : 0.04;
+      this.vx += (tx - this.vx) * steer * (dt / 16.66);
+      this.vy += (ty - this.vy) * steer * (dt / 16.66);
+    }
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > 8) this.trail.shift();
+    this.x += this.vx * (dt / 16.66);
+    this.y += this.vy * (dt / 16.66);
+    this.life -= dt;
+  }
+  draw(ctx, camera) {
+    ctx.save();
+    // 잔상 트레일
+    for (let i = 0; i < this.trail.length; i++) {
+      const a = (i / this.trail.length) * 0.4;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#ff8800';
+      ctx.beginPath();
+      ctx.arc(this.trail[i].x - camera.x, this.trail[i].y - camera.y, this.radius * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 18; ctx.shadowColor = this.color;
+    ctx.fillStyle  = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x - camera.x, this.y - camera.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  explode() {
+    const expR  = this.isEvo ? 90 : 60;
+    const expDmg = this.damage * 0.7;
+    createExplosionParticles(this.x, this.y, '#ff8800', this.isEvo ? 20 : 12);
+    triggerScreenShake(this.isEvo ? 5 : 3, 200);
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    for (let e of allT) {
+      if (dist(this.x, this.y, e.x, e.y) < expR + e.radius) {
+        const killed = e === activeBoss
+          ? activeBoss.takeDamage(expDmg, 'missile')
+          : e.takeDamage(expDmg, 'missile');
+        if (killed && e !== activeBoss) killCount++;
+      }
+    }
+    this.life = 0;
   }
 }
 
@@ -1412,12 +1680,23 @@ class Enemy {
       if (this.flashTimer > 0) this.flashTimer -= dt;
       return;
     }
-    let dx = player.x - this.x, dy = player.y - this.y;
-    let d  = Math.sqrt(dx*dx + dy*dy);
-    if (d > 0) { dx /= d; dy /= d; }
+    let dx, dy;
+    // 팬텀 시프트 이벤트: 적 AI 오작동 — 랜덤 방향으로 이동
+    if (activeFieldEvent?.id === 'phantom_shift') {
+      if (!this._phantomAngle) this._phantomAngle = Math.random() * Math.PI * 2;
+      this._phantomAngle += (Math.random() - 0.5) * 0.15;
+      dx = Math.cos(this._phantomAngle);
+      dy = Math.sin(this._phantomAngle);
+    } else {
+      dx = player.x - this.x; dy = player.y - this.y;
+      let d = Math.sqrt(dx*dx + dy*dy);
+      if (d > 0) { dx /= d; dy /= d; }
+    }
     let spd = this.baseSpeed * this.speedMultiplier;
     // 바이러스 광란 이벤트
     if (activeFieldEvent?.id === 'virus_frenzy') spd *= 1.7;
+    // 엘리트 침공 이벤트: 20% 속도 증가
+    if (activeFieldEvent?.id === 'elite_invasion') spd *= 1.2;
     this.x += dx * spd * (dt / 16.66);
     this.y += dy * spd * (dt / 16.66);
     this.speedMultiplier = 1.0;
@@ -1457,11 +1736,23 @@ class Enemy {
   }
 
   takeDamage(amount, sourceKey) {
+    // 크리티컬 코어 패시브
+    if (player && player.passives.critical > 0 && sourceKey !== 'thorns' && sourceKey !== 'boss_proj') {
+      const chance = player.passives.critical === 2 ? 0.25 : 0.15;
+      const mult   = player.passives.critical === 2 ? 3.0  : 2.5;
+      if (Math.random() < chance) {
+        amount *= mult;
+        addFloatingText(this.x, this.y - this.radius - 8, '💥CRIT!', '#ffe600', 13);
+      }
+    }
+    // 코어 과부하 이벤트: 플레이어 공격력 3배
+    if (activeFieldEvent?.id === 'core_overload' && sourceKey !== 'thorns' && sourceKey !== 'boss_proj') {
+      amount *= 3;
+    }
     this.hp -= amount;
     this.flashTimer = 80;
     if (weaponStats[sourceKey]) weaponStats[sourceKey].damage += amount;
     createExplosionParticles(this.x, this.y, this.color, 3);
-    // 플로팅 데미지 숫자 (25% 확률로 표시)
     if (Math.random() < 0.25) {
       addFloatingText(this.x + (Math.random()-0.5)*20, this.y - this.radius, Math.floor(amount).toString(), '#ffffff', 11);
     }
@@ -1475,6 +1766,23 @@ class Enemy {
     createExplosionParticles(this.x, this.y, this.color, this.isElite ? 20 : 12);
     playEnemyExplosionSound();
     if (weaponStats[sourceKey]) weaponStats[sourceKey].kills++;
+
+    // 폭발 연쇄 패시브
+    if (player && player.passives.explosive > 0) {
+      const chance = player.passives.explosive === 2 ? 0.5 : 0.3;
+      const radius = player.passives.explosive === 2 ? 160 : 120;
+      const dmg    = player.passives.explosive === 2 ? 60  : 40;
+      if (Math.random() < chance) {
+        createExplosionParticles(this.x, this.y, '#ff8800', 14);
+        // 스냅샷으로 이터레이션 중 배열 변경 방지
+        const nearby = enemies.filter(e => e !== this && dist(this.x, this.y, e.x, e.y) < radius);
+        for (let e of nearby) {
+          if (e.takeDamage(dmg, 'explosive')) killCount++;
+        }
+        if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < radius)
+          activeBoss.takeDamage(dmg, 'explosive');
+      }
+    }
 
     // 리듬 비트 시스템: 비트 윈도우 안에 처치하면 XP 보너스
     if (beatWindowActive) {
@@ -1520,6 +1828,14 @@ class Enemy {
 // ============================================================
 // 10. 보스 클래스
 // ============================================================
+// 보스 타입 팔레트 (인덱스 % 4 순환)
+const BOSS_TYPES = [
+  { id: 'berserker', label: 'BERSERKER', outerColor: '#ff0044', innerColor: '#ff4466', glowColor: '#ff0044' },
+  { id: 'sharpshooter', label: 'SNIPER',  outerColor: '#00f0ff', innerColor: '#00aaff', glowColor: '#00f0ff' },
+  { id: 'summoner',  label: 'SUMMONER',  outerColor: '#b026ff', innerColor: '#cc66ff', glowColor: '#b026ff' },
+  { id: 'titan',     label: 'TITAN',     outerColor: '#ffe600', innerColor: '#ffaa00', glowColor: '#ff8800' },
+];
+
 class Boss {
   constructor(x, y) {
     this.x = x; this.y = y;
@@ -1528,6 +1844,9 @@ class Boss {
     this.speedMultiplier = 1.0;
     this.flashTimer = 0;
     this.pulseTimer = 0;
+    this.stunTimer  = 0;
+    this.shieldActive = false;
+    this.shieldTimer  = 0;
 
     let bossIdx = Math.floor(currentStage / 10) - 1;
     let scale   = 1 + bossIdx * 0.65;
@@ -1538,17 +1857,32 @@ class Boss {
     this.baseSpeed = 1.3;
     this.name   = BOSS_NAMES[Math.min(bossIdx, BOSS_NAMES.length - 1)];
     this.phase  = 1;
+    this.bossIdx = bossIdx;
+    this.patternType = BOSS_TYPES[bossIdx % 4];
 
     // 돌진 공격
     this.chargeTimer    = 0;
-    this.chargeCooldown = 4500;
+    this.chargeCooldown = this.patternType.id === 'berserker' ? 3500 : 4500;
     this.isCharging     = false;
     this.chargeVx = 0; this.chargeVy = 0;
     this.chargeDuration = 0;
+    this.pendingCharges = 0;
 
     // 미니언 소환
     this.minionTimer    = 0;
-    this.minionCooldown = 8000;
+    this.minionCooldown = this.patternType.id === 'summoner' ? 5000 : 8000;
+
+    // 궤도 사격 (sharpshooter)
+    this.orbShotTimer    = 0;
+    this.orbShotCooldown = 5000;
+
+    // 유도탄 (titan)
+    this.homingTimer    = 0;
+    this.homingCooldown = 6000;
+
+    // 방어막 (summoner)
+    this.shieldCooldown = 14000;
+    this.shieldCDTimer  = 0;
   }
 
   update(dt) {
@@ -1556,16 +1890,45 @@ class Boss {
     this.speedMultiplier = 1.0;
     if (this.flashTimer > 0) this.flashTimer -= dt;
 
+    // 스턴 처리
+    if (this.stunTimer > 0) { this.stunTimer -= dt; return; }
+
+    // 방어막 처리
+    if (this.shieldActive) {
+      this.shieldTimer -= dt;
+      if (this.shieldTimer <= 0) {
+        this.shieldActive = false;
+        addFloatingText(this.x, this.y - 70, '🛡 방어막 해제!', '#b026ff', 13);
+      }
+      // 방어막 중에도 이동은 함
+    }
+
     // 페이즈 2 전환 (HP 50% 이하)
     if (this.phase === 1 && this.hp <= this.maxHp * 0.5) {
       this.phase = 2;
       this.baseSpeed    *= 1.5;
-      this.chargeCooldown = 2500;
-      this.minionCooldown = 5000;
-      createExplosionParticles(this.x, this.y, '#ff0000', 25);
+      this.chargeCooldown = this.patternType.id === 'berserker' ? 2000 : 2500;
+      this.minionCooldown = this.patternType.id === 'summoner'  ? 3000 : 5000;
+      this.orbShotCooldown = 3500;
+      this.homingCooldown  = 4000;
+      createExplosionParticles(this.x, this.y, this.patternType.outerColor, 25);
       triggerScreenShake(8, 500);
       addFloatingText(this.x, this.y - 70, 'PHASE 2!', '#ff6600', 18);
       playSynthSound([80, 200], 0.5, 'sawtooth', 0.12);
+    }
+
+    // 페이즈 3 전환 (HP 25% 이하, bossIdx >= 2)
+    if (this.phase === 2 && this.bossIdx >= 2 && this.hp <= this.maxHp * 0.25) {
+      this.phase = 3;
+      this.baseSpeed    *= 1.3;
+      this.chargeCooldown  = 1800;
+      this.minionCooldown  = 2500;
+      this.orbShotCooldown = 2500;
+      this.homingCooldown  = 2500;
+      createExplosionParticles(this.x, this.y, '#ffffff', 35);
+      triggerScreenShake(14, 800);
+      addFloatingText(this.x, this.y - 70, '⚠ PHASE 3!', '#ffffff', 20);
+      playSynthSound([60, 120, 240], 0.6, 'sawtooth', 0.14);
     }
 
     if (this.isCharging) {
@@ -1574,7 +1937,13 @@ class Boss {
       this.chargeDuration -= dt;
       if (this.chargeDuration <= 0) {
         this.isCharging = false;
-        this.baseSpeed  = this.phase === 2 ? 1.95 : 1.3;
+        const baseSpd = this.phase === 3 ? 2.5 : this.phase === 2 ? 1.95 : 1.3;
+        this.baseSpeed = baseSpd;
+        // 베르세르커: 연속 돌진
+        if (this.patternType.id === 'berserker' && this.pendingCharges > 0) {
+          this.pendingCharges--;
+          setTimeout(() => { if (activeBoss === this) this.startCharge(false); }, 200);
+        }
       }
     } else {
       if (player) {
@@ -1590,7 +1959,7 @@ class Boss {
     this.chargeTimer += dt;
     if (this.chargeTimer >= this.chargeCooldown && player) {
       this.chargeTimer = 0;
-      this.startCharge();
+      this.startCharge(true);
     }
 
     this.minionTimer += dt;
@@ -1598,79 +1967,173 @@ class Boss {
       this.minionTimer = 0;
       this.spawnMinions();
     }
+
+    // 궤도 사격 (sharpshooter + 페이즈2 이상 전체 보스)
+    if (this.patternType.id === 'sharpshooter' || this.phase >= 2) {
+      this.orbShotTimer += dt;
+      if (this.orbShotTimer >= this.orbShotCooldown) {
+        this.orbShotTimer = 0;
+        this.orbitalShot();
+      }
+    }
+
+    // 유도탄 (titan + 페이즈3 전체)
+    if (this.patternType.id === 'titan' || this.phase >= 3) {
+      this.homingTimer += dt;
+      if (this.homingTimer >= this.homingCooldown) {
+        this.homingTimer = 0;
+        this.homingShot();
+      }
+    }
+
+    // 방어막 쿨다운 (summoner)
+    if (this.patternType.id === 'summoner' && !this.shieldActive) {
+      this.shieldCDTimer += dt;
+      if (this.shieldCDTimer >= this.shieldCooldown) {
+        this.shieldCDTimer = 0;
+        this.activateShield();
+      }
+    }
   }
 
-  startCharge() {
+  startCharge(isNew) {
     if (!player) return;
     let dx = player.x - this.x, dy = player.y - this.y;
     let d  = Math.sqrt(dx*dx + dy*dy);
     if (d > 0) { dx /= d; dy /= d; }
-    let chargeSpd = this.phase === 2 ? 14 : 9;
+    const phase3 = this.phase >= 3;
+    let chargeSpd = phase3 ? 17 : (this.phase === 2 ? 14 : 9);
     this.chargeVx = dx * chargeSpd;
     this.chargeVy = dy * chargeSpd;
     this.isCharging     = true;
     this.chargeDuration = 600;
     this.baseSpeed      = 0;
+    // 베르세르커: 연속 2-3회 돌진
+    if (isNew && this.patternType.id === 'berserker') {
+      this.pendingCharges = this.phase >= 2 ? 2 : 1;
+    }
     addFloatingText(this.x, this.y - 60, '⚡ CHARGE!', '#ff6600', 13);
     playSynthSound([200, 600], 0.3, 'sawtooth', 0.1);
     triggerScreenShake(4, 300);
   }
 
+  orbitalShot() {
+    if (!player) return;
+    const shotCount = this.phase >= 3 ? 12 : (this.phase >= 2 ? 10 : 8);
+    const spd = 5.5;
+    const dmg = this.damage * 0.6;
+    addFloatingText(this.x, this.y - 60, '🔵 궤도 사격!', this.patternType.glowColor, 12);
+    playSynthSound([500, 300, 700], 0.12, 'triangle', 0.07);
+    for (let i = 0; i < shotCount; i++) {
+      const angle = (i / shotCount) * Math.PI * 2;
+      bossProjectiles.push(new BossProjectile(
+        this.x, this.y,
+        Math.cos(angle) * spd, Math.sin(angle) * spd,
+        dmg, 7, this.patternType.glowColor, false
+      ));
+    }
+  }
+
+  homingShot() {
+    if (!player) return;
+    const count = this.phase >= 3 ? 3 : (this.phase >= 2 ? 2 : 1);
+    const dmg = this.damage * 0.8;
+    addFloatingText(this.x, this.y - 60, '🎯 유도탄!', '#ff8800', 12);
+    playSynthSound([150, 400], 0.15, 'sawtooth', 0.08);
+    for (let i = 0; i < count; i++) {
+      const spread = (i - (count - 1) / 2) * 0.3;
+      const angle = Math.atan2(player.y - this.y, player.x - this.x) + spread;
+      bossProjectiles.push(new BossProjectile(
+        this.x, this.y,
+        Math.cos(angle) * 3.5, Math.sin(angle) * 3.5,
+        dmg, 9, '#ff8800', true
+      ));
+    }
+  }
+
+  activateShield() {
+    this.shieldActive = true;
+    this.shieldTimer  = 3500;
+    addFloatingText(this.x, this.y - 70, '🛡 방어막 발동!', '#b026ff', 14);
+    createExplosionParticles(this.x, this.y, '#b026ff', 20);
+    playSynthSound([400, 800, 1200], 0.15, 'triangle', 0.08);
+  }
+
   spawnMinions() {
-    let count = this.phase === 2 ? 4 : 2;
+    const isSummoner = this.patternType.id === 'summoner';
+    const count = this.phase >= 3 ? 6 : (this.phase === 2 ? 4 : (isSummoner ? 3 : 2));
+    const minionType = isSummoner && this.phase >= 2 ? 'elite' : 'rusher';
     for (let i = 0; i < count; i++) {
       let angle = Math.random() * Math.PI * 2;
       let r  = 80 + Math.random() * 60;
       let ex = Math.max(20, Math.min(MAP_WIDTH  - 20, this.x + Math.cos(angle) * r));
       let ey = Math.max(20, Math.min(MAP_HEIGHT - 20, this.y + Math.sin(angle) * r));
-      enemies.push(new Enemy(ex, ey, 'rusher'));
+      enemies.push(new Enemy(ex, ey, minionType));
     }
     addFloatingText(this.x, this.y - 60, '▶ 소환!', '#ff0044', 12);
   }
 
   draw(ctx, camera) {
     ctx.save();
-    let pulse    = Math.sin(this.pulseTimer * 0.006) * 5;
-    let drawR    = this.radius + pulse;
+    const pt  = this.patternType;
+    let pulse = Math.sin(this.pulseTimer * 0.006) * 5;
+    let drawR = this.radius + pulse;
     let bx = this.x - camera.x, by = this.y - camera.y;
-    let glowColor = this.phase === 2 ? '#ff6600' : '#ff0044';
 
+    // 방어막 링
+    if (this.shieldActive) {
+      ctx.strokeStyle = '#b026ff'; ctx.lineWidth = 3;
+      ctx.shadowBlur = 25; ctx.shadowColor = '#b026ff';
+      const sAlpha = 0.4 + Math.sin(this.pulseTimer * 0.01) * 0.2;
+      ctx.globalAlpha = sAlpha;
+      ctx.beginPath(); ctx.arc(bx, by, drawR + 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    const outerCol = this.phase >= 3 ? '#ffffff' : (this.phase === 2 ? '#ff6600' : pt.outerColor);
     ctx.shadowBlur  = 35;
-    ctx.shadowColor = glowColor;
-    ctx.fillStyle   = this.flashTimer > 0 ? '#ffffff' : (this.phase === 2 ? '#ff4400' : '#ff0044');
+    ctx.shadowColor = this.shieldActive ? '#b026ff' : pt.glowColor;
+    ctx.fillStyle   = this.flashTimer > 0 ? '#ffffff' : outerCol;
     ctx.beginPath(); ctx.arc(bx, by, drawR, 0, Math.PI * 2); ctx.fill();
 
     ctx.shadowBlur  = 15;
-    ctx.fillStyle   = this.phase === 2 ? '#ff8800' : '#ff4466';
+    ctx.fillStyle   = this.phase >= 2 ? '#ff8800' : pt.innerColor;
     ctx.beginPath(); ctx.arc(bx, by, drawR * 0.55, 0, Math.PI * 2); ctx.fill();
-
     ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
 
-    // 보스 이름 표시
+    // 보스 이름 + 타입 라벨
     ctx.font      = 'bold 11px Orbitron, sans-serif';
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
-    ctx.shadowBlur  = 5; ctx.shadowColor = '#ff0044';
-    ctx.fillText(this.name, bx, by - drawR - 12);
+    ctx.shadowBlur  = 5; ctx.shadowColor = pt.glowColor;
+    ctx.fillText(this.name, bx, by - drawR - 20);
+    ctx.font = '8px Orbitron, sans-serif';
+    ctx.fillStyle = pt.glowColor;
+    ctx.fillText(`[${pt.label}]`, bx, by - drawR - 10);
 
-    // HP 바 (보스 위)
+    // HP 바
     let barW = this.radius * 2.5, barH = 6;
-    let barX = bx - barW / 2, barY = by - drawR - 22;
+    let barX = bx - barW / 2, barY = by - drawR - 30;
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(barX, barY, barW, barH);
     let pct = Math.max(this.hp / this.maxHp, 0);
-    ctx.fillStyle = pct > 0.5 ? '#ff0044' : pct > 0.25 ? '#ff6600' : '#ff0000';
+    ctx.fillStyle = pct > 0.5 ? pt.outerColor : pct > 0.25 ? '#ff6600' : '#ff0000';
     ctx.fillRect(barX, barY, barW * pct, barH);
+    // 페이즈 경계 표시
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(barX + barW * 0.5 - 1, barY, 2, barH);
+    if (this.bossIdx >= 2) ctx.fillRect(barX + barW * 0.25 - 1, barY, 2, barH);
 
     ctx.restore();
   }
 
   takeDamage(amount, sourceKey) {
+    // 방어막 중: 피해 80% 감소
+    if (this.shieldActive) amount *= 0.2;
     this.hp -= amount;
     this.flashTimer = 80;
     if (weaponStats[sourceKey]) weaponStats[sourceKey].damage += amount;
     createExplosionParticles(this.x, this.y, '#ff0044', 2);
-    // 보스는 항상 데미지 숫자 표시
     addFloatingText(this.x + (Math.random()-0.5)*30, this.y - this.radius, Math.floor(amount).toString(), '#ff4466', 13);
     if (this.hp <= 0) { this.hp = 0; this.die(sourceKey); return true; }
     return false;
@@ -1679,22 +2142,61 @@ class Boss {
   die(sourceKey) {
     if (this.dead) return;
     this.dead = true;
+    bossProjectiles.length = 0;
     createExplosionParticles(this.x, this.y, '#ff0044', 35);
     createExplosionParticles(this.x, this.y, '#ffe600', 25);
+    createExplosionParticles(this.x, this.y, this.patternType.outerColor, 20);
     triggerScreenShake(18, 900);
     if (weaponStats[sourceKey]) weaponStats[sourceKey].kills++;
-    // 대량 XP 젬 생성
     for (let i = 0; i < 12; i++) {
       let ang = Math.random() * Math.PI * 2;
       let r   = Math.random() * 70;
       gems.push(new Gem(this.x + Math.cos(ang)*r, this.y + Math.sin(ang)*r, this.xpValue));
     }
-    // killCount는 무기 코드/충돌 판정에서 집계 (여기서는 제외)
     playBossDeathSound();
     spawnGoldCoins(this.x, this.y, 12 + Math.floor(Math.random() * 9));
     activeBoss = null;
     isBossStage = false;
     triggerStageClear();
+  }
+}
+
+// 보스 발사체 클래스
+class BossProjectile {
+  constructor(x, y, vx, vy, damage, radius, color, homing) {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.damage = damage; this.radius = radius; this.color = color;
+    this.homing = homing;
+    this.speed  = Math.sqrt(vx*vx + vy*vy);
+    this.life   = homing ? 5000 : 3500;
+  }
+  update(dt) {
+    if (this.homing && player) {
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const d  = Math.sqrt(dx*dx + dy*dy);
+      if (d > 0) {
+        const tx = (dx/d) * this.speed;
+        const ty = (dy/d) * this.speed;
+        this.vx += (tx - this.vx) * 0.022 * (dt / 16.66);
+        this.vy += (ty - this.vy) * 0.022 * (dt / 16.66);
+      }
+    }
+    this.x += this.vx * (dt / 16.66);
+    this.y += this.vy * (dt / 16.66);
+    this.life -= dt;
+  }
+  draw(ctx, camera) {
+    ctx.save();
+    ctx.shadowBlur = 14; ctx.shadowColor = this.color;
+    ctx.fillStyle  = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x - camera.x, this.y - camera.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    if (this.homing) {
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    ctx.restore();
   }
 }
 
@@ -2447,8 +2949,22 @@ function checkCollisions() {
         let isDead = e.takeDamage(p.damage, p.weaponKey);
         if (isDead) killCount++;
         p.hitEnemies.add(e);
+        // 미사일: 충돌 시 폭발
+        if (p instanceof MissileProjectile) { p.explode(); projectiles.splice(i, 1); break; }
         p.pierce--;
         if (p.pierce <= 0) { projectiles.splice(i, 1); break; }
+      }
+    }
+  }
+
+  // 보스 발사체 vs 플레이어
+  if (player.shieldTimer <= 0 && !player.voidActive) {
+    for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+      const bp = bossProjectiles[i];
+      if (dist(bp.x, bp.y, player.x, player.y) < player.radius + bp.radius) {
+        player.takeDamage(bp.damage);
+        createExplosionParticles(bp.x, bp.y, bp.color, 8);
+        bossProjectiles.splice(i, 1);
       }
     }
   }
@@ -2756,6 +3272,7 @@ function startGame() {
   killCount = 0; gameTime = 0; timeAccumulator = 0;
   enemies = []; projectiles = []; gems = []; particles = [];
   activeLasersArr = []; fieldItems = []; floatingTexts = [];
+  bossProjectiles = [];
   activeBoss  = null;
   currentStage = 1;
   stageKillProgress = 0;
@@ -2862,7 +3379,16 @@ function update(dt) {
   // 투사체
   for (let i = projectiles.length - 1; i >= 0; i--) {
     projectiles[i].update(dt);
-    if (projectiles[i].life <= 0) projectiles.splice(i, 1);
+    if (projectiles[i].life <= 0) {
+      if (projectiles[i] instanceof MissileProjectile) projectiles[i].explode();
+      projectiles.splice(i, 1);
+    }
+  }
+
+  // 보스 발사체
+  for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+    bossProjectiles[i].update(dt);
+    if (bossProjectiles[i].life <= 0) bossProjectiles.splice(i, 1);
   }
 
   // 젬
@@ -2980,6 +3506,7 @@ function draw(dt) {
   updateAndDrawLasers(ctx, camera, 16.66);
 
   for (let p of projectiles) p.draw(ctx, camera);
+  for (let bp of bossProjectiles) bp.draw(ctx, camera);
 
   for (let e of enemies) e.draw(ctx, camera);
 
@@ -3496,6 +4023,16 @@ function applyPassiveEffect(key, level) {
     case 'thorns':
       addFloatingText(player.x, player.y - 40, `⚔️ 복수의 가시 Lv${level}!`, '#ff4466', 14);
       break;
+    case 'critical':
+      addFloatingText(player.x, player.y - 40, `💥 크리티컬 코어 Lv${level}!`, '#ffe600', 14);
+      break;
+    case 'explosive':
+      addFloatingText(player.x, player.y - 40, `💣 폭발 연쇄 Lv${level}!`, '#ff8800', 14);
+      break;
+    case 'barrier':
+      player.barrierTimer = 0;
+      addFloatingText(player.x, player.y - 40, `🛡 전기 방벽 Lv${level}!`, '#00f0ff', 14);
+      break;
   }
 }
 
@@ -3895,6 +4432,35 @@ function triggerFieldEvent() {
     playSynthSound([120, 600, 40], 0.25, 'sawtooth', 0.1);
   }
 
+  // 즉발: 엘리트 침공 — 8기 스폰 + 속도 부스트
+  if (ev.id === 'elite_invasion' && player) {
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const d = 500 + Math.random() * 150;
+      const ex = Math.max(20, Math.min(MAP_WIDTH-20, player.x + Math.cos(angle)*d));
+      const ey = Math.max(20, Math.min(MAP_HEIGHT-20, player.y + Math.sin(angle)*d));
+      enemies.push(new Enemy(ex, ey, 'elite'));
+    }
+    // 이벤트 지속 중 적 속도 20% 증가는 enemy.update()에서 activeFieldEvent 체크로 처리
+    triggerScreenShake(6, 400);
+    playSynthSound([80, 200, 500], 0.2, 'sawtooth', 0.1);
+  }
+
+  // 즉발: 바이러스 급증 — 25기 무작위 스폰
+  if (ev.id === 'virus_surge' && player) {
+    const spawnTypes = ['swarm', 'swarm', 'rusher', 'rusher', 'bruiser'];
+    for (let i = 0; i < 25; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const d = 400 + Math.random() * 200;
+      const ex = Math.max(20, Math.min(MAP_WIDTH-20, player.x + Math.cos(angle)*d));
+      const ey = Math.max(20, Math.min(MAP_HEIGHT-20, player.y + Math.sin(angle)*d));
+      const t = spawnTypes[Math.floor(Math.random() * spawnTypes.length)];
+      enemies.push(new Enemy(ex, ey, t));
+    }
+    triggerScreenShake(9, 500);
+    playSynthSound([100, 300, 600], 0.2, 'sawtooth', 0.12);
+  }
+
   // 이벤트 배너 표시
   showFieldEventBanner(ev);
   playSynthSound([400, 600, 500], 0.12, 'triangle', 0.07);
@@ -3986,22 +4552,23 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 // ============================================================
 // ⚙ 설정 모달
 // ============================================================
+const BGM_TRACK_NAMES = ['🎵 신스웨이브', '🎶 데바 시스템', '⚡ 고스트 프로토콜'];
+
 function openSettingsModal() {
   const modal = document.getElementById('settings-modal');
   if (modal) modal.classList.add('active');
   const muteBtn = document.getElementById('settings-mute-btn');
   if (muteBtn) muteBtn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
   const trackBtn = document.getElementById('settings-bgm-track-btn');
-  if (trackBtn) trackBtn.textContent = bgmTrackId === 0 ? '🎵 신스웨이브' : '🎶 데바 시스템';
+  if (trackBtn) trackBtn.textContent = BGM_TRACK_NAMES[bgmTrackId] || BGM_TRACK_NAMES[0];
 }
 
 function settingsToggleBgmTrack() {
-  bgmTrackId = bgmTrackId === 0 ? 1 : 0;
+  bgmTrackId = (bgmTrackId + 1) % 3;
   bgmTrackCheckTimer = 0;
-  // BGM이 재생 중이면 재시작해서 즉시 적용
   if (!bgmMuted && bgmGainNode) { stopBGM(); startBGM(); }
   const btn = document.getElementById('settings-bgm-track-btn');
-  if (btn) btn.textContent = bgmTrackId === 0 ? '🎵 신스웨이브' : '🎶 데바 시스템';
+  if (btn) btn.textContent = BGM_TRACK_NAMES[bgmTrackId];
 }
 
 function closeSettingsModal() {
