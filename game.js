@@ -1064,7 +1064,7 @@ class Player {
     if (cls) mult *= cls.xpBonus;
     mult *= this.passiveXpMult;
     this.xp += amount * mult;
-    if (this.xp >= this.nextLevelXp) {
+    while (this.xp >= this.nextLevelXp) {
       this.xp -= this.nextLevelXp;
       this.levelUp();
     }
@@ -3037,6 +3037,7 @@ function advanceToNextStage() {
     isBossStage      = true;
     stageKillGoal    = 0;
     stageKillProgress = 0;
+    gameState = STATE_PLAYING;
     showBossWarning();
   } else {
     isBossStage       = false;
@@ -4503,7 +4504,7 @@ function closeLevelUpModal() {
   } else {
     levelUpInProgress = false;
     // 보너스 모달이 이미 열려 있으면 gameState 덮어쓰지 않음
-    if (gameState !== STATE_STAGE_BONUS && gameState !== STATE_SHOP) {
+    if (gameState !== STATE_STAGE_BONUS && gameState !== STATE_SHOP && gameState !== STATE_CURSE) {
       gameState = isStageClearAnim ? STATE_STAGE_CLEAR : STATE_PLAYING;
     }
     lastTime  = performance.now();
@@ -4776,9 +4777,10 @@ function applyShopItem(item) {
 
 function closeShopModal() {
   document.getElementById('shop-modal').classList.remove('active');
-  gameState = STATE_PLAYING;
+  gameState = isStageClearAnim ? STATE_STAGE_CLEAR : STATE_PLAYING;
   shopTimer = 0;
   lastTime  = performance.now();
+  ensureGameLoopRunning();
 }
 
 function applyRevivalPerk(id) {
