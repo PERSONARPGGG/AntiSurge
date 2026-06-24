@@ -31,18 +31,22 @@ echo "📋 Step 2/3 — Git 상태..."
 git log --oneline -3
 echo ""
 
-# 3. 푸시
-echo "🚀 Step 3/3 — GitHub Pages 배포 ($BRANCH)..."
+# 3. GitHub push
+echo "🚀 Step 3/4 — GitHub push ($BRANCH)..."
 if [ -n "$TOKEN" ]; then
   git push "$REMOTE" "$BRANCH"
 else
   git push origin "$BRANCH"
 fi
 
+# 4. Firebase Hosting 배포
+echo ""
+echo "🔥 Step 4/4 — Firebase Hosting 배포..."
+firebase deploy --only hosting
+
 echo ""
 echo "╔══════════════════════════════════════╗"
 echo "║  ✅ 배포 완료!                       ║"
-echo "║  🌐 https://personarpggg.github.io/  ║"
-echo "║     AntiSurge/                       ║"
+echo "║  🌐 https://antisurge-c0463.web.app  ║"
 echo "╚══════════════════════════════════════╝"
 echo ""
