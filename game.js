@@ -4699,6 +4699,55 @@ function showScreen(state) {
   else if (state === STATE_PLAYING || state === STATE_STAGE_CLEAR || state === STATE_STAGE_BONUS) {
     gameScreen.classList.add('active');
   }
+  // 모바일 스킬버튼 표시 여부 갱신
+  _refreshMobileControls(state);
+}
+
+// 모바일 전용: 터치 기기 감지
+const _isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
+
+function _refreshMobileControls(state) {
+  const ctrl = document.getElementById('mobile-controls');
+  if (!ctrl) return;
+  const playing = state === STATE_PLAYING || state === STATE_STAGE_CLEAR;
+  ctrl.style.display = (playing && _isTouchDevice()) ? 'block' : 'none';
+}
+
+// 스킬 버튼 매 프레임 업데이트 (쿨다운 링 + 아이콘)
+const _MSR_CIRC = 175.9; // 2π × 28
+function updateMobileSkillBtn() {
+  const btn = document.getElementById('mobile-skill-btn');
+  if (!btn) return;
+  if (!player) { btn.style.opacity = '0.4'; return; }
+  const cls = CLASS_DEFS[player.classId];
+  if (!cls?.activeSkill) return;
+
+  const maxCd  = cls.activeSkill.cd;
+  const cdLeft = player.activeSkillCd || 0;
+  const cdRatio = cdLeft > 0 ? cdLeft / maxCd : 0;
+
+  // 아이콘
+  const icon = document.getElementById('mobile-skill-icon');
+  if (icon) icon.textContent = cls.activeSkill.icon || '⚡';
+
+  // 쿨다운 텍스트
+  const label = document.getElementById('mobile-skill-cd-label');
+  if (label) label.textContent = cdLeft > 0 ? Math.ceil(cdLeft / 1000) + 's' : '';
+
+  // SVG 링
+  const circle = document.getElementById('mobile-skill-cd-circle');
+  if (circle) circle.style.strokeDashoffset = cdRatio * _MSR_CIRC;
+
+  // 준비 여부 표현
+  btn.classList.toggle('on-cooldown', cdLeft > 0);
+  btn.style.opacity = cdLeft > 0 ? '0.55' : '1';
+}
+
+// 모바일 스킬 버튼 터치 핸들러
+function useActiveSkillTouch(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  useActiveSkill();
 }
 
 function startGame() {
@@ -4891,6 +4940,7 @@ function update(dt) {
   }
 
   player.update(dt);
+  updateMobileSkillBtn();
 
   // 스펙테이터 카운트다운 (협동 모드만 부활)
   if (mpSpectating && mpGameMode === 'coop') {
@@ -6444,9 +6494,12 @@ function initTouchControls() {
   const canvas = document.getElementById('game-canvas');
   if (!canvas) return;
 
+  // 멀티터치: joystickTouchId로 특정 손가락만 추적
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (gameState !== STATE_PLAYING && gameState !== STATE_STAGE_CLEAR) return;
+    // 아직 조이스틱 손가락이 없는 경우만 신규 등록
+    if (joystickTouchId !== null) return;
     const t = e.changedTouches[0];
     touchStartX = t.clientX;
     touchStartY = t.clientY;
@@ -6480,9 +6533,29 @@ function initTouchControls() {
 
   canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
-    joystickBase = null; joystickKnob = null; joystickTouchId = null;
-    isTouching = false; touchDX = 0; touchDY = 0;
+    // 조이스틱 손가락이 들렸을 때만 리셋
+    for (const t of e.changedTouches) {
+      if (t.identifier === joystickTouchId) {
+        joystickBase = null; joystickKnob = null; joystickTouchId = null;
+        isTouching = false; touchDX = 0; touchDY = 0;
+      }
+    }
   }, { passive: false });
+
+  // 스킬 버튼 터치
+  const skillBtn = document.getElementById('mobile-skill-btn');
+  if (skillBtn) {
+    skillBtn.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      useActiveSkill();
+    }, { passive: false });
+  }
+
+  // 터치 기기면 모바일 컨트롤 표시 등록
+  if (_isTouchDevice()) {
+    _refreshMobileControls(gameState);
+  }
 }
 
 // ============================================================

@@ -22,7 +22,7 @@
   <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="NeonSurvivors">
+  <meta name="apple-mobile-web-app-title" content="AntiSurge">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
@@ -74,7 +74,7 @@
             ⚡ 영구 업그레이드 <span class="meta-badge">💾 <span id="meta-cores-badge">0</span></span>
           </button>
 
-          <div class="menu-controls">
+          <div class="menu-controls pc-only">
             <span class="ctrl-item"><kbd>W A S D</kbd> 이동</span>
             <span class="ctrl-sep">·</span>
             <span class="ctrl-item"><kbd>Q</kbd> 스킬</span>
@@ -82,6 +82,13 @@
             <span class="ctrl-item"><kbd>ESC</kbd> 일시정지</span>
             <span class="ctrl-sep">·</span>
             <span class="ctrl-item"><kbd>M</kbd> BGM</span>
+          </div>
+          <div class="menu-controls mobile-only">
+            <span class="ctrl-item">✋ 드래그: 이동</span>
+            <span class="ctrl-sep">·</span>
+            <span class="ctrl-item">⚡ 우하단: 스킬</span>
+            <span class="ctrl-sep">·</span>
+            <span class="ctrl-item">⚙ 상단: 일시정지</span>
           </div>
         </div>
 
@@ -351,7 +358,19 @@
 
     <!-- 게임 캔버스 -->
     <canvas id="game-canvas"></canvas>
-    <div class="touch-hint">드래그: 이동</div>
+
+    <!-- 모바일 전용 조작 버튼 (터치 기기만 표시) -->
+    <div id="mobile-controls" class="mobile-controls" style="display:none">
+      <!-- 스킬 버튼 (우하단) -->
+      <button id="mobile-skill-btn" class="mobile-skill-btn" aria-label="스킬 사용">
+        <svg class="mobile-skill-ring" viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="28" class="msr-track"/>
+          <circle cx="32" cy="32" r="28" class="msr-fill" id="mobile-skill-cd-circle"/>
+        </svg>
+        <span id="mobile-skill-icon" class="mobile-skill-icon">⚡</span>
+        <span id="mobile-skill-cd-label" class="mobile-skill-cd-label"></span>
+      </button>
+    </div>
 
     <!-- 콤보 표시 (플로팅) -->
     <div id="combo-display" class="combo-display">
@@ -573,13 +592,20 @@
         </div>
       </div>
 
-      <div class="settings-section-title">단축키</div>
-      <div class="settings-shortcuts">
+      <div class="settings-section-title pc-only">단축키</div>
+      <div class="settings-shortcuts pc-only">
         <div class="shortcut-row"><kbd>WASD / ↑↓←→</kbd><span>이동</span></div>
         <div class="shortcut-row"><kbd>Q</kbd><span>클래스 스킬</span></div>
         <div class="shortcut-row"><kbd>M</kbd><span>BGM 끄기/켜기</span></div>
         <div class="shortcut-row"><kbd>ESC / P</kbd><span>일시정지</span></div>
         <div class="shortcut-row"><kbd>F</kbd><span>전체화면</span></div>
+      </div>
+      <div class="settings-section-title mobile-only">터치 조작</div>
+      <div class="mobile-tips mobile-only">
+        <div class="mobile-tip-row">✋ <span>화면 드래그 — 이동</span></div>
+        <div class="mobile-tip-row">⚡ <span>우하단 버튼 — 클래스 스킬</span></div>
+        <div class="mobile-tip-row">⚙ <span>HUD 우상단 ⚙ — 일시정지</span></div>
+        <div class="mobile-tip-row">🎵 <span>HUD 🎵 — BGM 켜기/끄기</span></div>
       </div>
 
       <!-- 게임 중 일시정지 시에만 표시 -->

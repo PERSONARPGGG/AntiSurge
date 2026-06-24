@@ -1980,6 +1980,188 @@ body {
 }
 @media (pointer: coarse) { .touch-hint { display: block; } }
 
+/* ─── PC/모바일 전용 유틸리티 ─── */
+.pc-only   { display: block; }
+.mobile-only { display: none; }
+@media (pointer: coarse) {
+  .pc-only   { display: none !important; }
+  .mobile-only { display: block !important; }
+}
+
+/* ─── 모바일 조작 버튼 (터치 전용) ─── */
+.mobile-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 150;
+}
+/* 스킬 버튼 — 우하단 */
+.mobile-skill-btn {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(80px, calc(60px + env(safe-area-inset-bottom)));
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(10,10,22,0.75);
+  border: 2px solid rgba(0,240,255,0.55);
+  color: #e2e8f0;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0;
+  box-shadow: 0 0 14px rgba(0,240,255,0.25), inset 0 0 8px rgba(0,240,255,0.08);
+  transition: box-shadow 0.15s, border-color 0.15s, opacity 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.mobile-skill-btn:active {
+  box-shadow: 0 0 24px rgba(0,240,255,0.6), inset 0 0 12px rgba(0,240,255,0.2);
+  border-color: #00f0ff;
+}
+.mobile-skill-btn.on-cooldown {
+  border-color: rgba(0,240,255,0.2);
+  box-shadow: none;
+}
+/* SVG 쿨다운 링 */
+.mobile-skill-ring {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.msr-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.07);
+  stroke-width: 3;
+}
+.msr-fill {
+  fill: none;
+  stroke: #00f0ff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 175.9; /* 2π × 28 */
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.12s linear;
+}
+.mobile-skill-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+}
+.mobile-skill-cd-label {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  color: #94a3b8;
+  line-height: 1;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+  min-height: 0.6rem;
+}
+
+/* ─── 메인 메뉴 모바일 최적화 ─── */
+@media (pointer: coarse) {
+  /* 버튼 터치 타겟 최소 48px */
+  .neon-btn { min-height: 48px; padding: 0.65rem 1.1rem; }
+  .font-sm.neon-btn { min-height: 42px; font-size: 0.8rem; }
+  .diff-btn { min-height: 42px; padding: 0.5rem 0.8rem; }
+
+  /* 메뉴 카드 그리드 — 모바일 전체화면 */
+  .menu-action-btn { min-height: 56px; }
+  .mute-btn { min-width: 44px; min-height: 44px; }
+
+  /* 클래스 선택 카드 — 더 큰 터치 영역 */
+  .class-card { padding: 0.9rem 0.7rem; min-height: 120px; }
+  .cls-stats { display: none; } /* 작은 화면엔 스탯 숨기고 탭으로 확인 */
+  .class-card.class-selected .cls-stats { display: block; } /* 선택 시 표시 */
+
+  /* 저주 / 레벨업 / 보너스 모달 버튼 크게 */
+  .curse-actions .neon-btn, .curse-decline-btn, .curse-accept-btn { min-height: 52px; font-size: 0.92rem; }
+  .bonus-card { min-height: 60px; cursor: pointer; }
+  .upgrade-card { min-height: 56px; cursor: pointer; }
+
+  /* 결과 화면 공유 버튼 강조 */
+  .neon-btn-share { min-height: 52px; font-size: 0.88rem; }
+
+  /* 설정 모달 — 항목 간격 늘리기 */
+  .settings-item { min-height: 48px; }
+  .settings-btn { min-height: 42px; }
+
+  /* 모바일 팁 스타일 */
+  .mobile-tips { display: flex; flex-direction: column; gap: 0.5rem; }
+  .mobile-tip-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.76rem;
+    color: #94a3b8;
+    font-family: 'Rajdhani', sans-serif;
+    padding: 0.4rem 0.5rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+  }
+  .mobile-tip-row span { color: #e2e8f0; }
+}
+
+/* ─── 모바일 세로 모드 추가 최적화 ─── */
+@media (pointer: coarse) and (max-width: 600px) {
+  /* 메인 타이틀 크기 */
+  .neon-title { font-size: 2rem; letter-spacing: 0.05em; }
+  .menu-title-eyebrow { font-size: 0.55rem; }
+  .menu-title-sub { font-size: 0.7rem; }
+
+  /* 메뉴 컨트롤 한 줄 처리 */
+  .menu-controls { font-size: 0.62rem; flex-wrap: wrap; gap: 0.2rem 0.3rem; }
+  .ctrl-sep { display: none; }
+
+  /* 레코드 패널 간결하게 */
+  .mrp-stats span { font-size: 0.78rem; }
+
+  /* 결과화면 더 작게 */
+  .result-stats { grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }
+  .stat-card { padding: 0.35rem 0.2rem; }
+  .stat-value { font-size: 0.85rem; }
+  .stat-label { font-size: 0.52rem; }
+
+  /* 게임오버 상세 기록 숨기기 (모바일엔 너무 길어서) */
+  .result-details { display: none; }
+
+  /* 공유 영역 */
+  .share-row { flex-direction: column; gap: 0.4rem; }
+  .name-input { width: 100%; }
+
+  /* 결과 액션 버튼 세로 정렬 */
+  .result-actions { flex-direction: column; gap: 0.5rem; }
+  .result-actions .neon-btn { width: 100%; justify-content: center; }
+
+  /* 클래스 선택 컨펌 버튼 크게 */
+  .class-confirm-btns .neon-btn { min-height: 52px; font-size: 0.88rem; }
+
+  /* 상점 모달 */
+  .shop-grid { grid-template-columns: 1fr 1fr; }
+
+  /* 게임 화면 HUD 최적화 */
+  .hud-top .mute-btn { font-size: 0.9rem; padding: 2px 6px; }
+}
+
+/* 모달 스크롤 보장 (터치) */
+@media (pointer: coarse) {
+  .modal-content { -webkit-overflow-scrolling: touch; }
+  .glass-panel { max-height: 90vh; overflow-y: auto; }
+  /* 모달 안 버튼 하단 여유 */
+  .result-panel { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+}
+
 /* ===== 일시정지 오버레이 ===== */
 .pause-overlay {
   position: absolute;
