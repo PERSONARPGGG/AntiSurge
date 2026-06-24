@@ -284,6 +284,8 @@ let mpSpectating       = false;
 let mpRespawnTimer     = 0;
 let mpGameMode         = 'coop'; // 'coop' | 'battle'
 let mpSabotageTimer    = 0;
+let _authUser          = null;
+let _currentAchTab     = 'basic';
 
 // 오브젝트 상한 (멀티 대비 성능 캡)
 const MAX_ENEMIES        = 120;
@@ -568,6 +570,26 @@ const ACHIEVEMENTS = [
   { id: 'ach_combo',    icon: '🎯', name: '연속 처형',     desc: '콤보 25 이상 달성',        reward: 5  },
   { id: 'ach_gold',     icon: '💰', name: '황금 수집가',   desc: '골드 50 이상 보유',        reward: 5  },
   { id: 'ach_endless',  icon: '∞',  name: '무한의 수호자', desc: '무한 모드 진입',           reward: 20 }
+];
+
+const CLOUD_ACHIEVEMENTS = [
+  { id: 'kill_500',    name: '처치 전문가',     icon: '⚔',  desc: '적 500마리 처치',       stat: 'totalKills',      goal: 500   },
+  { id: 'kill_5000',   name: '네온 학살자',     icon: '💀',  desc: '적 5000마리 처치',      stat: 'totalKills',      goal: 5000  },
+  { id: 'kill_50000',  name: '사이버 신',       icon: '🔥',  desc: '적 5만마리 처치',       stat: 'totalKills',      goal: 50000 },
+  { id: 'boss_5',      name: '보스 헌터',       icon: '👑',  desc: '보스 5회 처치',         stat: 'totalBossKills',  goal: 5     },
+  { id: 'boss_20',     name: '보스의 천적',     icon: '💥',  desc: '보스 20회 처치',        stat: 'totalBossKills',  goal: 20    },
+  { id: 'stage_20',    name: '하이퍼 서바이버', icon: '⚡',  desc: '스테이지 20 도달',      stat: 'maxStage',        goal: 20    },
+  { id: 'stage_50',    name: '디지털 레전드',   icon: '🌀',  desc: '스테이지 50 도달',      stat: 'maxStage',        goal: 50    },
+  { id: 'stage_100',   name: '엔드게임',        icon: '🏆',  desc: '스테이지 100 도달',     stat: 'maxStage',        goal: 100   },
+  { id: 'time_600',    name: '10분 생존',       icon: '⏱',  desc: '단일 게임 10분 생존',   stat: 'maxSurviveTime',  goal: 600   },
+  { id: 'time_1800',   name: '30분 생존',       icon: '⌛',  desc: '단일 게임 30분 생존',   stat: 'maxSurviveTime',  goal: 1800  },
+  { id: 'evolve_5',    name: '진화 중독자',     icon: '🔮',  desc: '무기 진화 5회',         stat: 'totalEvolutions', goal: 5     },
+  { id: 'evolve_20',   name: '진화의 신',       icon: '💎',  desc: '무기 진화 20회',        stat: 'totalEvolutions', goal: 20    },
+  { id: 'mp_first',    name: '온라인 데뷔',     icon: '🌐',  desc: '멀티 첫 게임',          stat: 'mpGamesPlayed',   goal: 1     },
+  { id: 'mp_win',      name: '배틀로얄 킹',     icon: '🥊',  desc: '경쟁 모드 1위',         stat: 'mpBattleWins',    goal: 1     },
+  { id: 'mp_revive3',  name: '불사조',          icon: '🔄',  desc: '멀티 부활 3회',         stat: 'mpRevives',       goal: 3     },
+  { id: 'games_10',    name: '열정 게이머',     icon: '🎮',  desc: '10번 게임 플레이',      stat: 'totalGamesPlayed',goal: 10    },
+  { id: 'games_50',    name: '마스터',          icon: '🌟',  desc: '50번 게임 플레이',      stat: 'totalGamesPlayed',goal: 50    },
 ];
 
 // ============================================================
@@ -2926,6 +2948,7 @@ class Boss {
     }
     playBossDeathSound();
     spawnGoldCoins(this.x, this.y, 12 + Math.floor(Math.random() * 9));
+    _statAdd('totalBossKills', 1);
     activeBoss = null;
     isBossStage = false;
     pendingBossCurse = true;
@@ -4138,7 +4161,7 @@ function startGame() {
 
   // 전체 리셋
   killCount = 0; gameTime = 0; timeAccumulator = 0;
-  if (mpMode) { mpGameStartTime = Date.now(); mpSpectating = false; mpRespawnTimer = 0; }
+  if (mpMode) { mpGameStartTime = Date.now(); mpSpectating = false; mpRespawnTimer = 0; _statAdd('mpGamesPlayed', 1); }
   enemies = []; projectiles = []; gems = []; particles = [];
   activeLasersArr = []; fieldItems = []; floatingTexts = [];
   bossProjectiles = [];
@@ -5107,6 +5130,7 @@ function applyUpgrade(choice) {
     weaponStats[choice.key].level = choice.nextLevel;
     if (choice.nextLevel === 5) {
       evolutionCount++;
+      _statAdd('totalEvolutions', 1);
       let evolvedName = UPGRADES.weapons[choice.key].evolvedName || UPGRADES.weapons[choice.key].name;
       showEvolutionNotification(UPGRADES.weapons[choice.key].icon, evolvedName);
     } else {
@@ -5318,6 +5342,13 @@ function applyLegendaryUpgrade(id) {
 function endGame(isVictory) {
   gameState = STATE_GAME_OVER;
   stopBGM();
+  if (!isDailyRun) {
+    _statAdd('totalKills', killCount);
+    _statAdd('totalGamesPlayed', 1);
+    _statSet('maxStage', currentStage);
+    _statSet('maxSurviveTime', gameTime);
+    _syncToCloud();
+  }
   gameOverModal.classList.add('active');
 
   const title    = document.getElementById('result-title');
@@ -6142,6 +6173,7 @@ function _mpApplySabotage(sabotageType, curseIdx) {
 function _mpShowBattleWin() {
   const myName = mpPlayers[mpMyId]?.name || 'ME';
   mpBroadcast({ type: 'battle_win', name: myName });
+  _statAdd('mpBattleWins', 1);
   addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 80,
     '🏆 최후 생존자!', '#ffe600', 24);
   setTimeout(() => endGame(true), 3000);
@@ -6173,6 +6205,7 @@ function mpDoRespawn() {
   player.y = Math.max(100, Math.min(MAP_HEIGHT - 100, (t ? (t.renderY ?? t.y) : MAP_HEIGHT / 2) + oy));
   player.hp = Math.ceil(player.maxHp * 0.5);
   if (_fbDb) _fbDb.ref(`${_mpFbRoomPath()}/players/${mpMyId}`).update({ alive: true });
+  _statAdd('mpRevives', 1);
   addFloatingText(player.x, player.y - 50, '🔄 부활!', '#39ff14', 20);
   createExplosionParticles(player.x, player.y, '#39ff14', 15);
 }
@@ -6200,6 +6233,204 @@ function mpCheckAura() {
     ? player.damageMultiplier * (player._mpAuraApplied ? 1 : 1.1)
     : player.damageMultiplier / (player._mpAuraApplied ? 1.1 : 1);
   player._mpAuraApplied = mpAuraActive;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Google Auth + 클라우드 저장 + 확장 업적
+// ═══════════════════════════════════════════════════════════════
+function _initAuth() {
+  if (!FIREBASE_CONFIG || typeof firebase === 'undefined' || !firebase.auth) return;
+  firebase.auth().onAuthStateChanged(user => {
+    _authUser = user;
+    _updateAuthUI();
+    if (user) _loadFromCloud();
+  });
+}
+
+function signInGoogle() {
+  if (typeof firebase === 'undefined' || !firebase.auth) { alert('Firebase가 설정되지 않았습니다.'); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider).catch(e => { console.error('[AUTH]', e.message); alert('로그인 실패: ' + e.message); });
+}
+
+function signOutUser() {
+  if (!firebase?.auth) return;
+  firebase.auth().signOut().then(() => { _authUser = null; _updateAuthUI(); });
+}
+
+function _updateAuthUI() {
+  const btn  = document.getElementById('auth-btn');
+  const info = document.getElementById('auth-user-info');
+  if (!btn) return;
+  if (_authUser) {
+    btn.textContent = '🚪 로그아웃';
+    btn.onclick = signOutUser;
+    if (info) info.textContent = `☁ ${_authUser.displayName || _authUser.email} (클라우드 동기화 중)`;
+  } else {
+    btn.textContent = '🔑 Google 로그인';
+    btn.onclick = signInGoogle;
+    if (info) info.textContent = '로컬 저장 중 (로그인 시 클라우드 동기화)';
+  }
+}
+
+// ── 통계 헬퍼 ────────────────────────────────────────────────
+function _getStats() {
+  if (!saveData.stats) saveData.stats = {};
+  return saveData.stats;
+}
+
+function _statAdd(key, n) {
+  const s = _getStats();
+  s[key] = (s[key] || 0) + n;
+  _checkCloudAchievements();
+}
+
+function _statSet(key, val) {
+  const s = _getStats();
+  if (val > (s[key] || 0)) { s[key] = val; _checkCloudAchievements(); }
+}
+
+// ── 클라우드 업적 ─────────────────────────────────────────────
+function _checkCloudAchievements() {
+  const s = _getStats();
+  if (!saveData.cloudAchievements) saveData.cloudAchievements = {};
+  for (const def of CLOUD_ACHIEVEMENTS) {
+    if (saveData.cloudAchievements[def.id]) continue;
+    if ((s[def.stat] || 0) >= def.goal) _unlockCloudAchievement(def);
+  }
+}
+
+function _unlockCloudAchievement(def) {
+  if (!saveData.cloudAchievements) saveData.cloudAchievements = {};
+  saveData.cloudAchievements[def.id] = true;
+  saveSaveData();
+  _pushToCloud(`achievements/${def.id}`, true);
+  _showAchievementToast(def);
+}
+
+function _showAchievementToast(ach) {
+  const el = document.createElement('div');
+  el.className = 'cloud-ach-toast';
+  el.innerHTML = `<div class="ach-toast-icon">${ach.icon}</div><div><div class="ach-toast-name">업적 달성: ${ach.name}</div><div class="ach-toast-desc">${ach.desc}</div></div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 4000);
+}
+
+// ── 클라우드 동기화 ───────────────────────────────────────────
+function _cloudBase() {
+  return (_authUser && _fbDb) ? `users/${_authUser.uid}` : null;
+}
+
+function _pushToCloud(subpath, val) {
+  const base = _cloudBase();
+  if (!base) return;
+  _fbDb.ref(`${base}/${subpath}`).set(val).catch(e => console.warn('[CLOUD]', subpath, e.message));
+}
+
+function _syncToCloud() {
+  const base = _cloudBase();
+  if (!base) return;
+  const now = Date.now();
+  _fbDb.ref(base).update({
+    profile: { displayName: _authUser.displayName || '', lastLogin: now },
+    stats: _getStats(),
+    achievements: saveData.cloudAchievements || {},
+    [`saves/slot${currentSaveSlot}`]: { ...saveData, lastSaved: now }
+  }).catch(e => console.warn('[CLOUD] 동기화 실패:', e.message));
+}
+
+function _loadFromCloud() {
+  const base = _cloudBase();
+  if (!base) return;
+  _fbDb.ref(base).once('value', snap => {
+    const data = snap.val();
+    if (!data) { _syncToCloud(); return; }
+    if (data.stats) {
+      const ls = _getStats();
+      for (const k in data.stats) { if ((data.stats[k] || 0) > (ls[k] || 0)) ls[k] = data.stats[k]; }
+    }
+    if (data.achievements) {
+      if (!saveData.cloudAchievements) saveData.cloudAchievements = {};
+      Object.assign(saveData.cloudAchievements, data.achievements);
+    }
+    if (data.saves) {
+      for (let slot = 0; slot < 3; slot++) {
+        const cloud = data.saves[`slot${slot}`];
+        if (!cloud) continue;
+        try {
+          const localRaw = localStorage.getItem(`ns_save_slot_${slot}`);
+          const local = localRaw ? JSON.parse(localRaw) : null;
+          if (!local || (cloud.lastSaved || 0) > (local.lastSaved || 0)) {
+            localStorage.setItem(`ns_save_slot_${slot}`, JSON.stringify(cloud));
+          }
+        } catch(e) {}
+      }
+      saveData = loadSaveDataSlot(currentSaveSlot);
+    }
+    _checkCloudAchievements();
+    console.log('[CLOUD] 데이터 로드 완료');
+  });
+}
+
+// ── 업적 모달 UI ──────────────────────────────────────────────
+function openAchievementModal() {
+  const modal = document.getElementById('achievement-modal');
+  if (modal) { modal.classList.add('active'); renderAchievements(); }
+}
+
+function closeAchievementModal() {
+  document.getElementById('achievement-modal')?.classList.remove('active');
+}
+
+function switchAchTab(tab) {
+  _currentAchTab = tab;
+  document.querySelectorAll('.ach-tab').forEach(el => {
+    const match = (tab === 'basic' && el.textContent.includes('기본')) ||
+                  (tab === 'cloud' && el.textContent.includes('도전')) ||
+                  (tab === 'stats' && el.textContent.includes('통계'));
+    el.classList.toggle('active', match);
+  });
+  renderAchievements();
+}
+
+function renderAchievements() {
+  const list = document.getElementById('achievement-list');
+  if (!list) return;
+  if (_currentAchTab === 'stats') {
+    const s = _getStats();
+    list.innerHTML = `<div class="stats-grid">${[
+      ['총 킬 수', (s.totalKills||0).toLocaleString()],
+      ['보스 처치', (s.totalBossKills||0).toLocaleString()],
+      ['최고 스테이지', s.maxStage||0],
+      ['최장 생존', _fmtTime(s.maxSurviveTime||0)],
+      ['무기 진화', s.totalEvolutions||0],
+      ['총 플레이', s.totalGamesPlayed||0],
+      ['멀티 게임', s.mpGamesPlayed||0],
+      ['배틀 우승', s.mpBattleWins||0],
+    ].map(([l,v]) => `<div class="stat-card"><div class="stat-label">${l}</div><div class="stat-value">${v}</div></div>`).join('')}</div>`;
+    return;
+  }
+  const defs = _currentAchTab === 'basic' ? ACHIEVEMENTS : CLOUD_ACHIEVEMENTS;
+  const done = _currentAchTab === 'basic' ? (saveData.achievements || []) : (saveData.cloudAchievements || {});
+  list.innerHTML = defs.map(def => {
+    const isDone = _currentAchTab === 'basic' ? done.includes(def.id) : !!done[def.id];
+    const prog   = _currentAchTab === 'cloud' ? `${Math.min(_getStats()[def.stat]||0, def.goal).toLocaleString()} / ${def.goal.toLocaleString()}` : '';
+    return `<div class="ach-item${isDone?' done':''}">
+      <div class="ach-item-icon">${isDone ? def.icon : '🔒'}</div>
+      <div class="ach-item-body">
+        <div class="ach-item-name">${def.name}</div>
+        <div class="ach-item-desc">${def.desc}${def.reward ? ` (+${def.reward} 코어)` : ''}</div>
+        ${prog ? `<div class="ach-item-prog">${prog}</div>` : ''}
+      </div>
+      <div class="ach-item-status">${isDone ? '✅' : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function _fmtTime(secs) {
+  const m = Math.floor(secs/60), s = secs%60;
+  return `${m}:${String(s).padStart(2,'0')}`;
 }
 
 function drawMultiplayerGhosts(ctx, camera) {
@@ -6282,6 +6513,7 @@ function drawMpScoreboard(ctx, w, h) {
 saveData = loadSaveData();
 ascensionLevel = saveData.ascensionLevel || 0;
 updateMenuMetaBadge();
+_initAuth();
 
 // 터치 컨트롤 초기화
 initTouchControls();

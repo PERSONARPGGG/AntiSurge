@@ -2229,3 +2229,52 @@ body {
   font-family: 'Orbitron', monospace;
   letter-spacing: 0.04em;
 }
+
+/* ── 인증 섹션 ── */
+.auth-section { margin-top: 0.8rem; text-align: center; }
+.auth-info-text { font-size: 0.65rem; color: #475569; margin: 0 0 0.4rem; }
+.auth-btn-row { display: flex; gap: 8px; justify-content: center; }
+
+/* ── 클라우드 업적 토스트 ── */
+.cloud-ach-toast {
+  position: fixed; bottom: -80px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(0,0,0,0.88); border: 1px solid #ffe600;
+  border-radius: 8px; padding: 10px 18px;
+  box-shadow: 0 0 18px rgba(255,230,0,0.4);
+  font-family: 'Orbitron', monospace; z-index: 9999;
+  transition: bottom 0.35s cubic-bezier(.4,0,.2,1);
+  min-width: 240px; max-width: 320px;
+}
+.cloud-ach-toast.show { bottom: 24px; }
+.ach-toast-icon { font-size: 1.6rem; line-height: 1; }
+.ach-toast-name { font-size: 0.75rem; color: #ffe600; font-weight: bold; }
+.ach-toast-desc { font-size: 0.6rem; color: #94a3b8; margin-top: 2px; }
+
+/* ── 업적 모달 ── */
+.achievement-modal-content { max-width: 480px; width: 90vw; max-height: 80vh; overflow-y: auto; }
+.ach-tabs { display: flex; gap: 6px; margin-bottom: 0.8rem; justify-content: center; }
+.ach-tab {
+  background: rgba(0,240,255,0.08); border: 1px solid rgba(0,240,255,0.3);
+  color: #94a3b8; font-family: 'Orbitron', monospace; font-size: 0.65rem;
+  padding: 4px 14px; border-radius: 4px; cursor: pointer;
+}
+.ach-tab.active { background: rgba(0,240,255,0.2); color: #00f0ff; border-color: #00f0ff; }
+.achievement-list { display: flex; flex-direction: column; gap: 6px; }
+.ach-item {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px; padding: 8px 12px;
+}
+.ach-item.done { border-color: rgba(255,230,0,0.4); background: rgba(255,230,0,0.05); }
+.ach-item-icon { font-size: 1.3rem; width: 28px; text-align: center; }
+.ach-item-body { flex: 1; }
+.ach-item-name { font-size: 0.72rem; font-weight: bold; color: #e2e8f0; }
+.ach-item.done .ach-item-name { color: #ffe600; }
+.ach-item-desc { font-size: 0.6rem; color: #64748b; margin-top: 2px; }
+.ach-item-prog { font-size: 0.58rem; color: #00f0ff; margin-top: 3px; }
+.ach-item-status { font-size: 0.7rem; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-card { background: rgba(0,240,255,0.05); border: 1px solid rgba(0,240,255,0.15); border-radius: 6px; padding: 8px 12px; }
+.stat-label { font-size: 0.58rem; color: #64748b; }
+.stat-value { font-size: 1rem; font-weight: bold; color: #00f0ff; }

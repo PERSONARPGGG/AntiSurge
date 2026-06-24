@@ -76,6 +76,14 @@
           <span class="cs-badge" style="background:#ffe600;color:#000">TODAY</span>
         </div>
       </div>
+
+      <div class="auth-section">
+        <p id="auth-user-info" class="auth-info-text">로컬 저장 중 (로그인 시 클라우드 동기화)</p>
+        <div class="auth-btn-row">
+          <button id="auth-btn" class="neon-btn font-sm" onclick="signInGoogle()">🔑 Google 로그인</button>
+          <button class="neon-btn font-sm neon-btn-purple" onclick="openAchievementModal()">🏆 업적</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -486,6 +494,22 @@
     </div>
   </div>
 
+  <!-- 업적 모달 -->
+  <div id="achievement-modal" class="modal">
+    <div class="modal-content glass-panel achievement-modal-content">
+      <h2 class="neon-title-sm">🏆 업적</h2>
+      <div class="ach-tabs">
+        <button class="ach-tab active" onclick="switchAchTab('basic')">기본</button>
+        <button class="ach-tab" onclick="switchAchTab('cloud')">도전</button>
+        <button class="ach-tab" onclick="switchAchTab('stats')">통계</button>
+      </div>
+      <div id="achievement-list" class="achievement-list"></div>
+      <div style="text-align:center;margin-top:0.8rem">
+        <button class="neon-btn font-sm neon-btn-purple" onclick="closeAchievementModal()">← 닫기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ⚡ 개발자 패널 (비밀번호: 7501) -->
   <div id="dev-panel" class="dev-panel">
     <div class="dev-header">
@@ -534,6 +558,7 @@
   <!-- Firebase compat SDK (game.js보다 먼저 로드 필수) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
