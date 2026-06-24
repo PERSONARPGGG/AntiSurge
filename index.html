@@ -6,16 +6,23 @@
   <title>네온 서바이버즈 (Neon Survivors) - 사이버 생존 게임</title>
   <meta name="description" content="사이버펑크 네온 스타일의 2D 탑다운 자동 공격 생존 게임, 네온 서바이버즈를 브라우저에서 즐겨보세요!">
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
+  <!-- PWA (HTTP 서버에서만 활성화, file:// 에서는 스킵) -->
   <meta name="theme-color" content="#00f0ff">
-  <meta name="mobile-web-app-capable" content="yes">
+  <script>
+    if (location.protocol !== 'file:') {
+      const l = document.createElement('link');
+      l.rel = 'manifest'; l.href = 'manifest.json';
+      document.head.appendChild(l);
+      const a = document.createElement('meta');
+      a.name = 'mobile-web-app-capable'; a.content = 'yes';
+      document.head.appendChild(a);
+    }
+  </script>
 
   <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="NeonSurvivors">
-  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">

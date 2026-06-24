@@ -3230,10 +3230,10 @@ function triggerStageClear() {
     gems.push(new Gem(e.x, e.y, e.xpValue));
     createExplosionParticles(e.x, e.y, e.color, 5);
   }
-  enemies = [];
-  projectiles = [];
-  mines = [];
-  blackHoles = [];
+  enemies.length = 0;
+  projectiles.length = 0;
+  mines.length = 0;
+  blackHoles.length = 0;
   stageGemMagnet = true;
   if (_gemMagnetTimer) clearTimeout(_gemMagnetTimer);
   _gemMagnetTimer = setTimeout(() => { stageGemMagnet = false; _gemMagnetTimer = null; }, 3500);
@@ -3772,7 +3772,9 @@ function checkCollisions() {
 
   // 투사체 vs 적 + 보스
   for (let i = projectiles.length - 1; i >= 0; i--) {
+    if (i >= projectiles.length) continue;
     let p = projectiles[i];
+    if (!p) continue;
     let allTargets = [...enemies];
     if (activeBoss) allTargets.push(activeBoss);
 
@@ -4267,13 +4269,17 @@ function update(dt) {
 
   // 마인 업데이트
   for (let i = mines.length - 1; i >= 0; i--) {
+    if (i >= mines.length) continue;
     mines[i].update(dt);
+    if (i >= mines.length) continue; // triggerStageClear가 mines를 클리어했을 수 있음
     if (mines[i].exploded) mines.splice(i, 1);
   }
 
   // 블랙홀 업데이트
   for (let i = blackHoles.length - 1; i >= 0; i--) {
+    if (i >= blackHoles.length) continue;
     blackHoles[i].update(dt);
+    if (i >= blackHoles.length) continue;
     if (blackHoles[i].dead) blackHoles.splice(i, 1);
   }
 
