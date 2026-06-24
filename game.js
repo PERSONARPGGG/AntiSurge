@@ -249,16 +249,34 @@ let devFpsCount   = 0;
 let devLastFpsTs  = 0;
 let devCurrentFps = 60;
 
-// ─── 멀티플레이어 (초대 모드 베타) ───
-let mpMode     = false;
-let mpIsHost   = false;
-let mpRoomCode = '';
-let mpMyId     = '';
-let mpMyColor  = '#00f0ff';
-let mpPlayers  = {};
-let mpChannel  = null;
+// ─── 멀티플레이어 ───
+// Firebase 설정: Firebase Console → 프로젝트 설정 → 앱 추가(웹) → SDK 설정에서 복사
+// null 로 두면 BroadcastChannel(같은 기기 탭) 폴백 모드로 동작
+const FIREBASE_CONFIG = null;
+/* 예시:
+const FIREBASE_CONFIG = {
+  apiKey: "AIza...",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abc123"
+};
+*/
+
+let mpMode      = false;
+let mpIsHost    = false;
+let mpRoomCode  = '';
+let mpMyId      = '';
+let mpMyColor   = '#00f0ff';
+let mpPlayers   = {};
+let mpChannel   = null;   // BroadcastChannel (폴백)
+let mpUseFb     = false;  // Firebase 사용 여부
+let mpFbRoomRef = null;   // Firebase room reference
+let mpFbMsgRef  = null;   // Firebase messages reference
 let mpSyncTimer = 0;
-const MP_SYNC_MS = 150;
+let mpMsgSeq    = 0;      // 메시지 중복 방지용
+const MP_SYNC_MS = 120;
 const MP_COLORS  = ['#00f0ff','#b026ff','#39ff14','#ff4466','#ffe600','#ff8800'];
 
 // 오브젝트 상한 (멀티 대비 성능 캡)
@@ -5669,11 +5687,36 @@ function settingsToggleMute() {
 }
 
 // ============================================================
-// 🎮 초대 모드 (BroadcastChannel 베타)
+// 🎮 멀티플레이어 모드 (Firebase RTDB / BroadcastChannel 듀얼)
 // ============================================================
+
+// ── Firebase 초기화 ──────────────────────────────────────────
+let _fbApp = null, _fbDb = null;
+function _mpInitFirebase() {
+  if (_fbDb) return true;
+  if (!FIREBASE_CONFIG) return false;
+  if (typeof firebase === 'undefined') return false;
+  try {
+    _fbApp = firebase.apps.length ? firebase.apps[0] : firebase.initializeApp(FIREBASE_CONFIG);
+    _fbDb  = firebase.database(_fbApp);
+    return true;
+  } catch (e) {
+    console.warn('[MP] Firebase 초기화 실패:', e.message);
+    return false;
+  }
+}
+
+function _mpFbRoomPath() { return `neon_rooms/${mpRoomCode}`; }
+
+// ── 공통 유틸 ───────────────────────────────────────────────
 function openInviteModal() {
   const modal = document.getElementById('invite-modal');
   if (modal) modal.classList.add('active');
+  // Firebase 설정 여부 표시
+  const note = document.getElementById('mp-mode-note');
+  if (note) note.textContent = FIREBASE_CONFIG
+    ? '🌐 Firebase 모드 — 다른 기기와 플레이 가능'
+    : '⚠ 로컬 모드 — 같은 기기의 다른 탭에서만 작동';
 }
 
 function closeInviteModal() {
@@ -5685,10 +5728,55 @@ function mpGenCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+// ── 채널 설정 ────────────────────────────────────────────────
 function mpSetupChannel() {
-  if (mpChannel) mpChannel.close();
-  mpChannel = new BroadcastChannel('ns_room_' + mpRoomCode);
-  mpChannel.onmessage = mpHandleMsg;
+  mpUseFb = _mpInitFirebase();
+
+  if (mpUseFb) {
+    // Firebase 모드
+    const db = _fbDb;
+    const roomRef  = db.ref(_mpFbRoomPath());
+    const myRef    = roomRef.child(`players/${mpMyId}`);
+    const playerData = {
+      x: 0, y: 0, hp: 100, maxHp: 100, level: 1, kills: 0,
+      color: mpMyColor, name: mpIsHost ? 'HOST' : 'PLAYER', ts: Date.now()
+    };
+
+    // 연결 끊기면 자동 삭제
+    myRef.onDisconnect().remove();
+    if (mpIsHost) roomRef.onDisconnect().remove();
+
+    myRef.set(playerData);
+
+    // 다른 플레이어 상태 실시간 수신
+    mpFbRoomRef = roomRef.child('players');
+    mpFbRoomRef.on('value', snap => {
+      const all = snap.val() || {};
+      for (const [id, p] of Object.entries(all)) {
+        if (id === mpMyId) continue;
+        mpPlayers[id] = { ...mpPlayers[id], ...p, lastUpdate: Date.now() };
+      }
+      // 사라진 플레이어 제거
+      for (const id in mpPlayers) {
+        if (id !== mpMyId && !all[id]) delete mpPlayers[id];
+      }
+      mpUpdatePlayerList();
+    });
+
+    // 게임 이벤트 수신 (join/start/leave)
+    mpFbMsgRef = roomRef.child('msgs');
+    mpFbMsgRef.limitToLast(1).on('child_added', snap => {
+      const msg = snap.val();
+      if (!msg || msg.senderId === mpMyId) return;
+      _mpHandleEvent(msg);
+    });
+  } else {
+    // BroadcastChannel 폴백 (같은 기기)
+    if (mpChannel) mpChannel.close();
+    mpChannel = new BroadcastChannel('ns_room_' + mpRoomCode);
+    mpChannel.onmessage = e => _mpHandleMsg(e.data);
+  }
+
   mpMode = true;
   mpPlayers[mpMyId] = {
     x: 0, y: 0, hp: 100, maxHp: 100, level: 1, kills: 0,
@@ -5697,9 +5785,10 @@ function mpSetupChannel() {
   mpUpdatePlayerList();
 }
 
+// ── 방 생성 / 참가 ───────────────────────────────────────────
 function mpCreateRoom() {
   mpRoomCode = mpGenCode();
-  mpMyId     = 'H_' + Date.now();
+  mpMyId     = 'H_' + Date.now().toString(36);
   mpIsHost   = true;
   mpMyColor  = MP_COLORS[0];
   mpSetupChannel();
@@ -5714,18 +5803,19 @@ function mpJoinFromInput() {
 
 function mpJoinRoom(code) {
   mpRoomCode = code;
-  mpMyId     = 'P_' + Date.now();
+  mpMyId     = 'P_' + Date.now().toString(36);
   mpIsHost   = false;
   mpMyColor  = MP_COLORS[1 + Math.floor(Math.random() * (MP_COLORS.length - 1))];
   mpSetupChannel();
-  mpBroadcast({ type: 'join', id: mpMyId, color: mpMyColor, name: 'PLAYER' });
+  if (!mpUseFb) {
+    mpBroadcast({ type: 'join', id: mpMyId, color: mpMyColor, name: 'PLAYER' });
+  }
   _mpShowRoom();
 }
 
-function mpHandleMsg(e) {
-  const msg = e.data;
+// ── 메시지 처리 (BroadcastChannel용) ─────────────────────────
+function _mpHandleMsg(msg) {
   if (!msg?.type) return;
-
   if (msg.type === 'join') {
     mpPlayers[msg.id] = { x: 0, y: 0, hp: 100, maxHp: 100, level: 1, kills: 0,
       color: msg.color, name: msg.name || 'PLAYER', lastUpdate: Date.now() };
@@ -5742,22 +5832,41 @@ function mpHandleMsg(e) {
     if (msg.id === mpMyId) return;
     if (!mpPlayers[msg.id]) mpPlayers[msg.id] = { color: '#ffffff', name: 'PLAYER' };
     Object.assign(mpPlayers[msg.id], msg.state, { lastUpdate: Date.now() });
-  } else if (msg.type === 'start') {
+  } else {
+    _mpHandleEvent(msg);
+  }
+}
+
+// ── 게임 이벤트 처리 (공통) ──────────────────────────────────
+function _mpHandleEvent(msg) {
+  if (msg.type === 'start') {
     if (!mpIsHost) { closeInviteModal(); startGame(); }
   } else if (msg.type === 'leave') {
-    delete mpPlayers[msg.id];
+    delete mpPlayers[msg.id || msg.senderId];
     mpUpdatePlayerList();
   }
 }
 
+// ── 브로드캐스트 ─────────────────────────────────────────────
 function mpBroadcast(data) {
-  if (mpChannel) mpChannel.postMessage(data);
+  if (mpUseFb && _fbDb) {
+    _fbDb.ref(`${_mpFbRoomPath()}/msgs`).push({
+      ...data, senderId: mpMyId, ts: Date.now(), seq: mpMsgSeq++
+    });
+  } else if (mpChannel) {
+    mpChannel.postMessage(data);
+  }
 }
 
+// ── UI ───────────────────────────────────────────────────────
 function _mpShowRoom() {
   document.getElementById('invite-lobby').style.display = 'none';
   document.getElementById('invite-room').style.display  = 'block';
   document.getElementById('room-code-text').textContent = mpRoomCode;
+  const desc = document.getElementById('mp-room-desc');
+  if (desc) desc.textContent = mpUseFb
+    ? '📱 다른 기기에서 이 코드로 참가하세요.'
+    : '🖥 같은 기기의 다른 탭에서 이 코드로 참가하세요.';
   mpUpdatePlayerList();
 }
 
@@ -5774,40 +5883,61 @@ function mpUpdatePlayerList() {
 
 function mpStartGame() {
   if (!mpIsHost) return;
-  mpBroadcast({ type: 'start' });
+  mpBroadcast({ type: 'start', id: mpMyId });
   closeInviteModal();
   startGame();
 }
 
 function mpLeaveRoom() {
   mpBroadcast({ type: 'leave', id: mpMyId });
+  // Firebase 정리
+  if (mpUseFb && _fbDb) {
+    _fbDb.ref(`${_mpFbRoomPath()}/players/${mpMyId}`).remove();
+    if (mpIsHost) _fbDb.ref(_mpFbRoomPath()).remove();
+    if (mpFbRoomRef) { mpFbRoomRef.off(); mpFbRoomRef = null; }
+    if (mpFbMsgRef)  { mpFbMsgRef.off();  mpFbMsgRef  = null; }
+  }
+  // BroadcastChannel 정리
   if (mpChannel) { mpChannel.close(); mpChannel = null; }
-  mpMode = false; mpIsHost = false; mpRoomCode = ''; mpMyId = ''; mpPlayers = {};
+
+  mpMode = false; mpIsHost = false; mpUseFb = false;
+  mpRoomCode = ''; mpMyId = ''; mpPlayers = {};
   document.getElementById('invite-lobby').style.display = 'block';
   document.getElementById('invite-room').style.display  = 'none';
   const inp = document.getElementById('invite-code-input');
   if (inp) inp.value = '';
 }
 
+// ── 상태 동기화 (게임 루프에서 호출) ─────────────────────────
 function syncMpState(dt) {
-  if (!mpChannel || !player) return;
+  if (!player) return;
   mpSyncTimer += dt;
   if (mpSyncTimer < MP_SYNC_MS) return;
   mpSyncTimer = 0;
-  const me = mpPlayers[mpMyId] || {};
-  me.x = player.x; me.y = player.y;
-  me.hp = player.hp; me.maxHp = player.maxHp;
-  me.level = player.level; me.kills = killCount;
-  me.color = mpMyColor; me.lastUpdate = Date.now();
-  mpPlayers[mpMyId] = me;
-  mpBroadcast({ type: 'state', id: mpMyId, state: {
-    x: player.x, y: player.y, hp: player.hp, maxHp: player.maxHp,
-    level: player.level, kills: killCount, color: mpMyColor, name: me.name || 'ME'
-  }});
-  const now = Date.now();
-  for (const id in mpPlayers) {
-    if (id !== mpMyId && mpPlayers[id].lastUpdate && now - mpPlayers[id].lastUpdate > 5000)
-      delete mpPlayers[id];
+
+  const state = {
+    x: player.x, y: player.y,
+    hp: player.hp, maxHp: player.maxHp,
+    level: player.level, kills: killCount,
+    color: mpMyColor, name: mpPlayers[mpMyId]?.name || 'ME',
+    ts: Date.now()
+  };
+  mpPlayers[mpMyId] = { ...state, lastUpdate: Date.now() };
+
+  if (mpUseFb && _fbDb) {
+    // Firebase: player 노드 직접 업데이트 (메시지 채널 사용 X, 대역폭 절약)
+    _fbDb.ref(`${_mpFbRoomPath()}/players/${mpMyId}`).update(state);
+  } else if (mpChannel) {
+    mpChannel.postMessage({ type: 'state', id: mpMyId, state });
+  }
+
+  // 오래된 플레이어 로컬 제거 (Firebase 모드는 presence로 자동 처리)
+  if (!mpUseFb) {
+    const now = Date.now();
+    for (const id in mpPlayers) {
+      if (id !== mpMyId && mpPlayers[id].lastUpdate && now - mpPlayers[id].lastUpdate > 6000)
+        delete mpPlayers[id];
+    }
   }
 }
 

@@ -449,11 +449,11 @@
     </div>
   </div>
 
-  <!-- 🎮 초대 모드 모달 -->
+  <!-- 🎮 멀티플레이어 모달 -->
   <div id="invite-modal" class="modal">
     <div class="modal-content glass-panel invite-panel">
-      <h2 class="neon-title-sm">🎮 초대 모드 <span class="beta-tag">BETA</span></h2>
-      <p class="modal-desc invite-beta-note">⚠ 베타: 현재 같은 기기의 다른 탭에서만 작동합니다.<br>추후 Firebase로 크로스 기기 지원 예정.</p>
+      <h2 class="neon-title-sm">🎮 멀티플레이어</h2>
+      <p id="mp-mode-note" class="modal-desc invite-beta-note"></p>
 
       <div id="invite-lobby" class="invite-lobby">
         <div class="invite-section">
@@ -468,7 +468,7 @@
 
       <div id="invite-room" class="invite-room" style="display:none">
         <div class="room-code-box">방 코드: <span id="room-code-text" class="neon-text-pink room-code">------</span></div>
-        <p class="modal-desc">같은 기기의 다른 탭에서 이 코드로 참가하세요.</p>
+        <p id="mp-room-desc" class="modal-desc"></p>
         <div id="mp-player-list" class="mp-player-list"></div>
         <div class="invite-room-actions">
           <button id="mp-start-btn" class="neon-btn font-sm" onclick="mpStartGame()">▶ 게임 시작</button>
@@ -527,6 +527,12 @@
     <div class="dev-footer">키보드: 7501 입력 시 토글</div>
   </div>
 
+  <!-- Firebase SDK (FIREBASE_CONFIG가 null이 아닐 때만 로드) -->
+  <!-- game.js의 FIREBASE_CONFIG 에 값이 채워지면 이 주석을 해제하세요: -->
+  <!--
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  -->
   <script src="game.js"></script>
 </body>
 </html>
