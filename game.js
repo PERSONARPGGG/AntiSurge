@@ -175,6 +175,9 @@ let joystickTouchId = null;
 // ─── 메뉴 BGM ───
 let menuBgmStarted = false;
 
+// ─── 근사망 저주 플래그 ───
+let pendingNearDeathCurse = false;
+
 // ─── 배경 별 효과 (시각적) ───
 const bgStars = Array.from({ length: 130 }, () => ({
   xNorm:     Math.random(),
@@ -1156,15 +1159,15 @@ class Player {
     }
 
     // 사망 직전 저주 계약 (HP 15% 이하, 1회)
-    if (this.hp / this.maxHp <= 0.15 && !this._nearDeathCurseSent && !pendingBossCurse && gameState === STATE_PLAYING) {
+    if (this.hp / this.maxHp <= 0.15 && !this._nearDeathCurseSent && !pendingBossCurse && !pendingNearDeathCurse && gameState === STATE_PLAYING) {
       this._nearDeathCurseSent = true;
-      pendingBossCurse = true;
+      pendingNearDeathCurse = true;
       setTimeout(() => {
         if (player && player.hp > 0 && gameState === STATE_PLAYING) {
-          pendingBossCurse = false;
-          showCurseModal();
+          pendingNearDeathCurse = false;
+          showNearDeathCurseModal();
         } else {
-          pendingBossCurse = false;
+          pendingNearDeathCurse = false;
         }
       }, 500);
     }
@@ -1745,6 +1748,7 @@ class MissileWeapon extends BaseWeapon {
 class RingWeapon extends BaseWeapon {
   constructor(owner) { super(owner); this.rings = []; }
   update(dt) {
+    if (this.level === 0) return;
     this.timer += dt;
     const cds = [3500, 3000, 2500, 2200, 1800];
     const cd  = cds[Math.min(this.level - 1, cds.length - 1)] ?? 3500;
@@ -4117,7 +4121,7 @@ function startGame() {
   gameLoopId        = null;
   screenShake       = { x: 0, y: 0, intensity: 0, duration: 0 };
   comboCount = 0; comboTimer = 0; maxCombo = 0;
-  evolutionCount = 0; activeSynergies = new Set(); pendingBossCurse = false;
+  evolutionCount = 0; activeSynergies = new Set(); pendingBossCurse = false; pendingNearDeathCurse = false;
   mines = []; blackHoles = [];
   fieldItemTimer    = 0;
   shopTimer         = 0;
@@ -4884,6 +4888,41 @@ function showCurseModal() {
   document.getElementById('curse-accept-btn').onclick = () => applyCurseChoice(curse, true);
   document.getElementById('curse-decline-btn').onclick = () => applyCurseChoice(curse, false);
   modal.classList.add('active');
+  ensureGameLoopRunning();
+}
+
+// 근사망 저주: 선택 후 게임 플레이로 복귀 (스테이지 보너스 없음)
+function showNearDeathCurseModal() {
+  gameState = STATE_CURSE;
+  const curse = CURSE_DEFS[Math.floor(Math.random() * CURSE_DEFS.length)];
+  const modal = document.getElementById('curse-modal');
+  const card  = document.getElementById('curse-offer-card');
+  if (!modal || !card) { gameState = STATE_PLAYING; ensureGameLoopRunning(); return; }
+  card.innerHTML = `
+    <div style="color:#ff8800;font-size:0.75rem;margin-bottom:6px">⚠ 사망 직전 긴급 계약</div>
+    <div class="curse-debuff">💀 저주: ${curse.debuff}</div>
+    <div class="curse-reward">✨ 보상: ${curse.reward}</div>
+  `;
+  document.getElementById('curse-accept-btn').onclick = () => applyNearDeathCurseChoice(curse, true);
+  document.getElementById('curse-decline-btn').onclick = () => applyNearDeathCurseChoice(curse, false);
+  modal.classList.add('active');
+  ensureGameLoopRunning();
+}
+
+function applyNearDeathCurseChoice(curse, accepted) {
+  document.getElementById('curse-modal').classList.remove('active');
+  if (accepted && player) {
+    curse.debuffFn(player);
+    curse.rewardFn();
+    addFloatingText(player.x, player.y - 40, '⚠ 저주 수락!', '#ff4466', 15);
+    playSynthSound([150, 80, 200], 0.2, 'sawtooth', 0.1);
+    triggerScreenShake(8, 400);
+  } else {
+    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, '✋ 저주 거절', '#94a3b8', 13);
+  }
+  // 근사망 저주는 스테이지 보너스 없이 바로 게임 복귀
+  gameState = STATE_PLAYING;
+  lastTime = performance.now();
   ensureGameLoopRunning();
 }
 
