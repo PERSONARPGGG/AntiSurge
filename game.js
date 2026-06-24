@@ -1240,9 +1240,9 @@ class Player {
       this.thornsTrigger = false;
       const thornDmg = this.passives.thorns === 2 ? 25 : 15;
       const thornR   = this.passives.thorns === 2 ? 160 : 120;
-      for (let i = enemies.length - 1; i >= 0; i--) {
-        if (dist(this.x, this.y, enemies[i].x, enemies[i].y) < thornR) {
-          if (enemies[i].takeDamage(thornDmg, 'thorns')) killCount++;
+      for (const e of [...enemies]) {
+        if (e && dist(this.x, this.y, e.x, e.y) < thornR) {
+          if (e.takeDamage(thornDmg, 'thorns')) killCount++;
         }
       }
     }
@@ -1914,9 +1914,9 @@ class Mine {
     createExplosionParticles(this.x, this.y, '#ff8800', 20);
     triggerScreenShake(4, 250);
     playSynthSound([180, 80], 0.18, 'sawtooth', 0.08, true);
-    for (let i = enemies.length - 1; i >= 0; i--) {
-      if (dist(this.x, this.y, enemies[i].x, enemies[i].y) < this.explodeR + enemies[i].radius) {
-        if (enemies[i].takeDamage(this.damage, 'mine')) killCount++;
+    for (const e of [...enemies]) {
+      if (e && dist(this.x, this.y, e.x, e.y) < this.explodeR + e.radius) {
+        if (e.takeDamage(this.damage, 'mine')) killCount++;
       }
     }
     if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < this.explodeR + activeBoss.radius) {
@@ -2030,9 +2030,9 @@ class BlackHole {
     createExplosionParticles(this.x, this.y, '#ffffff', 12);
     triggerScreenShake(12, 700);
     playSynthSound([55, 140, 380], 0.28, 'sawtooth', 0.12);
-    for (let i = enemies.length - 1; i >= 0; i--) {
-      if (dist(this.x, this.y, enemies[i].x, enemies[i].y) < collapseR + enemies[i].radius) {
-        if (enemies[i].takeDamage(collapseDmg, 'blackhole')) killCount++;
+    for (const e of [...enemies]) {
+      if (e && dist(this.x, this.y, e.x, e.y) < collapseR + e.radius) {
+        if (e.takeDamage(collapseDmg, 'blackhole')) killCount++;
       }
     }
     if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < collapseR + activeBoss.radius) {
