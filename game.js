@@ -99,6 +99,7 @@ let isEndlessMode    = false;
 let endlessModeStartTime = 0;
 let isStageClearAnim = false;   // 클리어 연출 진행 중 여부
 let stageClearAnimStartMs = 0;  // 클리어 연출 시작 시각 (Date.now)
+let bossStageStartMs = 0;       // 보스 스테이지 시작 시각 (갇힘 감지용)
 let _gemMagnetTimer  = null;    // stageGemMagnet setTimeout ID
 let gameLoopId       = null;    // requestAnimationFrame ID (루프 재시작 감지용)
 
@@ -3025,6 +3026,7 @@ class Boss {
     activeBoss = null;
     isBossStage = false;
     isMiniBossStage = false;
+    bossStageStartMs = 0;
     if (!this.isMini) {
       pendingBossCurse = true;
     } else {
@@ -3422,6 +3424,7 @@ function advanceToNextStage() {
     isMiniBossStage  = false;
     stageKillGoal    = 0;
     stageKillProgress = 0;
+    bossStageStartMs  = Date.now();
     gameState = STATE_PLAYING;
     showBossWarning();
   } else if (currentStage % 10 === 5) {
@@ -3429,6 +3432,7 @@ function advanceToNextStage() {
     isMiniBossStage  = true;
     stageKillGoal    = 0;
     stageKillProgress = 0;
+    bossStageStartMs  = Date.now();
     gameState = STATE_PLAYING;
     setTimeout(() => spawnMiniBoss(), 1500);
   } else {
@@ -3455,7 +3459,9 @@ function spawnEliteEnemy() {
 }
 
 function spawnMiniBoss() {
-  if (!player || gameState !== STATE_PLAYING) return;
+  if (!player) return;
+  // 상점/일시정지/레벨업 중이면 재시도 (isBossStage가 true인 채로 갇히는 버그 방지)
+  if (gameState !== STATE_PLAYING) { setTimeout(() => spawnMiniBoss(), 500); return; }
   const miniBoss = new Boss();
   miniBoss.maxHp  = Math.floor(miniBoss.maxHp * 0.40);
   miniBoss.hp     = miniBoss.maxHp;
@@ -4581,6 +4587,14 @@ function update(dt) {
     showStageBonusSafe(200);
   }
 
+  // 보스 스테이지 갇힘 감지: isBossStage=true인데 보스가 없는 상태가 12초 이상이면 강제 클리어
+  if (isBossStage && !activeBoss && bossStageStartMs > 0 && Date.now() - bossStageStartMs > 12000) {
+    bossStageStartMs = 0;
+    isBossStage = false;
+    isMiniBossStage = false;
+    triggerStageClear();
+  }
+
   // HUD 동기화
   updateHUD();
 
@@ -5156,6 +5170,7 @@ function resumeGame() {
   const ia = document.getElementById('settings-ingame-actions');
   if (ia) ia.style.display = 'none';
   lastTime = performance.now();
+  ensureGameLoopRunning();
 }
 
 function goToMenu() {
