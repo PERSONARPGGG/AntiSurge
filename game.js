@@ -28,25 +28,43 @@ const CLASS_DEFS = {
     name: '해커', icon: '💻', color: '#00f0ff',
     desc: '올라운더. 균형 잡힌 스탯. XP 획득 +10%, 리롤 +1회.',
     hp: 100, speed: 3.2, damageMult: 1.0, magnetRadius: 90,
-    startWeapon: 'flare', rerolls: 3, xpBonus: 1.1
+    startWeapon: 'flare', rerolls: 3, xpBonus: 1.1,
+    activeSkill: { name: 'EMP 펄스', icon: '🔌', cd: 15000, desc: '주변 반경 200 내 적 3초 스턴' }
   },
   cyborg: {
     name: '사이보그', icon: '🤖', color: '#b026ff',
     desc: '방어형. HP가 높고 오비터로 근접 방어. 실드 지속 +3초.',
     hp: 160, speed: 2.4, damageMult: 0.9, magnetRadius: 75,
-    startWeapon: 'orbiter', rerolls: 2, xpBonus: 1.0
+    startWeapon: 'orbiter', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '강화 방어막', icon: '🛡', cd: 20000, desc: '10초간 피해 감소 50%' }
   },
   ghost: {
     name: '고스트', icon: '👻', color: '#39ff14',
     desc: '공격형. 이동속도 +40%, 피해량 +25%. HP가 낮음.',
     hp: 70, speed: 4.5, damageMult: 1.25, magnetRadius: 70,
-    startWeapon: 'flare', rerolls: 2, xpBonus: 1.0
+    startWeapon: 'flare', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '위상 도약', icon: '👁', cd: 12000, desc: '3초간 무적 + 속도 2배' }
   },
   engineer: {
     name: '엔지니어', icon: '🔧', color: '#ffe600',
     desc: '지원형. 존으로 시작. 자석 범위 2배, 회복 아이템 +50%.',
     hp: 110, speed: 3.0, damageMult: 1.0, magnetRadius: 180,
-    startWeapon: 'zone', rerolls: 2, xpBonus: 1.0
+    startWeapon: 'zone', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '긴급 수리', icon: '🔋', cd: 18000, desc: '최대 HP의 30% 즉시 회복' }
+  },
+  sniper: {
+    name: '스나이퍼', icon: '🎯', color: '#ff4466',
+    desc: '저격형. 단일 피해량 최고, 빠른 미사일로 시작.',
+    hp: 80, speed: 2.8, damageMult: 1.6, magnetRadius: 60,
+    startWeapon: 'missile', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '정밀 조준', icon: '🎯', cd: 10000, desc: '다음 미사일 피해 5배' }
+  },
+  support: {
+    name: '서포터', icon: '🔵', color: '#00ffaa',
+    desc: '지원형. 드론으로 시작. XP +15%, 리롤 3회.',
+    hp: 120, speed: 2.6, damageMult: 0.85, magnetRadius: 120,
+    startWeapon: 'drone', rerolls: 3, xpBonus: 1.15,
+    activeSkill: { name: '비상 보수', icon: '🔵', cd: 20000, desc: 'HP 10% 회복 + 드론 강화' }
   }
 };
 
@@ -128,6 +146,34 @@ let bonusSelectedIdx   = 0;
 
 // ─── 일시정지 ───
 let prevStateBeforePause = null;
+
+// ─── 난이도 시스템 ───
+let gameDifficulty = 'normal';
+const DIFFICULTY_SETTINGS = {
+  easy:   { enemyHpMult: 0.7,  enemySpeedMult: 0.85, spawnRateMult: 0.8,  xpMult: 0.8,  label: 'EASY',   color: '#39ff14' },
+  normal: { enemyHpMult: 1.0,  enemySpeedMult: 1.0,  spawnRateMult: 1.0,  xpMult: 1.0,  label: 'NORMAL', color: '#00f0ff' },
+  hard:   { enemyHpMult: 1.5,  enemySpeedMult: 1.2,  spawnRateMult: 1.3,  xpMult: 1.2,  label: 'HARD',   color: '#ff4466' }
+};
+
+// ─── 일일 도전 ───
+let isDailyRun = false;
+let dailyRunSeed = 0;
+let dailyRNG = null;
+
+// ─── 승천 시스템 ───
+let ascensionLevel = 0;
+
+// ─── 세이브 슬롯 ───
+let currentSaveSlot = 0;
+
+// ─── 모바일 조이스틱 ───
+let joystickBase = null;
+let joystickKnob = null;
+const JOYSTICK_RADIUS = 50;
+let joystickTouchId = null;
+
+// ─── 메뉴 BGM ───
+let menuBgmStarted = false;
 
 // ─── 배경 별 효과 (시각적) ───
 const bgStars = Array.from({ length: 130 }, () => ({
@@ -821,6 +867,151 @@ function bgmSchedule() {
   bgmSchedulerTimer = setTimeout(bgmSchedule, BGM_SCHEDULER_MS);
 }
 
+// ============================================================
+// 액티브 스킬 시스템 (Q 키)
+// ============================================================
+function useActiveSkill() {
+  if (!player || player.activeSkillCd > 0) return;
+  if (gameState !== STATE_PLAYING && gameState !== STATE_STAGE_CLEAR) return;
+  const cls = CLASS_DEFS[player.classId];
+  if (!cls?.activeSkill) return;
+  player.activeSkillCd = cls.activeSkill.cd;
+  initAudio();
+  switch (player.classId) {
+    case 'hacker':
+      enemies.forEach(e => {
+        const dx = e.x - player.x, dy = e.y - player.y;
+        if (dx*dx + dy*dy < 200*200) e.stunTimer = 3000;
+      });
+      if (activeBoss) {
+        const dx = activeBoss.x - player.x, dy = activeBoss.y - player.y;
+        if (dx*dx + dy*dy < 200*200) activeBoss.stunTimer = (activeBoss.stunTimer || 0) + 1500;
+      }
+      createExplosionParticles(player.x, player.y, '#00f0ff', 30);
+      playSynthSound([800, 200, 100], 0.25, 'sawtooth', 0.12, true);
+      addFloatingText(player.x, player.y - 60, '⚡ EMP 펄스!', '#00f0ff', 16);
+      break;
+    case 'cyborg':
+      player.skillShieldActive = true;
+      player.activeSkillTimer  = 10000;
+      player._skillOrigDmgReduction = player.damageReduction;
+      player.damageReduction = Math.min(player.damageReduction + 0.50, 0.85);
+      playSynthSound([400, 600], 0.2, 'triangle', 0.1);
+      addFloatingText(player.x, player.y - 60, '🛡 방어막 강화!', '#b026ff', 16);
+      break;
+    case 'ghost':
+      player.skillInvincible   = true;
+      player.skillSpeedBoost   = true;
+      player.activeSkillTimer  = 3000;
+      player._skillOrigSpeed   = player.speed;
+      player.speed *= 2.0;
+      playSynthSound([1000, 2000], 0.15, 'sine', 0.1);
+      addFloatingText(player.x, player.y - 60, '👁 위상 도약!', '#39ff14', 16);
+      break;
+    case 'engineer': {
+      const heal = Math.floor(player.maxHp * 0.30);
+      player.hp = Math.min(player.hp + heal, player.maxHp);
+      playSynthSound([600, 900, 1200], 0.2, 'triangle', 0.08);
+      addFloatingText(player.x, player.y - 60, `🔋 +${heal} HP 회복!`, '#ffe600', 16);
+      break;
+    }
+    case 'sniper':
+      player._sniperShotBoost = 5;
+      addFloatingText(player.x, player.y - 60, '🎯 정밀 조준!', '#ff4466', 16);
+      playSynthSound([1200, 800], 0.15, 'sawtooth', 0.1);
+      break;
+    case 'support': {
+      const healSup = Math.floor(player.maxHp * 0.10);
+      player.hp = Math.min(player.hp + healSup, player.maxHp);
+      if (player.weapons.drone) player.weapons.drone._repaired = true;
+      addFloatingText(player.x, player.y - 60, '🔵 비상 보수!', '#00ffaa', 16);
+      playSynthSound([500, 900, 1400], 0.2, 'triangle', 0.08);
+      break;
+    }
+  }
+  triggerScreenShake(4, 250);
+}
+
+// ============================================================
+// 난이도 / 일일 도전 / 승천
+// ============================================================
+function setDifficulty(d) {
+  gameDifficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('diff-active', b.dataset.diff === d));
+  localStorage.setItem('ns_difficulty', d);
+}
+
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function getDailyRunDate() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function startDailyRun() {
+  isDailyRun = true;
+  const dateStr = getDailyRunDate();
+  dailyRunSeed = [...dateStr].reduce((h, c) => (Math.imul(31, h) + c.charCodeAt(0)) | 0, 0);
+  dailyRNG = mulberry32(dailyRunSeed);
+  gameDifficulty = 'hard';
+  startGame();
+}
+
+function getAscensionScale() {
+  return 1.0 + (ascensionLevel || 0) * 0.25;
+}
+
+// ============================================================
+// 세이브 슬롯
+// ============================================================
+function getSaveKey(slot) { return `ns_save_slot_${slot ?? currentSaveSlot}`; }
+
+function selectSaveSlot(n) {
+  saveSaveData();
+  currentSaveSlot = n;
+  saveData = loadSaveDataSlot(n);
+  applyMetaUpgrades();
+  renderMetaGrid();
+  updateMenuMetaBadge();
+  document.querySelectorAll('.slot-btn').forEach((b, i) => b.classList.toggle('slot-active', i === n));
+}
+
+function loadSaveDataSlot(slot) {
+  try {
+    const raw = localStorage.getItem(getSaveKey(slot));
+    if (!raw) return { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0, ascensionLevel: 0 };
+    const d = JSON.parse(raw);
+    return {
+      dataCores:      d.dataCores      || 0,
+      metaLevels:     d.metaLevels     || {},
+      achievements:   d.achievements   || [],
+      bestKills:      d.bestKills      || 0,
+      bestStage:      d.bestStage      || 0,
+      bestTime:       d.bestTime       || 0,
+      ascensionLevel: d.ascensionLevel || 0
+    };
+  } catch(e) { return { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0, ascensionLevel: 0 }; }
+}
+
+// ============================================================
+// 메뉴 BGM 시작
+// ============================================================
+function tryStartMenuBgm() {
+  if (menuBgmStarted || gameState !== STATE_MENU) return;
+  menuBgmStarted = true;
+  initAudio();
+  bgmTrackId = Math.floor(Math.random() * 3);
+  bgmTrackCheckTimer = 0;
+  startBGM();
+}
+
 function startBGM() {
   if (!audioCtx) return;
   stopBGM();
@@ -902,6 +1093,17 @@ class Player {
     // 골드
     this.gold = 0;
 
+    // 액티브 스킬
+    this.activeSkillCd     = 0;
+    this.activeSkillTimer  = 0;
+    this.skillShieldActive = false;
+    this.skillInvincible   = false;
+    this.skillSpeedBoost   = false;
+    this._skillOrigDmgReduction = 0;
+    this._skillOrigSpeed   = 0;
+    this._sniperShotBoost  = 0;
+    this._nearDeathCurseSent = false;
+
     // 부활 퍽
     this.revivals     = { restore: false, backup: false, lastStand: 0, counter: false, void: false };
     this.voidActive   = false;
@@ -945,6 +1147,29 @@ class Player {
 
     if (this.shieldTimer > 0) this.shieldTimer -= dt;
     if (this.surgeTimer  > 0) this.surgeTimer  -= dt;
+
+    // 액티브 스킬 쿨다운 & 타이머
+    if (this.activeSkillCd > 0) this.activeSkillCd = Math.max(0, this.activeSkillCd - dt);
+    if (this.activeSkillTimer > 0) {
+      this.activeSkillTimer -= dt;
+      if (this.activeSkillTimer <= 0) this._deactivateSkill();
+    }
+
+    // 사망 직전 저주 계약 (HP 15% 이하, 1회)
+    if (this.hp / this.maxHp <= 0.15 && !this._nearDeathCurseSent && !pendingBossCurse && gameState === STATE_PLAYING) {
+      this._nearDeathCurseSent = true;
+      pendingBossCurse = true;
+      setTimeout(() => {
+        if (player && player.hp > 0 && gameState === STATE_PLAYING) {
+          pendingBossCurse = false;
+          showCurseModal();
+        } else {
+          pendingBossCurse = false;
+        }
+      }, 500);
+    }
+    if (this.hp / this.maxHp > 0.30) this._nearDeathCurseSent = false;
+
     if (this.attackSurgeTimer > 0) {
       this.attackSurgeTimer -= dt;
       if (this.attackSurgeTimer <= 0) {
@@ -1083,9 +1308,25 @@ class Player {
     }
   }
 
+  _deactivateSkill() {
+    if (this.skillShieldActive) {
+      this.damageReduction = this._skillOrigDmgReduction;
+      this.skillShieldActive = false;
+    }
+    if (this.skillSpeedBoost) {
+      this.speed = this._skillOrigSpeed || this.speed;
+      this.skillSpeedBoost = false;
+      this.skillInvincible = false;
+    }
+  }
+
   takeDamage(amount) {
     if (devGodMode) {
       addFloatingText(this.x, this.y - this.radius - 5, '♦GOD♦', '#39ff14', 9);
+      return;
+    }
+    if (this.skillInvincible) {
+      addFloatingText(this.x, this.y - this.radius, 'PHASE', '#39ff14', 12);
       return;
     }
     if (this.shieldTimer > 0) {
@@ -2040,10 +2281,12 @@ function updateAndDrawLasers(ctx, camera, dt) {
 // 9. 적 클래스 (일반 Enemy + Boss)
 // ============================================================
 function getEnemyStageScale() {
+  const diff = DIFFICULTY_SETTINGS[gameDifficulty] || DIFFICULTY_SETTINGS.normal;
+  const asc  = getAscensionScale();
   return {
-    hpMult:    1 + (currentStage - 1) * 0.18,
-    dmgMult:   1 + (currentStage - 1) * 0.10,
-    speedMult: 1 + (currentStage - 1) * 0.025
+    hpMult:    (1 + (currentStage - 1) * 0.18) * diff.enemyHpMult * asc,
+    dmgMult:   (1 + (currentStage - 1) * 0.10) * diff.enemyHpMult,
+    speedMult: (1 + (currentStage - 1) * 0.025) * diff.enemySpeedMult
   };
 }
 
@@ -3044,7 +3287,21 @@ function advanceToNextStage() {
     stageKillProgress = 0;
     stageKillGoal     = getStageKillGoal(currentStage);
     gameState = STATE_PLAYING;
+    // 3스테이지마다 (보스 스테이지 제외) 특별 엘리트 소환
+    if (currentStage % 3 === 0 && currentStage > 3) {
+      setTimeout(() => spawnEliteEnemy(), 2000);
+    }
   }
+}
+
+function spawnEliteEnemy() {
+  if (!player || gameState !== STATE_PLAYING) return;
+  const angle = Math.random() * Math.PI * 2;
+  const ex = Math.max(50, Math.min(MAP_WIDTH - 50, player.x + Math.cos(angle) * 420));
+  const ey = Math.max(50, Math.min(MAP_HEIGHT - 50, player.y + Math.sin(angle) * 420));
+  enemies.push(new Enemy(ex, ey, 'elite'));
+  showStageOverlay('⚠ ELITE VIRUS!', '정예 바이러스 침투!', '#ff6600');
+  setTimeout(hideStageOverlay, 2000);
 }
 
 // ============================================================
@@ -3221,11 +3478,14 @@ function updateComboSystem(dt) {
 }
 
 function getXpMultiplier() {
-  if (comboCount < 5)  return 1.0;
-  if (comboCount < 15) return 1.25;
-  if (comboCount < 30) return 1.5;
-  if (comboCount < 60) return 2.0;
-  return 2.5;
+  const diff = DIFFICULTY_SETTINGS[gameDifficulty] || DIFFICULTY_SETTINGS.normal;
+  let base = 1.0;
+  if (comboCount < 5)       base = 1.0;
+  else if (comboCount < 15) base = 1.25;
+  else if (comboCount < 30) base = 1.5;
+  else if (comboCount < 60) base = 2.0;
+  else                       base = 2.5;
+  return base * diff.xpMult;
 }
 
 // 초반 경험치 버프 (스테이지 10 이하) — 너무 강하지 않게 조정
@@ -3240,23 +3500,36 @@ function getEarlyGameXpMult() {
 // 저장 / 메타 성장 / 업적 시스템
 // ============================================================
 function loadSaveData() {
+  // 슬롯 0에서 로드, 레거시 데이터 마이그레이션
   try {
+    const slotRaw = localStorage.getItem(getSaveKey(0));
+    if (slotRaw) return loadSaveDataSlot(0);
+    // 레거시 마이그레이션
     const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0 };
+    if (!raw) return { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0, ascensionLevel: 0 };
     const d = JSON.parse(raw);
-    return {
-      dataCores:    d.dataCores    || 0,
-      metaLevels:   d.metaLevels   || {},
-      achievements: d.achievements || [],
-      bestKills:    d.bestKills    || 0,
-      bestStage:    d.bestStage    || 0,
-      bestTime:     d.bestTime     || 0
+    const migrated = {
+      dataCores:      d.dataCores    || 0,
+      metaLevels:     d.metaLevels   || {},
+      achievements:   d.achievements || [],
+      bestKills:      d.bestKills    || 0,
+      bestStage:      d.bestStage    || 0,
+      bestTime:       d.bestTime     || 0,
+      ascensionLevel: 0
     };
-  } catch(e) { return { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0 }; }
+    localStorage.setItem(getSaveKey(0), JSON.stringify(migrated));
+    return migrated;
+  } catch(e) { return { dataCores: 0, metaLevels: {}, achievements: [], bestKills: 0, bestStage: 0, bestTime: 0, ascensionLevel: 0 }; }
 }
 
 function saveSaveData() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); } catch(e) {}
+  try { localStorage.setItem(getSaveKey(currentSaveSlot), JSON.stringify(saveData)); } catch(e) {}
+}
+
+// 난이도 로드
+function loadDifficulty() {
+  gameDifficulty = localStorage.getItem('ns_difficulty') || 'normal';
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('diff-active', b.dataset.diff === gameDifficulty));
 }
 
 function applyMetaUpgrades() {
@@ -3446,7 +3719,9 @@ function updateEnemySpawning(dt) {
   let timeMultiplier  = Math.min(gameTime / 300, 1.0);
   let stageMultiplier = Math.min((currentStage - 1) / 50, 0.7);
   enemySpawnInterval  = Math.max(200, 1200 - timeMultiplier * 600 - stageMultiplier * 500);
-  if (enemySpawnTimer >= enemySpawnInterval) {
+  const spawnRate = DIFFICULTY_SETTINGS[gameDifficulty]?.spawnRateMult || 1.0;
+  const effectiveInterval = enemySpawnInterval / spawnRate;
+  if (enemySpawnTimer >= effectiveInterval) {
     enemySpawnTimer = 0;
     spawnEnemyPack();
   }
@@ -3772,6 +4047,7 @@ window.addEventListener('keydown', e => {
 
   keys[e.key] = true;
   if (e.key === 'm' || e.key === 'M') toggleBGM();
+  if ((e.key === 'q' || e.key === 'Q') && (gameState === STATE_PLAYING || gameState === STATE_STAGE_CLEAR)) useActiveSkill();
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
@@ -3813,7 +4089,7 @@ function showScreen(state) {
   gameOverModal.classList.remove('active');
   document.getElementById('stage-bonus-modal').classList.remove('active');
   document.getElementById('shop-modal').classList.remove('active');
-  if (state === STATE_MENU) { menuScreen.classList.add('active'); stopBGM(); updateMenuMetaBadge(); }
+  if (state === STATE_MENU) { menuScreen.classList.add('active'); menuBgmStarted = false; stopBGM(); updateMenuMetaBadge(); }
   else if (state === STATE_PLAYING || state === STATE_STAGE_CLEAR || state === STATE_STAGE_BONUS) {
     gameScreen.classList.add('active');
   }
@@ -3870,8 +4146,12 @@ function startGame() {
   camera.x = player.x - camera.width  / 2;
   camera.y = player.y - camera.height / 2;
 
+  // 승천 레벨 로드
+  ascensionLevel = saveData.ascensionLevel || 0;
+
   bgmTrackId = Math.floor(Math.random() * 3); // 3트랙 중 랜덤 선택
   bgmTrackCheckTimer = 0;
+  menuBgmStarted = true; // 게임 중에는 tryStartMenuBgm 스킵
   startBGM();
   lastTime = performance.now();
   gameLoopId = requestAnimationFrame(gameLoop);
@@ -4132,6 +4412,24 @@ function draw(dt) {
 
   // 비네트 오버레이 (화면 가장자리 어둡게)
   drawVignette(ctx, canvas.width, canvas.height);
+
+  // 모바일 가상 조이스틱 (screen 좌표로 직접 그림)
+  if (joystickBase && joystickKnob && isTouching) {
+    ctx.save();
+    ctx.globalAlpha = 0.30;
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.arc(joystickBase.x, joystickBase.y, JOYSTICK_RADIUS, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle   = '#00f0ff';
+    ctx.beginPath();
+    ctx.arc(joystickKnob.x, joystickKnob.y, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+    ctx.restore();
+  }
 }
 
 // ============================================================
@@ -4305,7 +4603,7 @@ function updateHUD() {
     stageBarText.innerText    = isEndlessMode ? `∞ ${stageKillProgress}/${stageKillGoal}` : `${stageKillProgress} / ${stageKillGoal}`;
   }
 
-  // 무기 슬롯
+  // 무기 슬롯 (진화 진행도 바 포함)
   let wc = document.getElementById('weapons-list');
   wc.innerHTML = '';
   for (let key in player.weapons) {
@@ -4313,9 +4611,41 @@ function updateHUD() {
     if (w.level > 0) {
       let slot = document.createElement('div');
       slot.className = 'weapon-slot active';
-      slot.innerHTML = `${UPGRADES.weapons[key].icon}<span class="weapon-level">Lv.${w.level}</span>`;
+      const maxLvl = UPGRADES.weapons[key].maxLevel;
+      const isEvolved = w.level >= maxLvl;
+      const pct = (w.level / maxLvl) * 100;
+      slot.title = UPGRADES.weapons[key].name + (isEvolved ? ` — ${UPGRADES.weapons[key].evolvedName || '진화'}` : ` Lv.${w.level}`);
+      slot.innerHTML = `${UPGRADES.weapons[key].icon}<span class="weapon-level">${isEvolved ? '✨' : `Lv.${w.level}`}</span><div class="weapon-evo-bar"><div class="weapon-evo-fill" style="width:${pct}%;background:${isEvolved ? '#ffe600' : '#00f0ff'}"></div></div>`;
       wc.appendChild(slot);
     }
+  }
+  // 액티브 스킬 슬롯
+  const actCls = CLASS_DEFS[player.classId];
+  if (actCls?.activeSkill) {
+    let skillEl = document.getElementById('active-skill-slot');
+    if (!skillEl) {
+      skillEl = document.createElement('div');
+      skillEl.id = 'active-skill-slot';
+      skillEl.className = 'active-skill-slot';
+      wc.parentNode.appendChild(skillEl);
+    }
+    const cdReady = player.activeSkillCd <= 0;
+    skillEl.innerHTML = `<span>${actCls.activeSkill.icon}</span><span class="skill-cd-text">${cdReady ? 'Q' : Math.ceil(player.activeSkillCd / 1000) + 's'}</span>`;
+    skillEl.style.opacity = cdReady ? '1' : '0.5';
+    skillEl.title = `[Q] ${actCls.activeSkill.name}: ${actCls.activeSkill.desc}`;
+  }
+  // 빌드 요약 HUD
+  const buildHud = document.getElementById('build-summary-hud');
+  if (buildHud) {
+    const parts = [];
+    if (activeSynergies.size > 0) {
+      [...activeSynergies].forEach(id => { const s = SYNERGY_DEFS.find(d => d.id === id); if (s) parts.push(`${s.icon}${s.name}`); });
+    }
+    if (player._curseDamageMult > 1) parts.push('💀저주');
+    if (player.skillShieldActive)    parts.push('🛡강화');
+    if (player.skillInvincible)      parts.push('👁위상');
+    buildHud.style.display = parts.length > 0 ? 'flex' : 'none';
+    buildHud.textContent = parts.join('  ·  ');
   }
 
   // 골드 표시
@@ -4474,6 +4804,9 @@ function renderUpgradeCards(choices) {
       descText += ` <span style="color:${rd.color}">[${rd.name}: 효과 x${choice.rarityMult}]</span>`;
     }
 
+    const evoPreview = (choice.type === 'weapon' && choice.nextLevel === 5)
+      ? `<div class="evo-preview-badge">✨ 진화 → ${UPGRADES.weapons[choice.key]?.evolvedName || '진화형'}</div>`
+      : '';
     card.innerHTML = `
       <div class="card-icon">${choice.icon}</div>
       <div class="card-details">
@@ -4482,6 +4815,7 @@ function renderUpgradeCards(choices) {
           <span class="card-tag tag-${choice.rarity || 'common'}">${tagText}</span>
         </div>
         <div class="card-desc">${descText}</div>
+        ${evoPreview}
       </div>
     `;
 
@@ -4847,11 +5181,27 @@ function endGame(isVictory) {
   const title    = document.getElementById('result-title');
   const subtitle = document.getElementById('result-subtitle');
 
-  if (isEndlessMode) {
+  if (isDailyRun) {
+    title.innerText = '📅 DAILY RUN';
+    title.style.textShadow = '0 0 10px #ffe600, 0 0 20px #ffe600';
+    title.style.color = '#fff';
+    subtitle.innerText = `[${getDailyRunDate()}] 일일 챌린지 완료! STAGE ${currentStage} 도달`;
+    const dailyKey = `ns_daily_${getDailyRunDate()}`;
+    const prev = parseInt(localStorage.getItem(dailyKey) || '0');
+    if (currentStage > prev) localStorage.setItem(dailyKey, currentStage);
+    isDailyRun = false;
+  } else if (isEndlessMode) {
     title.innerText = 'ENDLESS TERMINATED';
     title.style.textShadow = '0 0 10px #ffe600, 0 0 20px #ffe600';
     title.style.color = '#fff';
     subtitle.innerText = `★ STAGE ${currentStage} 도달! STAGE 100 돌파 후 무한 생존! ★`;
+    // 승천 레벨 증가 가능
+    if (isVictory && !saveData._ascendedToday) {
+      saveData.ascensionLevel = (saveData.ascensionLevel || 0) + 1;
+      ascensionLevel = saveData.ascensionLevel;
+      saveSaveData();
+      addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 60, `✨ 승천 Lv.${ascensionLevel}!`, '#ffe600', 18);
+    }
   } else {
     title.innerText = 'SYSTEM OVERLOAD';
     title.style.textShadow = '0 0 10px var(--color-neon-pink), 0 0 20px var(--color-neon-pink)';
@@ -4956,13 +5306,19 @@ function shareResult() {
   const seconds   = gameTime % 60;
   const timeStr   = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
   const stageStr  = `${currentStage}${isEndlessMode ? ' ∞' : ''}`;
+  const clsInfo   = CLASS_DEFS[player?.classId || selectedClass];
+  const diffLabel = DIFFICULTY_SETTINGS[gameDifficulty]?.label || 'NORMAL';
+  const synergyStr = activeSynergies.size > 0
+    ? [...activeSynergies].map(id => { const s = SYNERGY_DEFS.find(d => d.id === id); return s ? `${s.icon}${s.name}` : id; }).join(', ')
+    : '없음';
   const text =
-    `🎮 네온 서바이버즈 v0.03\n` +
-    `👤 ${name}\n` +
+    `🎮 네온 서바이버즈 v0.07\n` +
+    `👤 ${name} [${clsInfo?.icon || ''}${clsInfo?.name || ''}] [${diffLabel}]\n` +
     `🏆 STAGE ${stageStr} 도달\n` +
-    `💀 ${killCount}마리 바이러스 제거\n` +
-    `⏱ 생존시간 ${timeStr}\n` +
-    `⭐ Lv.${player?.level ?? '?'}\n` +
+    `💀 ${killCount}마리 제거  ⭐ Lv.${player?.level ?? '?'}\n` +
+    `⏱ ${timeStr}  💥 최대콤보 ${maxCombo}\n` +
+    `🔗 시너지: ${synergyStr}\n` +
+    (ascensionLevel > 0 ? `✨ 승천 Lv.${ascensionLevel}\n` : '') +
     `\n#네온서바이버즈 #NeonSurvivors`;
 
   const btn = document.getElementById('share-btn');
@@ -5182,9 +5538,12 @@ function initTouchControls() {
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (gameState !== STATE_PLAYING && gameState !== STATE_STAGE_CLEAR) return;
-    const t = e.touches[0];
+    const t = e.changedTouches[0];
     touchStartX = t.clientX;
     touchStartY = t.clientY;
+    joystickBase = { x: t.clientX, y: t.clientY };
+    joystickKnob = { x: t.clientX, y: t.clientY };
+    joystickTouchId = t.identifier;
     touchDX = 0; touchDY = 0;
     isTouching = true;
   }, { passive: false });
@@ -5192,20 +5551,27 @@ function initTouchControls() {
   canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (!isTouching) return;
-    const t = e.touches[0];
-    let dx = t.clientX - touchStartX;
-    let dy = t.clientY - touchStartY;
-    const len = Math.sqrt(dx*dx + dy*dy);
-    const deadzone = 12;
-    if (len < deadzone) { touchDX = 0; touchDY = 0; return; }
-    const maxDist = 80;
-    const clamped = Math.min(len, maxDist) / maxDist;
-    touchDX = (dx / len) * clamped;
-    touchDY = (dy / len) * clamped;
+    for (const t of e.changedTouches) {
+      if (t.identifier === joystickTouchId) {
+        const dx = t.clientX - joystickBase.x;
+        const dy = t.clientY - joystickBase.y;
+        const len = Math.sqrt(dx*dx + dy*dy);
+        const deadzone = 12;
+        if (len < deadzone) { touchDX = 0; touchDY = 0; joystickKnob = { x: joystickBase.x, y: joystickBase.y }; continue; }
+        const clamped = Math.min(len, JOYSTICK_RADIUS);
+        const angle = Math.atan2(dy, dx);
+        joystickKnob = { x: joystickBase.x + Math.cos(angle) * clamped, y: joystickBase.y + Math.sin(angle) * clamped };
+        const maxDist = 80;
+        const ratio = Math.min(len, maxDist) / maxDist;
+        touchDX = (dx / len) * ratio;
+        touchDY = (dy / len) * ratio;
+      }
+    }
   }, { passive: false });
 
   canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
+    joystickBase = null; joystickKnob = null; joystickTouchId = null;
     isTouching = false; touchDX = 0; touchDY = 0;
   }, { passive: false });
 }
@@ -5465,7 +5831,15 @@ function drawMpScoreboard(ctx, w, h) {
 
 // 저장 데이터 로드 (스크립트 초기화 시)
 saveData = loadSaveData();
+ascensionLevel = saveData.ascensionLevel || 0;
 updateMenuMetaBadge();
 
 // 터치 컨트롤 초기화
 initTouchControls();
+
+// 난이도 로드
+loadDifficulty();
+
+// 메뉴 BGM: 첫 상호작용 시 자동 시작
+document.addEventListener('click',   tryStartMenuBgm);
+document.addEventListener('keydown', tryStartMenuBgm);

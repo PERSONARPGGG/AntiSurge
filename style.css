@@ -2140,3 +2140,92 @@ body {
   min-height: 1.2rem;
   letter-spacing: 0.05em;
 }
+
+/* ===== 난이도 버튼 ===== */
+.difficulty-row { display:flex; gap:0.5rem; justify-content:center; margin:0.5rem 0; }
+.diff-btn {
+  padding: 4px 14px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.65rem;
+  border: 1px solid #333;
+  background: rgba(0,0,0,0.4);
+  color: #555;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.08em;
+}
+.diff-btn.diff-active { border-color:#00f0ff; color:#00f0ff; background:rgba(0,240,255,0.08); }
+.diff-btn[data-diff="hard"].diff-active { border-color:#ff4466; color:#ff4466; background:rgba(255,68,102,0.08); }
+.diff-btn[data-diff="easy"].diff-active { border-color:#39ff14; color:#39ff14; background:rgba(57,255,20,0.08); }
+
+/* ===== 세이브 슬롯 버튼 ===== */
+.slot-row { display:flex; gap:0.5rem; justify-content:center; margin-bottom:0.7rem; }
+.slot-btn {
+  padding: 4px 12px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.62rem;
+  border: 1px solid #333;
+  background: rgba(0,0,0,0.4);
+  color: #555;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.slot-btn.slot-active { border-color:#00f0ff; color:#00f0ff; background:rgba(0,240,255,0.1); }
+
+/* ===== 빌드 요약 HUD ===== */
+.build-summary-hud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2px 8px;
+  font-size: 0.6rem;
+  color: #ffe600;
+  background: rgba(0,0,0,0.55);
+  border-top: 1px solid rgba(255,230,0,0.18);
+  flex-wrap: wrap;
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+/* ===== 액티브 스킬 슬롯 ===== */
+.active-skill-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 6px;
+  background: rgba(0,240,255,0.08);
+  border: 1px solid rgba(0,240,255,0.35);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: default;
+  min-width: 32px;
+  margin-left: 4px;
+}
+.skill-cd-text {
+  font-size: 0.58rem;
+  color: #00f0ff;
+  font-family: 'Orbitron', monospace;
+  margin-top: 1px;
+}
+
+/* ===== 무기 진화 진행도 바 ===== */
+.weapon-slot { position: relative; }
+.weapon-evo-bar { width: 100%; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px; margin-top: 1px; }
+.weapon-evo-fill { height: 100%; border-radius: 1px; transition: width 0.3s ease; }
+
+/* ===== 진화 미리보기 배지 ===== */
+.evo-preview-badge {
+  font-size: 0.60rem;
+  color: #ffe600;
+  background: rgba(255,230,0,0.08);
+  border: 1px solid rgba(255,230,0,0.35);
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin-top: 4px;
+  display: inline-block;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 0.04em;
+}

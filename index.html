@@ -41,6 +41,11 @@
         <p class="objective">★ 목표: 스테이지 100 돌파 후 무한 생존 기록을 달성하세요! ★</p>
       </div>
 
+      <div class="difficulty-row">
+        <button class="diff-btn" data-diff="easy"   onclick="setDifficulty('easy')">EASY</button>
+        <button class="diff-btn diff-active" data-diff="normal" onclick="setDifficulty('normal')">NORMAL</button>
+        <button class="diff-btn" data-diff="hard"   onclick="setDifficulty('hard')">HARD</button>
+      </div>
       <button id="start-btn" class="neon-btn">백신 프로그램 가동 (시작)</button>
       <button class="neon-btn neon-btn-purple font-sm" onclick="openMetaModal()" style="margin-top:0.6rem">
         ⚡ 영구 업그레이드 <span class="meta-badge">💾 <span id="meta-cores-badge">0</span></span>
@@ -57,6 +62,11 @@
           <span class="cs-icon">🎮</span>
           <span class="cs-label">초대 모드</span>
           <span class="cs-badge cs-badge-beta">BETA</span>
+        </div>
+        <div class="coming-soon-card" onclick="startDailyRun()" style="cursor:pointer">
+          <span class="cs-icon">📅</span>
+          <span class="cs-label">일일 도전</span>
+          <span class="cs-badge" style="background:#ffe600;color:#000">TODAY</span>
         </div>
       </div>
     </div>
@@ -109,7 +119,29 @@
             <li>HP 110 / 속도 보통</li>
             <li>시작 무기: 일렉트로 존</li>
             <li>자석 범위 2배</li>
-            <li>회복 아이템 +50%</li>
+            <li>[Q] 긴급 수리 (18초)</li>
+          </ul>
+        </button>
+        <button class="class-card" data-class="sniper" style="--cls-color:#ff4466">
+          <div class="cls-icon">🎯</div>
+          <div class="cls-name">스나이퍼</div>
+          <div class="cls-type">저격형</div>
+          <ul class="cls-stats">
+            <li>HP 80 / 속도 보통</li>
+            <li>시작 무기: 사이버 미사일</li>
+            <li>피해량 +60%</li>
+            <li>[Q] 정밀 조준 (10초)</li>
+          </ul>
+        </button>
+        <button class="class-card" data-class="support" style="--cls-color:#00ffaa">
+          <div class="cls-icon">🔵</div>
+          <div class="cls-name">서포터</div>
+          <div class="cls-type">지원형</div>
+          <ul class="cls-stats">
+            <li>HP 120 / 속도 느림</li>
+            <li>시작 무기: 데이터 드론</li>
+            <li>XP 획득 +15%</li>
+            <li>[Q] 비상 보수 (20초)</li>
           </ul>
         </button>
       </div>
@@ -177,6 +209,9 @@
           <div id="boss-hp-bar" class="boss-bar-inner"></div>
         </div>
       </div>
+
+      <!-- 빌드 요약 HUD (시너지/저주/스킬 상태) -->
+      <div id="build-summary-hud" class="build-summary-hud" style="display:none"></div>
 
       <!-- HP 바 + 무기 슬롯 + 패시브 슬롯 -->
       <div class="hud-bottom">
@@ -356,6 +391,11 @@
   <div id="meta-upgrade-modal" class="modal">
     <div class="modal-content glass-panel meta-panel">
       <h2 class="neon-title-sm">⚡ 영구 업그레이드</h2>
+      <div class="slot-row">
+        <button class="slot-btn slot-active" onclick="selectSaveSlot(0)">슬롯 1</button>
+        <button class="slot-btn" onclick="selectSaveSlot(1)">슬롯 2</button>
+        <button class="slot-btn" onclick="selectSaveSlot(2)">슬롯 3</button>
+      </div>
       <p id="meta-cores-display" class="meta-cores-display">💾 보유 데이터 코어: 0</p>
       <p class="modal-desc">런 종료 후 획득한 데이터 코어로 영구 능력을 강화하세요.</p>
       <div id="meta-upgrade-grid" class="meta-upgrade-grid"></div>
