@@ -590,6 +590,18 @@ const CLOUD_ACHIEVEMENTS = [
   { id: 'mp_revive3',  name: '불사조',          icon: '🔄',  desc: '멀티 부활 3회',         stat: 'mpRevives',       goal: 3     },
   { id: 'games_10',    name: '열정 게이머',     icon: '🎮',  desc: '10번 게임 플레이',      stat: 'totalGamesPlayed',goal: 10    },
   { id: 'games_50',    name: '마스터',          icon: '🌟',  desc: '50번 게임 플레이',      stat: 'totalGamesPlayed',goal: 50    },
+  { id: 'boss_50',     name: '보스 킬러',       icon: '🩸',  desc: '보스 50회 처치',        stat: 'totalBossKills',  goal: 50    },
+  { id: 'kills_1000',  name: '버그 박멸자',     icon: '🦠',  desc: '적 1000마리 처치',      stat: 'totalKills',      goal: 1000  },
+  { id: 'combo_30',    name: '콤보 달인',       icon: '🎯',  desc: '최대 콤보 30 달성',     stat: 'maxCombo',        goal: 30    },
+  { id: 'combo_75',    name: '콤보의 신',       icon: '⚡',  desc: '최대 콤보 75 달성',     stat: 'maxCombo',        goal: 75    },
+  { id: 'survive_20m', name: '20분 생존',       icon: '🕐',  desc: '단일 게임 20분 생존',   stat: 'maxSurviveTime',  goal: 1200  },
+  { id: 'mp_battle3',  name: '배틀로얄 고수',   icon: '🏅',  desc: '경쟁 모드 3회 우승',    stat: 'mpBattleWins',    goal: 3     },
+  // ── 히든 업적 ──────────────────────────────────────────
+  { id: 'hidden_dedicated', hidden: true, realName: '이름 없는 영웅',  name: '???', icon: '🌙', desc: '100번 게임 플레이',          stat: 'totalGamesPlayed', goal: 100   },
+  { id: 'hidden_slayer',    hidden: true, realName: '보스의 악몽',     name: '???', icon: '💀', desc: '보스 100회 처치',            stat: 'totalBossKills',   goal: 100   },
+  { id: 'hidden_combo',     hidden: true, realName: '콤보 전설',       name: '???', icon: '🌀', desc: '최대 콤보 100 달성',         stat: 'maxCombo',         goal: 100   },
+  { id: 'hidden_mp_vet',    hidden: true, realName: '베테랑 용병',     name: '???', icon: '🔱', desc: '멀티 10게임 플레이',         stat: 'mpGamesPlayed',    goal: 10    },
+  { id: 'hidden_legend',    hidden: true, realName: '레전드',           name: '???', icon: '👑', desc: '모든 기본 업적 달성',        stat: '__allBasic__',     goal: 8     },
 ];
 
 // ============================================================
@@ -818,6 +830,29 @@ const BGM3_KICK  = [1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,
 const BGM3_SNARE = [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,1,0];
 const BGM3_HIHAT = [1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1];
 
+// ─── BGM Track 4: SHADOW OPS (Dm, atmospheric / sparse, daily run) ───
+const BGM4_BASS = [
+  38,null,null,null,null,null,null,null,41,null,null,null,null,null,null,null,
+  38,null,null,null,null,null,null,null,43,null,null,null,45,null,null,null,
+  36,null,null,null,null,null,null,null,41,null,null,null,null,null,null,null,
+  38,null,null,null,null,null,41,null, 38,null,null,null,null,null,null,null
+];
+const BGM4_LEAD = [
+  62,null,null,null,null,null,65,null,null,null,null,null,62,null,null,null,
+  null,null,60,null,null,null,null,null,58,null,null,null,null,null,60,null,
+  62,null,null,null,65,null,null,null,null,null,67,null,null,null,65,null,
+  null,null,null,null,62,null,null,null,60,null,null,null,null,null,null,null
+];
+const BGM4_PAD = [
+  50,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,
+  53,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,
+  48,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,
+  50,null,null,null,null,null,null,null,53,null,null,null,null,null,null,null
+];
+const BGM4_KICK  = [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0];
+const BGM4_SNARE = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0];
+const BGM4_HIHAT = [0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0];
+
 function initBGMBuffers() {
   if (!audioCtx) return;
   const sr = audioCtx.sampleRate;
@@ -888,7 +923,11 @@ function bgmSchedule() {
     const step  = bgmCurrentStep % BGM_TOTAL_STEPS;
     const t     = bgmNextNoteTime;
     let bass, lead, pad, kick, snare, hihat, bassVol, leadVol, leadType;
-    if (bgmTrackId === 2) {
+    if (bgmTrackId === 3) {
+      bass = BGM4_BASS; lead = BGM4_LEAD; pad = BGM4_PAD;
+      kick = BGM4_KICK; snare = BGM4_SNARE; hihat = BGM4_HIHAT;
+      bassVol = 0.20; leadVol = 0.06; leadType = 'sine';
+    } else if (bgmTrackId === 2) {
       bass = BGM3_BASS; lead = BGM3_LEAD; pad = BGM3_PAD;
       kick = BGM3_KICK; snare = BGM3_SNARE; hihat = BGM3_HIHAT;
       bassVol = 0.25; leadVol = 0.08; leadType = 'sawtooth';
@@ -1010,6 +1049,7 @@ function startDailyRun() {
   dailyRunSeed = [...dateStr].reduce((h, c) => (Math.imul(31, h) + c.charCodeAt(0)) | 0, 0);
   dailyRNG = mulberry32(dailyRunSeed);
   gameDifficulty = 'hard';
+  bgmTrackId = 3; // 섀도우 옵스 — 일일 도전 전용
   startGame();
 }
 
@@ -4211,9 +4251,10 @@ function startGame() {
   // 승천 레벨 로드
   ascensionLevel = saveData.ascensionLevel || 0;
 
-  bgmTrackId = Math.floor(Math.random() * 3); // 3트랙 중 랜덤 선택
+  if (!isDailyRun) bgmTrackId = Math.floor(Math.random() * 3); // 일일 도전은 bgmTrackId=3 유지
   bgmTrackCheckTimer = 0;
-  menuBgmStarted = true; // 게임 중에는 tryStartMenuBgm 스킵
+  menuBgmStarted = true;
+  initAudio(); // 오디오 컨텍스트 보장
   startBGM();
   lastTime = performance.now();
   gameLoopId = requestAnimationFrame(gameLoop);
@@ -4981,16 +5022,33 @@ function pauseGame() {
   if (gameState !== STATE_PLAYING && gameState !== STATE_STAGE_CLEAR) return;
   prevStateBeforePause = gameState;
   gameState = STATE_PAUSED;
-  const overlay = document.getElementById('pause-overlay');
-  if (overlay) overlay.classList.add('active');
+  openSettingsModal();
 }
 
 function resumeGame() {
   if (gameState !== STATE_PAUSED) return;
   gameState = prevStateBeforePause || STATE_PLAYING;
-  const overlay = document.getElementById('pause-overlay');
-  if (overlay) overlay.classList.remove('active');
+  const modal = document.getElementById('settings-modal');
+  if (modal) modal.classList.remove('active');
+  const ia = document.getElementById('settings-ingame-actions');
+  if (ia) ia.style.display = 'none';
   lastTime = performance.now();
+}
+
+function goToMenu() {
+  if (!confirm('게임을 종료하고 메인 메뉴로 돌아가시겠습니까?')) return;
+  stopBGM();
+  if (gameLoopId) { cancelAnimationFrame(gameLoopId); gameLoopId = null; }
+  enemies.length = 0; projectiles.length = 0; activeBoss = null;
+  isDailyRun = false; mpSpectating = false;
+  const modal = document.getElementById('settings-modal');
+  if (modal) modal.classList.remove('active');
+  const ia = document.getElementById('settings-ingame-actions');
+  if (ia) ia.style.display = 'none';
+  gameState = STATE_MENU;
+  showScreen(STATE_MENU);
+  menuBgmStarted = false;
+  tryStartMenuBgm();
 }
 
 function togglePause() {
@@ -5347,6 +5405,9 @@ function endGame(isVictory) {
     _statAdd('totalGamesPlayed', 1);
     _statSet('maxStage', currentStage);
     _statSet('maxSurviveTime', gameTime);
+    _statSet('maxCombo', maxCombo);
+    if (!isVictory) _statAdd('totalDeaths', 1);
+    _checkCloudAchievements();
     _syncToCloud();
   }
   gameOverModal.classList.add('active');
@@ -5784,7 +5845,7 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 // ============================================================
 // ⚙ 설정 모달
 // ============================================================
-const BGM_TRACK_NAMES = ['🎵 신스웨이브', '🎶 데바 시스템', '⚡ 고스트 프로토콜'];
+const BGM_TRACK_NAMES = ['🎵 신스웨이브', '🎶 데바 시스템', '⚡ 고스트 프로토콜', '🌑 섀도우 옵스'];
 
 function openSettingsModal() {
   const modal = document.getElementById('settings-modal');
@@ -5793,10 +5854,12 @@ function openSettingsModal() {
   if (muteBtn) muteBtn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
   const trackBtn = document.getElementById('settings-bgm-track-btn');
   if (trackBtn) trackBtn.textContent = BGM_TRACK_NAMES[bgmTrackId] || BGM_TRACK_NAMES[0];
+  const ia = document.getElementById('settings-ingame-actions');
+  if (ia) ia.style.display = gameState === STATE_PAUSED ? 'flex' : 'none';
 }
 
 function settingsToggleBgmTrack() {
-  bgmTrackId = (bgmTrackId + 1) % 3;
+  bgmTrackId = (bgmTrackId + 1) % BGM_TRACK_NAMES.length;
   bgmTrackCheckTimer = 0;
   if (!bgmMuted && bgmGainNode) { stopBGM(); startBGM(); }
   const btn = document.getElementById('settings-bgm-track-btn');
@@ -6296,7 +6359,10 @@ function _checkCloudAchievements() {
   if (!saveData.cloudAchievements) saveData.cloudAchievements = {};
   for (const def of CLOUD_ACHIEVEMENTS) {
     if (saveData.cloudAchievements[def.id]) continue;
-    if ((s[def.stat] || 0) >= def.goal) _unlockCloudAchievement(def);
+    const cur = def.stat === '__allBasic__'
+      ? (saveData.achievements || []).length
+      : (s[def.stat] || 0);
+    if (cur >= def.goal) _unlockCloudAchievement(def);
   }
 }
 
@@ -6309,9 +6375,10 @@ function _unlockCloudAchievement(def) {
 }
 
 function _showAchievementToast(ach) {
+  const displayName = ach.realName || ach.name;
   const el = document.createElement('div');
   el.className = 'cloud-ach-toast';
-  el.innerHTML = `<div class="ach-toast-icon">${ach.icon}</div><div><div class="ach-toast-name">업적 달성: ${ach.name}</div><div class="ach-toast-desc">${ach.desc}</div></div>`;
+  el.innerHTML = `<div class="ach-toast-icon">${ach.icon}</div><div><div class="ach-toast-name">업적 달성: ${displayName}</div><div class="ach-toast-desc">${ach.desc}</div></div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 4000);
@@ -6415,12 +6482,18 @@ function renderAchievements() {
   const done = _currentAchTab === 'basic' ? (saveData.achievements || []) : (saveData.cloudAchievements || {});
   list.innerHTML = defs.map(def => {
     const isDone = _currentAchTab === 'basic' ? done.includes(def.id) : !!done[def.id];
-    const prog   = _currentAchTab === 'cloud' ? `${Math.min(_getStats()[def.stat]||0, def.goal).toLocaleString()} / ${def.goal.toLocaleString()}` : '';
+    const isHidden = def.hidden && !isDone;
+    const displayName = isDone ? (def.realName || def.name) : (isHidden ? '???' : def.name);
+    const displayDesc = isHidden ? '🔒 비밀 업적 — 조건을 찾아보세요' : (def.desc + (def.reward ? ` (+${def.reward} 코어)` : ''));
+    const s = _getStats();
+    const cur = def.stat === '__allBasic__' ? (saveData.achievements||[]).length : (s[def.stat]||0);
+    const prog = (_currentAchTab === 'cloud' && !isHidden)
+      ? `${Math.min(cur, def.goal).toLocaleString()} / ${def.goal.toLocaleString()}` : '';
     return `<div class="ach-item${isDone?' done':''}">
       <div class="ach-item-icon">${isDone ? def.icon : '🔒'}</div>
       <div class="ach-item-body">
-        <div class="ach-item-name">${def.name}</div>
-        <div class="ach-item-desc">${def.desc}${def.reward ? ` (+${def.reward} 코어)` : ''}</div>
+        <div class="ach-item-name">${displayName}</div>
+        <div class="ach-item-desc">${displayDesc}</div>
         ${prog ? `<div class="ach-item-prog">${prog}</div>` : ''}
       </div>
       <div class="ach-item-status">${isDone ? '✅' : ''}</div>

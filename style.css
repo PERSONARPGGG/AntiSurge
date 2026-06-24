@@ -2278,3 +2278,15 @@ body {
 .stat-card { background: rgba(0,240,255,0.05); border: 1px solid rgba(0,240,255,0.15); border-radius: 6px; padding: 8px 12px; }
 .stat-label { font-size: 0.58rem; color: #64748b; }
 .stat-value { font-size: 1rem; font-weight: bold; color: #00f0ff; }
+
+/* ── 설정 인게임 액션 (일시정지 시) ── */
+.settings-ingame-actions {
+  display: flex; gap: 8px; justify-content: center;
+  margin: 0.8rem 0 0.2rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(0,240,255,0.15);
+}
+.neon-btn-red {
+  background: rgba(255,68,102,0.12);
+  border-color: #ff4466; color: #ff4466;
+}
