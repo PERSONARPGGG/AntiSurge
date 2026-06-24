@@ -75,6 +75,7 @@ let lastTime = 0;
 let gameTime = 0;
 let timeAccumulator = 0;
 let killCount = 0;
+let lastDamageSource = '';
 
 // 엔티티 배열
 let player;
@@ -93,6 +94,7 @@ let currentStage     = 1;
 let stageKillProgress = 0;
 let stageKillGoal    = 20;
 let isBossStage      = false;
+let isMiniBossStage  = false;
 let isEndlessMode    = false;
 let endlessModeStartTime = 0;
 let isStageClearAnim = false;   // 클리어 연출 진행 중 여부
@@ -2708,8 +2710,8 @@ class Boss {
       // 방어막 중에도 이동은 함
     }
 
-    // 페이즈 2 전환 (HP 50% 이하)
-    if (this.phase === 1 && this.hp <= this.maxHp * 0.5) {
+    // 페이즈 2 전환 (HP 50% 이하, 미니보스 제외)
+    if (!this.isMini && this.phase === 1 && this.hp <= this.maxHp * 0.5) {
       this.phase = 2;
       this.baseSpeed    *= 1.5;
       this.chargeCooldown = this.patternType.id === 'berserker' ? 2000 : 2500;
@@ -2722,8 +2724,8 @@ class Boss {
       playSynthSound([80, 200], 0.5, 'sawtooth', 0.12);
     }
 
-    // 페이즈 3 전환 (HP 25% 이하, bossIdx >= 2 또는 최종 보스)
-    if (this.phase === 2 && (this.bossIdx >= 2 || this.isFinalBoss) && this.hp <= this.maxHp * 0.25) {
+    // 페이즈 3 전환 (HP 25% 이하, bossIdx >= 2 또는 최종 보스, 미니보스 제외)
+    if (!this.isMini && this.phase === 2 && (this.bossIdx >= 2 || this.isFinalBoss) && this.hp <= this.maxHp * 0.25) {
       this.phase = 3;
       this.baseSpeed    *= 1.3;
       this.chargeCooldown  = 1800;
@@ -3022,7 +3024,17 @@ class Boss {
     _statAdd('totalBossKills', 1);
     activeBoss = null;
     isBossStage = false;
-    pendingBossCurse = true;
+    isMiniBossStage = false;
+    if (!this.isMini) {
+      pendingBossCurse = true;
+    } else {
+      for (let i = 0; i < 6; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        gems.push(new Gem(this.x + Math.cos(ang) * 50, this.y + Math.sin(ang) * 50, this.xpValue * 2));
+      }
+      spawnGoldCoins(this.x, this.y, 8 + Math.floor(Math.random() * 5));
+      addFloatingText(this.x, this.y - 80, '⚡ MINI BOSS 처치!', '#ffe600', 16);
+    }
     triggerStageClear();
   }
 }
@@ -3407,12 +3419,21 @@ function advanceToNextStage() {
 
   if (currentStage % 10 === 0) {
     isBossStage      = true;
+    isMiniBossStage  = false;
     stageKillGoal    = 0;
     stageKillProgress = 0;
     gameState = STATE_PLAYING;
     showBossWarning();
+  } else if (currentStage % 10 === 5) {
+    isBossStage      = true;
+    isMiniBossStage  = true;
+    stageKillGoal    = 0;
+    stageKillProgress = 0;
+    gameState = STATE_PLAYING;
+    setTimeout(() => spawnMiniBoss(), 1500);
   } else {
     isBossStage       = false;
+    isMiniBossStage   = false;
     stageKillProgress = 0;
     stageKillGoal     = getStageKillGoal(currentStage);
     gameState = STATE_PLAYING;
@@ -3431,6 +3452,23 @@ function spawnEliteEnemy() {
   enemies.push(new Enemy(ex, ey, 'elite'));
   showStageOverlay('⚠ ELITE VIRUS!', '정예 바이러스 침투!', '#ff6600');
   setTimeout(hideStageOverlay, 2000);
+}
+
+function spawnMiniBoss() {
+  if (!player || gameState !== STATE_PLAYING) return;
+  const miniBoss = new Boss();
+  miniBoss.maxHp  = Math.floor(miniBoss.maxHp * 0.40);
+  miniBoss.hp     = miniBoss.maxHp;
+  miniBoss.radius = Math.floor(miniBoss.radius * 0.75);
+  miniBoss.isMini = true;
+  miniBoss.phase  = 1;
+  miniBoss.name   = '⚡ MINI ' + miniBoss.name;
+  activeBoss = miniBoss;
+  enemies.length = 0;
+  bossProjectiles.length = 0;
+  showStageOverlay('⚡ MINI BOSS', miniBoss.name, '#b026ff');
+  triggerScreenShake(8, 600);
+  playSynthSound([150, 200, 250], 0.2, 'sawtooth', 0.1);
 }
 
 // ============================================================
@@ -3557,6 +3595,13 @@ function onEnemyKilled() {
   if (comboCount > maxCombo) maxCombo = comboCount;
   checkComboMilestone(comboCount);
   updateComboDisplay();
+  // 킬 마일스톤 (100킬 배수마다)
+  if (killCount > 0 && killCount % 100 === 0 && player) {
+    addFloatingText(player.x, player.y - 70, `💀 ${killCount} KILLS! +50XP`, '#ffe600', 16);
+    gems.push(new Gem(player.x, player.y, 50));
+    triggerScreenShake(5, 300);
+    playSynthSound([600, 800, 1000], 0.15, 'triangle', 0.08);
+  }
 }
 
 function checkComboMilestone(count) {
@@ -3719,6 +3764,16 @@ function showAchievementPopup(ach) {
 function updateMenuMetaBadge() {
   const badge = document.getElementById('meta-cores-badge');
   if (badge) badge.textContent = saveData.dataCores;
+  // 최고 기록 패널
+  const bm = Math.floor((saveData.bestTime || 0) / 60);
+  const bs = (saveData.bestTime || 0) % 60;
+  const stageEl = document.getElementById('mrp-stage');
+  const killsEl = document.getElementById('mrp-kills');
+  const timeEl  = document.getElementById('mrp-time');
+  if (stageEl) stageEl.textContent = saveData.bestStage ? `S ${saveData.bestStage}` : 'S —';
+  if (killsEl) killsEl.textContent = saveData.bestKills ? `${saveData.bestKills.toLocaleString()} 킬` : '— 킬';
+  if (timeEl)  timeEl.textContent  = saveData.bestStage
+    ? `${bm.toString().padStart(2, '0')}:${bs.toString().padStart(2, '0')}` : '—:——';
 }
 
 function renderMetaGrid() {
@@ -3922,6 +3977,7 @@ function checkCollisions() {
     for (let i = bossProjectiles.length - 1; i >= 0; i--) {
       const bp = bossProjectiles[i];
       if (dist(bp.x, bp.y, player.x, player.y) < player.radius + bp.radius) {
+        lastDamageSource = '보스 발사체';
         player.takeDamage(bp.damage);
         createExplosionParticles(bp.x, bp.y, bp.color, 8);
         bossProjectiles.splice(i, 1);
@@ -3937,6 +3993,7 @@ function checkCollisions() {
     if (activeBoss) allTargets.push(activeBoss);
     for (let e of allTargets) {
       if (dist(player.x, player.y, e.x, e.y) < player.radius + e.radius) {
+        lastDamageSource = e === activeBoss ? '보스 충돌' : '바이러스 충돌';
         player.takeDamage(e.damage);
         player.lastHitTime = now;
         break;
@@ -4204,14 +4261,36 @@ homeBtn.addEventListener('click',  () => {
 });
 document.getElementById('mute-btn').addEventListener('click', () => toggleBGM());
 
-// 클래스 선택 카드 이벤트
+// 클래스 선택 카드 이벤트 (2단계 선택 흐름)
 document.querySelectorAll('.class-card').forEach(card => {
   card.addEventListener('click', () => {
+    document.querySelectorAll('.class-card').forEach(c => c.classList.remove('class-selected'));
+    card.classList.add('class-selected');
     selectedClass = card.dataset.class;
-    document.getElementById('class-select-screen').classList.remove('active');
-    startGame();
+    const hint = document.getElementById('class-selected-hint');
+    const confirmBtn = document.getElementById('class-confirm-btn');
+    const names = { hacker:'해커', cyborg:'사이보그', ghost:'고스트', engineer:'엔지니어', sniper:'스나이퍼', support:'서포터' };
+    if (hint) { hint.textContent = `✓ ${names[selectedClass] || selectedClass} 선택됨`; hint.classList.add('has-selection'); }
+    if (confirmBtn) confirmBtn.disabled = false;
   });
 });
+
+function confirmClassStart() {
+  if (!selectedClass) return;
+  document.getElementById('class-select-screen').classList.remove('active');
+  startGame();
+}
+
+function goBackToMenu() {
+  document.getElementById('class-select-screen').classList.remove('active');
+  menuScreen.classList.add('active');
+  // 선택 상태 초기화
+  document.querySelectorAll('.class-card').forEach(c => c.classList.remove('class-selected'));
+  const hint = document.getElementById('class-selected-hint');
+  const confirmBtn = document.getElementById('class-confirm-btn');
+  if (hint) { hint.textContent = '백신 유형을 선택하세요'; hint.classList.remove('has-selection'); }
+  if (confirmBtn) confirmBtn.disabled = true;
+}
 
 function showScreen(state) {
   gameState = state;
@@ -4231,7 +4310,7 @@ function startGame() {
   showScreen(STATE_PLAYING);
 
   // 전체 리셋
-  killCount = 0; gameTime = 0; timeAccumulator = 0;
+  killCount = 0; gameTime = 0; timeAccumulator = 0; lastDamageSource = '';
   if (mpMode) { mpGameStartTime = Date.now(); mpSpectating = false; mpRespawnTimer = 0; _statAdd('mpGamesPlayed', 1); }
   enemies = []; projectiles = []; gems = []; particles = [];
   activeLasersArr = []; fieldItems = []; floatingTexts = [];
@@ -4243,6 +4322,7 @@ function startGame() {
   stageKillProgress = 0;
   stageKillGoal     = getStageKillGoal(1);
   isBossStage       = false;
+  isMiniBossStage   = false;
   isEndlessMode     = false;
   endlessModeStartTime = 0;
   isStageClearAnim  = false;
@@ -4326,7 +4406,7 @@ function gameLoop(time) {
 
   draw(dt);
 
-  // 개발자 FPS 카운터
+  // FPS 카운터
   devFpsCount++;
   if (time - devLastFpsTs >= 500) {
     devCurrentFps = Math.round(devFpsCount * 1000 / (time - devLastFpsTs));
@@ -4339,6 +4419,10 @@ function gameLoop(time) {
       if (entEl) entEl.textContent = `E${enemies.length}/P${projectiles.length}/G${gems.length}`;
       const stEl = document.getElementById('dev-stage-display');
       if (stEl) stEl.textContent = currentStage ?? '--';
+    }
+    if (showFps) {
+      const hudFps = document.getElementById('hud-fps');
+      if (hudFps) hudFps.textContent = `${devCurrentFps} FPS`;
     }
   }
 
@@ -5459,6 +5543,8 @@ function endGame(isVictory) {
     submitLeaderboard(isVictory);
   }
   gameOverModal.classList.add('active');
+  const causeRowHide = document.getElementById('death-cause-row');
+  if (causeRowHide && isVictory) causeRowHide.style.display = 'none';
 
   const title    = document.getElementById('result-title');
   const subtitle = document.getElementById('result-subtitle');
@@ -5489,6 +5575,15 @@ function endGame(isVictory) {
     title.style.textShadow = '0 0 10px var(--color-neon-pink), 0 0 20px var(--color-neon-pink)';
     title.style.color = '#fff';
     subtitle.innerText = `STAGE ${currentStage}에서 바이러스에 감염되었습니다.`;
+    const causeEl = document.getElementById('death-cause-row');
+    if (causeEl) {
+      if (lastDamageSource) {
+        causeEl.textContent = `☠ 사망 원인: ${lastDamageSource}`;
+        causeEl.style.display = 'block';
+      } else {
+        causeEl.style.display = 'none';
+      }
+    }
     playGameOverSound();
   }
 
@@ -5938,6 +6033,15 @@ function settingsToggleMute() {
   if (btn) btn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
 }
 
+let showFps = false;
+function settingsToggleFps() {
+  showFps = !showFps;
+  const btn = document.getElementById('settings-fps-btn');
+  if (btn) btn.textContent = showFps ? '📊 켜짐' : '📊 꺼짐';
+  const hudFps = document.getElementById('hud-fps');
+  if (hudFps) hudFps.style.display = showFps ? 'inline' : 'none';
+}
+
 // ============================================================
 // 🎮 멀티플레이어 모드 (Firebase RTDB / BroadcastChannel 듀얼)
 // ============================================================
@@ -6364,6 +6468,7 @@ function mpCheckAura() {
 // ═══════════════════════════════════════════════════════════════
 function _initAuth() {
   if (!FIREBASE_CONFIG || typeof firebase === 'undefined' || !firebase.auth) return;
+  if (!_fbDb) _mpInitFirebase(); // auth 호출 전 앱 초기화 보장
   firebase.auth().onAuthStateChanged(user => {
     _authUser = user;
     _updateAuthUI();

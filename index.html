@@ -35,58 +35,92 @@
   <!-- 메인 메뉴 화면 -->
   <div id="menu-screen" class="screen active">
     <div class="menu-content">
-      <button class="menu-settings-btn" onclick="openSettingsModal()" title="옵션">⚙</button>
-      <h1 class="neon-title" data-text="NEON SURVIVORS">NEON SURVIVORS</h1>
-      <p class="subtitle">네온 바이러스의 침공으로부터 시스템을 방어하세요</p>
-      <div class="version-badge">v0.03 ALPHA</div>
 
-      <div class="instructions">
-        <h3>[ 조작 방법 ]</h3>
-        <p><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> 또는 <span class="key">방향키</span> : 이동</p>
-        <p>※ 모든 공격은 자동으로 적을 타겟팅하여 실행됩니다.</p>
-        <p>※ 적을 물리쳐 네온 코어를 흡수하고 레벨업하세요.</p>
-        <p class="objective">★ 목표: 스테이지 100 돌파 후 무한 생존 기록을 달성하세요! ★</p>
-      </div>
-
-      <div class="difficulty-row">
-        <button class="diff-btn" data-diff="easy"   onclick="setDifficulty('easy')">EASY</button>
-        <button class="diff-btn diff-active" data-diff="normal" onclick="setDifficulty('normal')">NORMAL</button>
-        <button class="diff-btn" data-diff="hard"   onclick="setDifficulty('hard')">HARD</button>
-      </div>
-      <button id="start-btn" class="neon-btn">백신 프로그램 가동 (시작)</button>
-      <button class="neon-btn neon-btn-purple font-sm" onclick="openMetaModal()" style="margin-top:0.6rem">
-        ⚡ 영구 업그레이드 <span class="meta-badge">💾 <span id="meta-cores-badge">0</span></span>
-      </button>
-
-      <!-- 하단 액션 행 -->
-      <div class="coming-soon-row">
-        <div class="coming-soon-card" onclick="openSettingsModal()" style="cursor:pointer">
-          <span class="cs-icon">⚙</span>
-          <span class="cs-label">옵션 설정</span>
-          <span class="cs-badge">설정</span>
-        </div>
-        <div class="coming-soon-card cs-invite" onclick="openInviteModal()" style="cursor:pointer">
-          <span class="cs-icon">🎮</span>
-          <span class="cs-label">초대 모드</span>
-          <span class="cs-badge cs-badge-beta">BETA</span>
-        </div>
-        <div class="coming-soon-card" onclick="startDailyRun()" style="cursor:pointer">
-          <span class="cs-icon">📅</span>
-          <span class="cs-label">일일 도전</span>
-          <span class="cs-badge" style="background:#ffe600;color:#000">TODAY</span>
-        </div>
-        <div class="coming-soon-card" onclick="openLeaderboardModal()" style="cursor:pointer">
-          <span class="cs-icon">🏅</span>
-          <span class="cs-label">리더보드</span>
-          <span class="cs-badge" style="background:#b026ff;color:#fff">TOP 10</span>
+      <!-- 헤더: 타이틀 + 버전 -->
+      <div class="menu-header">
+        <h1 class="neon-title" data-text="NEON SURVIVORS">NEON SURVIVORS</h1>
+        <div class="menu-header-meta">
+          <span class="version-badge">v0.09</span>
+          <span class="menu-tagline">사이버펑크 바이러스 생존 게임</span>
         </div>
       </div>
 
-      <div class="auth-section">
-        <p id="auth-user-info" class="auth-info-text">로컬 저장 중 (로그인 시 클라우드 동기화)</p>
-        <div class="auth-btn-row">
-          <button id="auth-btn" class="neon-btn font-sm" onclick="signInGoogle()">🔑 Google 로그인</button>
-          <button class="neon-btn font-sm neon-btn-purple" onclick="openAchievementModal()">🏆 업적</button>
+      <!-- 본문: 2컬럼 -->
+      <div class="menu-body">
+
+        <!-- 왼쪽: 게임 시작 흐름 -->
+        <div class="menu-left">
+          <div class="menu-objective">★ 목표: 스테이지 100 돌파 후 무한 생존!</div>
+
+          <div class="difficulty-row">
+            <button class="diff-btn" data-diff="easy"   onclick="setDifficulty('easy')">EASY</button>
+            <button class="diff-btn diff-active" data-diff="normal" onclick="setDifficulty('normal')">NORMAL</button>
+            <button class="diff-btn" data-diff="hard"   onclick="setDifficulty('hard')">HARD</button>
+          </div>
+
+          <button id="start-btn" class="neon-btn menu-start-btn">▶ 게임 시작</button>
+
+          <button class="neon-btn neon-btn-purple menu-meta-btn" onclick="openMetaModal()">
+            ⚡ 영구 업그레이드 <span class="meta-badge">💾 <span id="meta-cores-badge">0</span></span>
+          </button>
+
+          <div class="menu-controls">
+            <span class="ctrl-item"><kbd>W A S D</kbd> 이동</span>
+            <span class="ctrl-sep">·</span>
+            <span class="ctrl-item"><kbd>Q</kbd> 스킬</span>
+            <span class="ctrl-sep">·</span>
+            <span class="ctrl-item"><kbd>ESC</kbd> 일시정지</span>
+            <span class="ctrl-sep">·</span>
+            <span class="ctrl-item"><kbd>M</kbd> BGM</span>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 보조 기능 -->
+        <div class="menu-right">
+
+          <!-- 최고 기록 패널 -->
+          <div class="menu-record-panel">
+            <div class="mrp-title">— 최고 기록 —</div>
+            <div class="mrp-stats">
+              <span id="mrp-stage">S —</span>
+              <span id="mrp-kills">— 킬</span>
+              <span id="mrp-time">—:——</span>
+            </div>
+          </div>
+
+          <!-- 액션 그리드 -->
+          <div class="menu-action-grid">
+            <button class="menu-action-btn" onclick="startDailyRun()">
+              <span class="mab-icon">📅</span>
+              <span class="mab-label">일일 도전</span>
+              <span class="mab-badge mab-today">TODAY</span>
+            </button>
+            <button class="menu-action-btn" onclick="openLeaderboardModal()">
+              <span class="mab-icon">🏅</span>
+              <span class="mab-label">리더보드</span>
+              <span class="mab-badge mab-purple">TOP 10</span>
+            </button>
+            <button class="menu-action-btn" onclick="openAchievementModal()">
+              <span class="mab-icon">🏆</span>
+              <span class="mab-label">업적</span>
+            </button>
+            <button class="menu-action-btn" onclick="openInviteModal()">
+              <span class="mab-icon">🎮</span>
+              <span class="mab-label">멀티플레이</span>
+              <span class="mab-badge mab-beta">BETA</span>
+            </button>
+            <button class="menu-action-btn menu-action-settings" onclick="openSettingsModal()">
+              <span class="mab-icon">⚙</span>
+              <span class="mab-label">옵션 설정</span>
+            </button>
+          </div>
+
+          <!-- 인증 -->
+          <div class="menu-auth">
+            <p id="auth-user-info" class="auth-info-text">로컬 저장 중 (로그인 시 클라우드 동기화)</p>
+            <button id="auth-btn" class="neon-btn font-sm" onclick="signInGoogle()">🔑 Google 로그인</button>
+          </div>
+
         </div>
       </div>
     </div>
@@ -96,74 +130,99 @@
   <div id="class-select-screen" class="screen">
     <div class="class-select-content">
       <h2 class="neon-title-sm">백신 유형 선택</h2>
-      <p class="modal-desc">전투 스타일을 선택하세요. 각 클래스는 고유 능력을 보유합니다.</p>
+      <p class="modal-desc">전투 스타일을 선택하세요. 카드를 클릭하면 상세 정보를 확인할 수 있습니다.</p>
       <div class="class-card-grid">
         <button class="class-card" data-class="hacker" style="--cls-color:#00f0ff">
-          <div class="cls-icon">💻</div>
-          <div class="cls-name">해커</div>
+          <div class="cls-header">
+            <span class="cls-icon">💻</span>
+            <span class="cls-name">해커</span>
+          </div>
           <div class="cls-type">올라운더</div>
           <ul class="cls-stats">
             <li>HP 100 / 속도 보통</li>
             <li>시작 무기: 네온 플레어</li>
             <li>XP 획득 +10%</li>
             <li>리롤 횟수 +1 (3회)</li>
+            <li class="cls-skill">[Q] 침투 프로토콜 (8초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="cyborg" style="--cls-color:#b026ff">
-          <div class="cls-icon">🤖</div>
-          <div class="cls-name">사이보그</div>
+          <div class="cls-header">
+            <span class="cls-icon">🤖</span>
+            <span class="cls-name">사이보그</span>
+          </div>
           <div class="cls-type">방어형</div>
           <ul class="cls-stats">
             <li>HP 160 / 속도 느림</li>
             <li>시작 무기: 사이버 오비터</li>
             <li>피해량 -10%</li>
             <li>실드 지속 +3초</li>
+            <li class="cls-skill">[Q] 오버드라이브 (12초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="ghost" style="--cls-color:#39ff14">
-          <div class="cls-icon">👻</div>
-          <div class="cls-name">고스트</div>
+          <div class="cls-header">
+            <span class="cls-icon">👻</span>
+            <span class="cls-name">고스트</span>
+          </div>
           <div class="cls-type">공격형</div>
           <ul class="cls-stats">
             <li>HP 70 / 속도 매우 빠름</li>
             <li>시작 무기: 네온 플레어</li>
             <li>피해량 +25%</li>
             <li>이동속도 +40%</li>
+            <li class="cls-skill">[Q] 페이즈 시프트 (15초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="engineer" style="--cls-color:#ffe600">
-          <div class="cls-icon">🔧</div>
-          <div class="cls-name">엔지니어</div>
+          <div class="cls-header">
+            <span class="cls-icon">🔧</span>
+            <span class="cls-name">엔지니어</span>
+          </div>
           <div class="cls-type">지원형</div>
           <ul class="cls-stats">
             <li>HP 110 / 속도 보통</li>
             <li>시작 무기: 일렉트로 존</li>
             <li>자석 범위 2배</li>
-            <li>[Q] 긴급 수리 (18초)</li>
+            <li>드론 킬 보너스 XP</li>
+            <li class="cls-skill">[Q] 긴급 수리 (18초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="sniper" style="--cls-color:#ff4466">
-          <div class="cls-icon">🎯</div>
-          <div class="cls-name">스나이퍼</div>
+          <div class="cls-header">
+            <span class="cls-icon">🎯</span>
+            <span class="cls-name">스나이퍼</span>
+          </div>
           <div class="cls-type">저격형</div>
           <ul class="cls-stats">
             <li>HP 80 / 속도 보통</li>
             <li>시작 무기: 사이버 미사일</li>
             <li>피해량 +60%</li>
-            <li>[Q] 정밀 조준 (10초)</li>
+            <li>치명타 확률 +15%</li>
+            <li class="cls-skill">[Q] 정밀 조준 (10초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="support" style="--cls-color:#00ffaa">
-          <div class="cls-icon">🔵</div>
-          <div class="cls-name">서포터</div>
+          <div class="cls-header">
+            <span class="cls-icon">🔵</span>
+            <span class="cls-name">서포터</span>
+          </div>
           <div class="cls-type">지원형</div>
           <ul class="cls-stats">
             <li>HP 120 / 속도 느림</li>
             <li>시작 무기: 데이터 드론</li>
             <li>XP 획득 +15%</li>
-            <li>[Q] 비상 보수 (20초)</li>
+            <li>회복 효율 +20%</li>
+            <li class="cls-skill">[Q] 비상 보수 (20초)</li>
           </ul>
         </button>
+      </div>
+      <div class="class-confirm-footer">
+        <span id="class-selected-hint" class="class-selected-hint">백신 유형을 선택하세요</span>
+        <div class="class-confirm-btns">
+          <button class="neon-btn font-sm neon-btn-purple" onclick="goBackToMenu()">← 뒤로</button>
+          <button id="class-confirm-btn" class="neon-btn font-sm" onclick="confirmClassStart()" disabled>▶ 배포 시작</button>
+        </div>
       </div>
     </div>
   </div>
@@ -191,6 +250,7 @@
 
         <div class="timer-container">
           <span id="game-timer" class="neon-text-pink">00:00</span>
+          <span id="hud-fps" class="hud-fps" style="display:none"></span>
           <button id="mute-btn" class="mute-btn" title="배경음악 끄기 (M)">🎵</button>
           <button class="mute-btn" title="옵션" onclick="openSettingsModal()">⚙</button>
         </div>
@@ -386,6 +446,7 @@
       </div>
       <div id="stat-synergies-row" class="synergies-result-row"></div>
 
+      <div id="death-cause-row" class="death-cause-row" style="display:none"></div>
       <div id="mp-survival-rank" style="display:none;background:rgba(0,0,0,0.5);border:1px solid #00f0ff33;border-radius:6px;padding:8px 12px;margin:6px 0;font-size:12px;line-height:1.8"></div>
       <div id="cores-earned-row" class="cores-earned-row"></div>
       <div id="best-record-row" class="best-record-row"></div>
@@ -455,11 +516,21 @@
   <div id="settings-modal" class="modal">
     <div class="modal-content glass-panel settings-panel">
       <h2 class="neon-title-sm">⚙ 옵션</h2>
+
+      <div class="settings-section-title">화면</div>
       <div class="settings-list">
         <div class="settings-item">
           <span class="settings-label">전체화면</span>
           <button class="neon-btn font-sm settings-btn" onclick="toggleFullscreen()">⛶ 전환</button>
         </div>
+        <div class="settings-item">
+          <span class="settings-label">FPS 표시</span>
+          <button id="settings-fps-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleFps()">📊 꺼짐</button>
+        </div>
+      </div>
+
+      <div class="settings-section-title">오디오</div>
+      <div class="settings-list">
         <div class="settings-item">
           <span class="settings-label">배경음악</span>
           <button id="settings-mute-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleMute()">🎵 켜짐</button>
@@ -469,12 +540,22 @@
           <button id="settings-bgm-track-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleBgmTrack()">🎵 신스웨이브</button>
         </div>
       </div>
+
+      <div class="settings-section-title">단축키</div>
+      <div class="settings-shortcuts">
+        <div class="shortcut-row"><kbd>WASD / ↑↓←→</kbd><span>이동</span></div>
+        <div class="shortcut-row"><kbd>Q</kbd><span>클래스 스킬</span></div>
+        <div class="shortcut-row"><kbd>M</kbd><span>BGM 끄기/켜기</span></div>
+        <div class="shortcut-row"><kbd>ESC / P</kbd><span>일시정지</span></div>
+        <div class="shortcut-row"><kbd>F</kbd><span>전체화면</span></div>
+      </div>
+
       <!-- 게임 중 일시정지 시에만 표시 -->
       <div id="settings-ingame-actions" class="settings-ingame-actions" style="display:none">
         <button class="neon-btn font-sm" onclick="resumeGame()">▶ 계속하기</button>
         <button class="neon-btn font-sm neon-btn-red" onclick="goToMenu()">🏠 메인으로</button>
       </div>
-      <div style="text-align:center;margin-top:0.6rem">
+      <div style="text-align:center;margin-top:0.8rem">
         <button class="neon-btn font-sm" onclick="closeSettingsModal()">← 닫기</button>
       </div>
     </div>
