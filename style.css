@@ -2290,3 +2290,22 @@ body {
   background: rgba(255,68,102,0.12);
   border-color: #ff4466; color: #ff4466;
 }
+
+/* ── 글로벌 리더보드 ───────────────────────────────── */
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.lb-row:first-child { background: rgba(255,230,0,0.06); border-radius: 4px 4px 0 0; }
+.lb-rank  { font-size: 1.1rem; min-width: 26px; }
+.lb-name  { flex: 1; color: #e2e8f0; font-family: 'Orbitron', monospace; font-size: 0.8rem; }
+.lb-stage { color: #ffe600; font-family: 'Orbitron', monospace; font-size: 0.8rem; min-width: 52px; text-align: right; }
+.lb-kills { color: #00f0ff; font-size: 0.75rem; min-width: 58px; text-align: right; }
+.lb-time  { color: #94a3b8; font-size: 0.75rem; min-width: 48px; text-align: right; }
+.lb-asc   { color: #b026ff; font-size: 0.72rem; }
+
+/* 카드 행이 4개일 때 wrap */
+.coming-soon-row { flex-wrap: wrap; }

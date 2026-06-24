@@ -75,6 +75,11 @@
           <span class="cs-label">일일 도전</span>
           <span class="cs-badge" style="background:#ffe600;color:#000">TODAY</span>
         </div>
+        <div class="coming-soon-card" onclick="openLeaderboardModal()" style="cursor:pointer">
+          <span class="cs-icon">🏅</span>
+          <span class="cs-label">리더보드</span>
+          <span class="cs-badge" style="background:#b026ff;color:#fff">TOP 10</span>
+        </div>
       </div>
 
       <div class="auth-section">
@@ -399,6 +404,18 @@
       <div class="result-actions">
         <button id="retry-btn" class="neon-btn font-sm">시스템 재가동</button>
         <button id="home-btn" class="neon-btn font-sm neon-btn-purple">메인 화면으로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 글로벌 리더보드 모달 -->
+  <div id="leaderboard-modal" class="modal" onclick="if(event.target===this)closeLeaderboardModal()">
+    <div class="modal-content glass-panel" style="max-width:520px;padding:1.5rem">
+      <h2 class="neon-title-sm" style="color:#b026ff;text-shadow:0 0 10px #b026ff">🏅 글로벌 리더보드</h2>
+      <p class="modal-desc" style="margin-bottom:0.8rem">전체 플레이어 최고 기록 TOP 10 (스테이지 기준)</p>
+      <div id="lb-list" style="min-height:120px;font-size:0.85rem;line-height:1.9"></div>
+      <div style="text-align:center;margin-top:1rem">
+        <button class="neon-btn font-sm" onclick="closeLeaderboardModal()">← 닫기</button>
       </div>
     </div>
   </div>

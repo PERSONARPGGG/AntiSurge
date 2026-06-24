@@ -320,7 +320,13 @@ const FIELD_EVENTS = [
   { id: 'core_overload',   icon: '🔥', name: '코어 과부하',   color: '#ff8800', duration: 8000,
     desc: '공격력 3배 상승! 하지만 받는 피해도 1.5배 증가합니다.' },
   { id: 'phantom_shift',   icon: '👁', name: '팬텀 시프트',   color: '#8800ff', duration: 7000,
-    desc: '적들의 추적 AI 오작동! 혼란 상태로 무작위 이동합니다.' }
+    desc: '적들의 추적 AI 오작동! 혼란 상태로 무작위 이동합니다.' },
+  { id: 'freeze_zone',     icon: '❄️', name: '프리즈 존',     color: '#00cfff', duration: 10000,
+    desc: '냉각 필드 발생! 10초간 모든 적 이동속도 -60% 감소합니다.' },
+  { id: 'repair_drone',    icon: '🔧', name: '수리 드론',     color: '#39ff14', duration: 15000,
+    desc: '수리 드론 출동! 15초간 매초 HP 5를 자동 회복합니다.' },
+  { id: 'cyber_mine_field',icon: '💣', name: '마인 필드',     color: '#ff8800', duration: 1200,
+    desc: '자동 마인 배치! 주변 랜덤 위치에 사이버 마인 8개가 설치됩니다.' }
 ];
 let fieldEventTimer    = 0;
 let fieldEventInterval = 40000 + Math.random() * 20000;
@@ -602,6 +608,13 @@ const CLOUD_ACHIEVEMENTS = [
   { id: 'hidden_combo',     hidden: true, realName: '콤보 전설',       name: '???', icon: '🌀', desc: '최대 콤보 100 달성',         stat: 'maxCombo',         goal: 100   },
   { id: 'hidden_mp_vet',    hidden: true, realName: '베테랑 용병',     name: '???', icon: '🔱', desc: '멀티 10게임 플레이',         stat: 'mpGamesPlayed',    goal: 10    },
   { id: 'hidden_legend',    hidden: true, realName: '레전드',           name: '???', icon: '👑', desc: '모든 기본 업적 달성',        stat: '__allBasic__',     goal: 8     },
+  // ── 클래스 전용 업적 ──────────────────────────────────────
+  { id: 'cls_hacker',   name: '시스템 침투자',  icon: '💻', desc: '[해커] 스테이지 20 도달',       stat: 'cls_hacker_maxStage',    goal: 20  },
+  { id: 'cls_cyborg',   name: '강철 의지',      icon: '🤖', desc: '[사이보그] 30게임 플레이',      stat: 'cls_cyborg_games',       goal: 30  },
+  { id: 'cls_ghost',    name: '유령 전술가',    icon: '👻', desc: '[고스트] 스테이지 15 도달',     stat: 'cls_ghost_maxStage',     goal: 15  },
+  { id: 'cls_engineer', name: '드론 마스터',    icon: '🔧', desc: '[엔지니어] 드론 킬 300회 누적', stat: 'cls_engineer_droneKills',goal: 300 },
+  { id: 'cls_sniper',   name: '원거리 지배자',  icon: '🎯', desc: '[저격수] 스테이지 25 도달',     stat: 'cls_sniper_maxStage',    goal: 25  },
+  { id: 'cls_support',  name: '전장의 수호자',  icon: '💊', desc: '[서포트] 10게임 플레이',        stat: 'cls_support_games',      goal: 10  },
 ];
 
 // ============================================================
@@ -1279,6 +1292,18 @@ class Player {
       }
     } else {
       this.regenTimer = 0;
+    }
+
+    // 수리 드론 이벤트: 매초 +5 HP
+    if (activeFieldEvent?.id === 'repair_drone') {
+      this._droneHealTimer = (this._droneHealTimer || 0) + dt;
+      if (this._droneHealTimer >= 1000) {
+        this._droneHealTimer -= 1000;
+        this.hp = Math.min(this.hp + 5, this.maxHp);
+        addFloatingText(this.x, this.y - 30, '+5 수리', '#39ff14', 11);
+      }
+    } else {
+      this._droneHealTimer = 0;
     }
 
     // 패시브: 전기 방벽 — 주기적으로 주변 적 스턴
@@ -2460,6 +2485,8 @@ class Enemy {
     if (activeFieldEvent?.id === 'virus_frenzy') spd *= 1.7;
     // 엘리트 침공 이벤트: 20% 속도 증가
     if (activeFieldEvent?.id === 'elite_invasion') spd *= 1.2;
+    // 프리즈 존: 적 속도 -60%
+    if (activeFieldEvent?.id === 'freeze_zone') spd *= 0.4;
     this.x += dx * spd * (dt / 16.66);
     this.y += dy * spd * (dt / 16.66);
     this.speedMultiplier = 1.0;
@@ -2988,6 +3015,10 @@ class Boss {
     }
     playBossDeathSound();
     spawnGoldCoins(this.x, this.y, 12 + Math.floor(Math.random() * 9));
+    // 보스 처치 보너스 드롭: HP 또는 서지 아이템
+    const bossDropType = ['health', 'health', 'surge', 'magnet'][Math.floor(Math.random() * 4)];
+    fieldItems.push(new FieldItem(this.x + (Math.random() - 0.5) * 60, this.y + (Math.random() - 0.5) * 60, bossDropType));
+    addFloatingText(this.x, this.y - this.radius - 20, '★ BOSS DROP!', '#ffe600', 15);
     _statAdd('totalBossKills', 1);
     activeBoss = null;
     isBossStage = false;
@@ -4248,8 +4279,16 @@ function startGame() {
   camera.x = player.x - camera.width  / 2;
   camera.y = player.y - camera.height / 2;
 
-  // 승천 레벨 로드
+  // 승천 레벨 로드 + 보너스 적용
   ascensionLevel = saveData.ascensionLevel || 0;
+  if (ascensionLevel > 0 && player) {
+    const hpBonus = ascensionLevel * 15;
+    player.maxHp += hpBonus;
+    player.hp    += hpBonus;
+    rerollUses   += Math.floor(ascensionLevel / 2);
+    if (ascensionLevel >= 3) player.passiveXpMult *= 1.10;
+    addFloatingText(player.x, player.y - 50, `✨ 승천 Lv.${ascensionLevel} 보너스 적용!`, '#ffe600', 13);
+  }
 
   if (!isDailyRun) bgmTrackId = Math.floor(Math.random() * 3); // 일일 도전은 bgmTrackId=3 유지
   bgmTrackCheckTimer = 0;
@@ -5407,8 +5446,17 @@ function endGame(isVictory) {
     _statSet('maxSurviveTime', gameTime);
     _statSet('maxCombo', maxCombo);
     if (!isVictory) _statAdd('totalDeaths', 1);
+    // 클래스별 스탯
+    if (player) {
+      const cls = player.classId;
+      _statAdd(`cls_${cls}_games`, 1);
+      _statSet(`cls_${cls}_maxStage`, currentStage);
+      _statAdd(`cls_${cls}_kills`, killCount);
+      if (cls === 'engineer') _statAdd('cls_engineer_droneKills', weaponStats.drone?.kills || 0);
+    }
     _checkCloudAchievements();
     _syncToCloud();
+    submitLeaderboard(isVictory);
   }
   gameOverModal.classList.add('active');
 
@@ -5742,6 +5790,19 @@ function triggerFieldEvent() {
     }
     triggerScreenShake(9, 500);
     playSynthSound([100, 300, 600], 0.2, 'sawtooth', 0.12);
+  }
+
+  // 즉발: 마인 필드 — 8개 사이버 마인 랜덤 배치
+  if (ev.id === 'cyber_mine_field' && player) {
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
+      const d = 120 + Math.random() * 200;
+      const mx = Math.max(20, Math.min(MAP_WIDTH - 20, player.x + Math.cos(angle) * d));
+      const my = Math.max(20, Math.min(MAP_HEIGHT - 20, player.y + Math.sin(angle) * d));
+      mines.push(new Mine(mx, my, 80, 130, false));
+    }
+    triggerScreenShake(5, 300);
+    playSynthSound([200, 100, 50], 0.15, 'sawtooth', 0.09, true);
   }
 
   // 이벤트 배너 표시
@@ -6580,6 +6641,66 @@ function drawMpScoreboard(ctx, w, h) {
     );
   });
   ctx.restore();
+}
+
+// ============================================================
+// 글로벌 리더보드 (Firebase RTDB)
+// ============================================================
+function submitLeaderboard(isVictory) {
+  if (!_fbDb && !_mpInitFirebase()) return;
+  if (!_fbDb) return;
+  const uid  = _authUser ? _authUser.uid : ('anon_' + (localStorage.getItem('ns_anon_id') || (() => { const id = Math.random().toString(36).slice(2); localStorage.setItem('ns_anon_id', id); return id; })()));
+  const name = (document.getElementById('player-name-input')?.value.trim()) ||
+               (_authUser?.displayName) || '익명';
+  _fbDb.ref(`antisurge_lb/${uid}`).transaction(cur => {
+    if (!cur || currentStage >= (cur.stage || 0)) {
+      return { name: name.slice(0, 12), stage: currentStage, kills: killCount,
+               time: gameTime, cls: player?.classId || '?', asc: ascensionLevel,
+               victory: isVictory ? 1 : 0, ts: Date.now() };
+    }
+    return cur;
+  }).catch(e => console.warn('[LB] 기록 실패:', e.message));
+}
+
+function openLeaderboardModal() {
+  const modal = document.getElementById('leaderboard-modal');
+  if (!modal) return;
+  modal.classList.add('active');
+  const list = document.getElementById('lb-list');
+  list.innerHTML = '<div style="color:#64748b;padding:16px 0">불러오는 중...</div>';
+
+  if (!_fbDb && !_mpInitFirebase()) {
+    list.innerHTML = '<div style="color:#64748b;padding:16px 0">Firebase 미연결 — 로그인 후 이용 가능합니다.</div>';
+    return;
+  }
+  _fbDb.ref('antisurge_lb').orderByChild('stage').limitToLast(10).once('value', snap => {
+    const rows = [];
+    snap.forEach(c => rows.push(c.val()));
+    rows.sort((a, b) => b.stage - a.stage || b.kills - a.kills);
+    if (rows.length === 0) {
+      list.innerHTML = '<div style="color:#64748b;padding:16px 0">아직 기록이 없습니다. 첫 주인공이 되세요!</div>';
+      return;
+    }
+    const medals = ['🥇', '🥈', '🥉'];
+    const clsIcons = { hacker:'💻', cyborg:'🤖', ghost:'👻', engineer:'🔧', sniper:'🎯', support:'💊' };
+    const fmtTime = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+    list.innerHTML = rows.map((r, i) => `
+      <div class="lb-row">
+        <span class="lb-rank">${medals[i] || `#${i+1}`}</span>
+        <span class="lb-name">${(clsIcons[r.cls] || '?')} ${r.name || '익명'}</span>
+        <span class="lb-stage">S${r.stage}${r.victory ? ' ★' : ''}</span>
+        <span class="lb-kills">${(r.kills||0).toLocaleString()}킬</span>
+        <span class="lb-time">${fmtTime(r.time||0)}</span>
+        ${r.asc > 0 ? `<span class="lb-asc">✨${r.asc}</span>` : ''}
+      </div>`).join('');
+  }).catch(() => {
+    list.innerHTML = '<div style="color:#64748b;padding:16px 0">기록 로드 실패</div>';
+  });
+}
+
+function closeLeaderboardModal() {
+  const modal = document.getElementById('leaderboard-modal');
+  if (modal) modal.classList.remove('active');
 }
 
 // 저장 데이터 로드 (스크립트 초기화 시)
