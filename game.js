@@ -5710,7 +5710,8 @@ function openInviteModal() {
   if (modal) modal.classList.add('active');
   // Firebase 설정 여부 표시
   const note = document.getElementById('mp-mode-note');
-  if (note) note.textContent = FIREBASE_CONFIG
+  const fbReady = FIREBASE_CONFIG && typeof firebase !== 'undefined';
+  if (note) note.textContent = fbReady
     ? '🌐 Firebase 모드 — 다른 기기와 플레이 가능'
     : '⚠ 로컬 모드 — 같은 기기의 다른 탭에서만 작동';
 }
@@ -5742,12 +5743,21 @@ function mpSetupChannel() {
     myRef.onDisconnect().remove();
     if (mpIsHost) roomRef.onDisconnect().remove();
 
-    myRef.set(playerData);
+    myRef.set(playerData, err => {
+      if (err) {
+        console.error('[MP] Firebase 쓰기 실패:', err.message);
+        alert('Firebase 연결 실패: ' + err.message + '\n콘솔(F12)을 확인하세요.');
+        mpUseFb = false;
+      } else {
+        console.log('[MP] Firebase 연결 성공 —', mpMyId, '→', _mpFbRoomPath());
+      }
+    });
 
     // 다른 플레이어 상태 실시간 수신
     mpFbRoomRef = roomRef.child('players');
     mpFbRoomRef.on('value', snap => {
       const all = snap.val() || {};
+      console.log('[MP] players 업데이트:', Object.keys(all));
       for (const [id, p] of Object.entries(all)) {
         if (id === mpMyId) continue;
         mpPlayers[id] = { ...mpPlayers[id], ...p, lastUpdate: Date.now() };
@@ -5757,7 +5767,7 @@ function mpSetupChannel() {
         if (id !== mpMyId && !all[id]) delete mpPlayers[id];
       }
       mpUpdatePlayerList();
-    });
+    }, err => console.error('[MP] players 수신 실패:', err.message));
 
     // 게임 이벤트 수신 (join/start/leave)
     mpFbMsgRef = roomRef.child('msgs');
