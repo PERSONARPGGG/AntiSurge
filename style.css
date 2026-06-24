@@ -2493,6 +2493,108 @@ body {
   justify-content: center;
   margin-top: 0.6rem;
 }
+.curse-key-hint {
+  margin-top: 0.5rem;
+  font-size: 0.65rem;
+  color: #475569;
+  text-align: center;
+  font-family: 'Orbitron', monospace;
+}
+.curse-key-hint kbd {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.58rem;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: #94a3b8;
+}
+
+/* ─── 커스텀 게임 다이얼로그 ─── */
+.game-confirm-panel {
+  max-width: 380px;
+  width: 92%;
+  text-align: center;
+}
+.gc-icon {
+  font-size: 2rem;
+  margin-bottom: 0.4rem;
+  line-height: 1;
+}
+.gc-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.95rem;
+  color: #ff4466;
+  margin-bottom: 0.6rem;
+  letter-spacing: 1px;
+}
+.gc-msg {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+.gc-copy-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.gc-copy-text {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,240,255,0.2);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  padding: 0.5rem 0.7rem;
+  resize: none;
+  font-family: monospace;
+}
+.gc-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+.gc-key-hint {
+  font-size: 0.6rem;
+  color: #334155;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 0.5px;
+}
+.gc-key-hint kbd {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.55rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: #64748b;
+}
+
+/* 토스트 알림 */
+.game-toast {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(10,10,22,0.92);
+  border: 1px solid rgba(0,240,255,0.3);
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.72rem;
+  color: #e2e8f0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  white-space: nowrap;
+}
+.game-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 .neon-btn-red {
   border-color: #ff4466;
   color: #ff4466;

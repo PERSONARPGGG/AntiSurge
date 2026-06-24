@@ -4591,6 +4591,18 @@ window.addEventListener('keydown', e => {
       }
     }
   }
+  // 저주 계약 모달: Y=수락, N/ESC=거절
+  if (gameState === STATE_CURSE) {
+    if (e.key === 'y' || e.key === 'Y') {
+      e.preventDefault();
+      document.getElementById('curse-accept-btn')?.click(); return;
+    }
+    if (e.key === 'n' || e.key === 'N' || e.key === 'Escape') {
+      e.preventDefault();
+      document.getElementById('curse-decline-btn')?.click(); return;
+    }
+  }
+
   // R키: 레벨업 모달에서 리롤
   if (gameState === STATE_LEVEL_UP && (e.key === 'r' || e.key === 'R')) {
     e.preventDefault();
@@ -4690,6 +4702,9 @@ function showScreen(state) {
 }
 
 function startGame() {
+  // HUD 복원 (게임오버에서 hidden 처리한 것 되돌리기)
+  const _sHudEl = document.getElementById('hud');
+  if (_sHudEl) _sHudEl.style.visibility = '';
   showScreen(STATE_PLAYING);
 
   // 전체 리셋
@@ -4762,6 +4777,59 @@ function startGame() {
   lastTime = performance.now();
   gameLoopId = requestAnimationFrame(gameLoop);
 }
+
+// ============================================================
+// 22-A. 커스텀 UI 유틸리티 (native confirm/alert/prompt 대체)
+// ============================================================
+let _gcOkCb = null, _gcCancelCb = null;
+
+function showGameConfirm(msg, onOk, onCancel, opts = {}) {
+  const modal  = document.getElementById('game-confirm-modal');
+  const cancelBtn = document.getElementById('gc-cancel-btn');
+  document.getElementById('gc-icon').textContent  = opts.icon    || '⚠';
+  document.getElementById('gc-title').textContent = opts.title   || '확인';
+  document.getElementById('gc-msg').textContent   = msg;
+  document.getElementById('gc-ok-btn').textContent = opts.okLabel || '확인';
+  cancelBtn.textContent = opts.cancelLabel || '취소';
+  cancelBtn.style.display = opts.noCancel ? 'none' : '';
+  const copyBox = document.getElementById('gc-copy-box');
+  if (opts.copyText) {
+    document.getElementById('gc-copy-text').value = opts.copyText;
+    copyBox.style.display = 'flex';
+  } else { copyBox.style.display = 'none'; }
+  const hint = document.getElementById('gc-key-hint');
+  hint.style.display = opts.noCancel ? 'none' : '';
+  _gcOkCb = onOk || null;
+  _gcCancelCb = onCancel || null;
+  modal.classList.add('active');
+}
+function showGameAlert(msg, opts = {}) {
+  showGameConfirm(msg, null, null, { ...opts, noCancel: true, icon: opts.icon || '⚡', title: opts.title || '알림', okLabel: opts.okLabel || '확인' });
+}
+function showGameToast(msg, duration = 2200) {
+  const t = document.getElementById('game-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), duration);
+}
+function gcOk()     { document.getElementById('game-confirm-modal').classList.remove('active'); _gcOkCb?.();     _gcOkCb = _gcCancelCb = null; }
+function gcCancel() { document.getElementById('game-confirm-modal').classList.remove('active'); _gcCancelCb?.(); _gcOkCb = _gcCancelCb = null; }
+function gcCopyText() {
+  const ta = document.getElementById('gc-copy-text');
+  if (!ta) return;
+  ta.select(); document.execCommand('copy');
+  showGameToast('📋 클립보드에 복사되었습니다');
+  gcCancel();
+}
+// 커스텀 confirm/alert 모달 키보드 (Enter=OK, ESC=Cancel)
+window.addEventListener('keydown', e => {
+  const modal = document.getElementById('game-confirm-modal');
+  if (!modal?.classList.contains('active')) return;
+  if (e.key === 'Enter') { e.preventDefault(); gcOk(); }
+  if (e.key === 'Escape') { e.preventDefault(); gcCancel(); }
+}, true);
 
 // ============================================================
 // 22. 메인 게임 루프
@@ -5570,19 +5638,27 @@ function resumeGame() {
 }
 
 function goToMenu() {
-  if (!confirm('게임을 종료하고 메인 메뉴로 돌아가시겠습니까?')) return;
-  stopBGM();
-  if (gameLoopId) { cancelAnimationFrame(gameLoopId); gameLoopId = null; }
-  enemies.length = 0; projectiles.length = 0; activeBoss = null;
-  isDailyRun = false; mpSpectating = false;
-  const modal = document.getElementById('settings-modal');
-  if (modal) modal.classList.remove('active');
-  const ia = document.getElementById('settings-ingame-actions');
-  if (ia) ia.style.display = 'none';
-  gameState = STATE_MENU;
-  showScreen(STATE_MENU);
-  menuBgmStarted = false;
-  tryStartMenuBgm();
+  showGameConfirm(
+    '지금 게임을 종료하고 메인 메뉴로 돌아갑니다.\n진행 상황은 자동 저장됩니다.',
+    () => {
+      stopBGM();
+      if (gameLoopId) { cancelAnimationFrame(gameLoopId); gameLoopId = null; }
+      enemies.length = 0; projectiles.length = 0; activeBoss = null;
+      isDailyRun = false; mpSpectating = false;
+      const _modal = document.getElementById('settings-modal');
+      if (_modal) _modal.classList.remove('active');
+      const _ia = document.getElementById('settings-ingame-actions');
+      if (_ia) _ia.style.display = 'none';
+      const _hudEl2 = document.getElementById('hud');
+      if (_hudEl2) _hudEl2.style.visibility = '';
+      gameState = STATE_MENU;
+      showScreen(STATE_MENU);
+      menuBgmStarted = false;
+      tryStartMenuBgm();
+    },
+    null,
+    { title: '게임 종료', icon: '⚡', okLabel: '나가기', cancelLabel: '계속하기' }
+  );
 }
 
 function togglePause() {
@@ -5934,6 +6010,14 @@ function applyLegendaryUpgrade(id) {
 function endGame(isVictory) {
   gameState = STATE_GAME_OVER;
   stopBGM();
+  // 캔버스 클리어 (마지막 프레임의 미니맵/스코어보드가 뒤에 비치는 문제 방지)
+  if (typeof canvas !== 'undefined' && canvas) {
+    const _c2 = canvas.getContext('2d');
+    _c2.fillStyle = '#000007';
+    _c2.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  const _hudEl = document.getElementById('hud');
+  if (_hudEl) _hudEl.style.visibility = 'hidden';
   if (!isDailyRun) {
     _statAdd('totalKills', killCount);
     _statAdd('totalGamesPlayed', 1);
@@ -6133,9 +6217,9 @@ function shareResult() {
   } else if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(text).then(() => {
       if (btn) { btn.textContent = '✓ 클립보드 복사!'; setTimeout(() => { btn.textContent = '📤 결과 공유'; }, 2500); }
-    }).catch(() => { prompt('아래 텍스트를 복사하세요 (Ctrl+A → Ctrl+C):', text); });
+    }).catch(() => { showGameConfirm('', null, null, { title: '결과 공유', icon: '📤', noCancel: true, okLabel: '닫기', copyText: text }); });
   } else {
-    prompt('아래 텍스트를 복사하세요 (Ctrl+A → Ctrl+C):', text);
+    showGameConfirm('', null, null, { title: '결과 공유', icon: '📤', noCancel: true, okLabel: '닫기', copyText: text });
   }
 }
 
@@ -6242,11 +6326,17 @@ function devJumpStage() {
 }
 
 function devResetSave() {
-  if (!confirm('⚠ 모든 저장 데이터를 초기화합니까?\n(메타 업그레이드, 업적, 최고기록 전부 삭제)')) return;
-  localStorage.removeItem(SAVE_KEY);
-  saveData = loadSaveData();
-  updateMenuMetaBadge();
-  alert('저장 초기화 완료');
+  showGameConfirm(
+    '모든 저장 데이터를 초기화합니다.\n메타 업그레이드, 업적, 최고기록이 전부 삭제됩니다.',
+    () => {
+      localStorage.removeItem(SAVE_KEY);
+      saveData = loadSaveData();
+      updateMenuMetaBadge();
+      showGameToast('⚡ 저장 데이터가 초기화되었습니다');
+    },
+    null,
+    { title: '데이터 초기화', icon: '💀', okLabel: '전부 삭제', cancelLabel: '취소' }
+  );
 }
 
 // ============================================================
@@ -6520,7 +6610,7 @@ function mpSetupChannel() {
     myRef.set(playerData, err => {
       if (err) {
         console.error('[MP] Firebase 쓰기 실패:', err.message);
-        alert('Firebase 연결 실패: ' + err.message + '\n콘솔(F12)을 확인하세요.');
+        showGameToast('⚠ Firebase 연결 실패 (콘솔 확인)');
         mpUseFb = false;
       } else {
         console.log('[MP] Firebase 연결 성공 —', mpMyId, '→', _mpFbRoomPath());
@@ -6582,7 +6672,7 @@ function mpCreateRoom(mode) {
 
 function mpJoinFromInput() {
   const code = (document.getElementById('invite-code-input')?.value || '').trim().toUpperCase();
-  if (code.length !== 6) { alert('초대 코드는 6자리입니다.'); return; }
+  if (code.length !== 6) { showGameToast('⚠ 초대 코드는 6자리입니다'); return; }
   if (FIREBASE_CONFIG && typeof firebase !== 'undefined') {
     if (!_fbDb) _mpInitFirebase();
     if (_fbDb) {
@@ -6590,7 +6680,7 @@ function mpJoinFromInput() {
       roomRef.once('value', snap => {
         const room = snap.val() || {};
         const playerCount = room.players ? Object.keys(room.players).length : 0;
-        if (playerCount >= MP_MAX_PLAYERS) { alert(`방이 가득 찼습니다. (최대 ${MP_MAX_PLAYERS}명)`); return; }
+        if (playerCount >= MP_MAX_PLAYERS) { showGameToast(`⚠ 방이 가득 찼습니다 (최대 ${MP_MAX_PLAYERS}명)`); return; }
         mpGameMode = room.mode || 'coop';
         mpJoinRoom(code);
       });
@@ -6888,9 +6978,9 @@ function _initAuth() {
 }
 
 function signInGoogle() {
-  if (typeof firebase === 'undefined' || !firebase.auth) { alert('Firebase가 설정되지 않았습니다.'); return; }
+  if (typeof firebase === 'undefined' || !firebase.auth) { showGameToast('⚠ Firebase가 설정되지 않았습니다'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider).catch(e => { console.error('[AUTH]', e.message); alert('로그인 실패: ' + e.message); });
+  firebase.auth().signInWithPopup(provider).catch(e => { console.error('[AUTH]', e.message); showGameToast('⚠ 로그인 실패: ' + e.message); });
 }
 
 function signOutUser() {
