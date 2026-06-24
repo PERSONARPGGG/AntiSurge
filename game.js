@@ -191,10 +191,29 @@ const bgStars = Array.from({ length: 130 }, () => ({
   color:     Math.random() < 0.07 ? '#b026ff' : Math.random() < 0.1 ? '#ffe600' : '#00f0ff'
 }));
 let bgScanY = Math.random(); // 스캔 라인 위치 (0-1 normalized)
-let bgCurrentPlanetIdx = 0; // 현재 행성 인덱스 (보스 처치마다 증가)
-let bgPlanetCanvas = null;  // offscreen canvas
-let bgPlanetCtxOff = null;
-let bgPlanetDirty  = true;  // 행성 다시 그려야 할지
+
+// 배경 바이러스 오브젝트 (부유하는 거대 바이러스 실루엣)
+const BG_VIRUS_TYPES = ['spike', 'hexa', 'double'];
+const BG_VIRUS_COLORS = [
+  ['#00f0ff','rgba(0,240,255,0.08)'],
+  ['#b026ff','rgba(176,38,255,0.07)'],
+  ['#39ff14','rgba(57,255,20,0.06)'],
+  ['#ff4466','rgba(255,68,102,0.07)'],
+];
+const bgVirusObjs = Array.from({ length: 10 }, (_, i) => ({
+  xNorm:    Math.random(),
+  yNorm:    Math.random(),
+  size:     60 + Math.random() * 100,
+  vxNorm:   (Math.random() - 0.5) * 0.000012,
+  vyNorm:   (Math.random() - 0.5) * 0.000008,
+  rot:      Math.random() * Math.PI * 2,
+  rotSpeed: (Math.random() - 0.5) * 0.00018,
+  type:     BG_VIRUS_TYPES[i % 3],
+  colIdx:   i % 4,
+  alpha:    0.04 + Math.random() * 0.07,
+}));
+
+let obstacles = [];
 
 // ── 배경 테마 (스테이지별 자동 전환) ──────────────────────────
 const BG_THEMES = [
@@ -235,18 +254,6 @@ const BG_THEMES = [
   }
 ];
 
-const PLANET_DEFS = [
-  { name:'수성',   color:'#8c7853', glow:'rgba(140,120,80,0.35)',   ring:false, spots:true,  size:55 },
-  { name:'금성',   color:'#e8cda0', glow:'rgba(255,210,120,0.30)',  ring:false, spots:false, size:70 },
-  { name:'지구',   color:'#1a6db5', glow:'rgba(30,120,200,0.35)',   ring:false, spots:true,  size:68 },
-  { name:'화성',   color:'#c1440e', glow:'rgba(200,70,20,0.35)',    ring:false, spots:true,  size:52 },
-  { name:'목성',   color:'#c88b3a', glow:'rgba(200,140,60,0.35)',   ring:false, spots:true,  size:95 },
-  { name:'토성',   color:'#e4d191', glow:'rgba(220,210,140,0.30)',  ring:true,  spots:false, size:78 },
-  { name:'천왕성', color:'#7de8e8', glow:'rgba(100,220,220,0.32)',  ring:true,  spots:false, size:72 },
-  { name:'해왕성', color:'#3f54ba', glow:'rgba(60,80,220,0.35)',    ring:false, spots:false, size:70 },
-  { name:'명왕성', color:'#8a8078', glow:'rgba(130,120,110,0.28)',  ring:false, spots:true,  size:38 },
-  { name:'은하계', color:'#b026ff', glow:'rgba(176,38,255,0.40)',   ring:false, spots:false, size:0  },
-];
 
 function getCurrentBgTheme() {
   const s = (typeof currentStage !== 'undefined' && gameState !== STATE_MENU) ? currentStage : 1;
@@ -1262,7 +1269,7 @@ class Player {
       dx = touchDX; dy = touchDY;
     } else if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
 
-    let spd = this.speed * (this.surgeTimer > 0 ? 2.0 : 1.0);
+    let spd = this.speed * (this.surgeTimer > 0 ? 2.0 : 1.0) * (this._poolSpeedMult ?? 1.0);
     this.x += dx * spd * (dt / 16.66);
     this.y += dy * spd * (dt / 16.66);
     this.x = Math.max(this.radius, Math.min(MAP_WIDTH  - this.radius, this.x));
@@ -2720,6 +2727,148 @@ const BOSS_TYPES = [
   { id: 'titan',     label: 'TITAN',     outerColor: '#ffe600', innerColor: '#ffaa00', glowColor: '#ff8800' },
 ];
 
+// ============================================================
+// 장애물 시스템
+// ============================================================
+class FirewallWall {
+  constructor(x1, y1, x2, y2) {
+    this.x1 = x1; this.y1 = y1; this.x2 = x2; this.y2 = y2;
+    this.type = 'firewall'; this.color = '#00f0ff';
+    this.pulseT = Math.random() * Math.PI * 2; this.dead = false;
+  }
+  update(dt) { this.pulseT += dt * 0.003; }
+  draw(ctx, camera) {
+    const sx1 = this.x1 - camera.x, sy1 = this.y1 - camera.y;
+    const sx2 = this.x2 - camera.x, sy2 = this.y2 - camera.y;
+    const pulse = 0.6 + Math.sin(this.pulseT) * 0.3;
+    ctx.save();
+    ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+    ctx.strokeStyle = this.color; ctx.lineWidth = 3; ctx.globalAlpha = pulse;
+    ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2); ctx.stroke();
+    ctx.lineWidth = 1; ctx.globalAlpha = pulse * 0.4;
+    const dx = sx2-sx1, dy = sy2-sy1, len = Math.sqrt(dx*dx+dy*dy);
+    const nx = -dy/len*6, ny = dx/len*6;
+    const segs = Math.max(2, Math.floor(len / 40));
+    for (let i = 0; i <= segs; i++) {
+      const t = i/segs, mx = sx1+dx*t, my = sy1+dy*t;
+      ctx.beginPath(); ctx.moveTo(mx-nx, my-ny); ctx.lineTo(mx+nx, my+ny); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  collidesWithCircle(cx, cy, cr) {
+    const dx = this.x2-this.x1, dy = this.y2-this.y1, lenSq = dx*dx+dy*dy;
+    if (lenSq === 0) return false;
+    let t = Math.max(0, Math.min(1, ((cx-this.x1)*dx+(cy-this.y1)*dy)/lenSq));
+    return Math.sqrt((cx-this.x1-t*dx)**2+(cy-this.y1-t*dy)**2) < cr + 4;
+  }
+  pushOutVector(cx, cy, cr) {
+    const dx = this.x2-this.x1, dy = this.y2-this.y1, lenSq = dx*dx+dy*dy;
+    if (lenSq === 0) return {x:0,y:0};
+    let t = Math.max(0, Math.min(1, ((cx-this.x1)*dx+(cy-this.y1)*dy)/lenSq));
+    const nearX = this.x1+t*dx, nearY = this.y1+t*dy;
+    let pvx = cx-nearX, pvy = cy-nearY;
+    const d = Math.sqrt(pvx*pvx+pvy*pvy);
+    if (d === 0) { pvx = -dy/Math.sqrt(lenSq); pvy = dx/Math.sqrt(lenSq); return {x:pvx*(cr+5),y:pvy*(cr+5)}; }
+    return { x: pvx/d*(cr+5-d), y: pvy/d*(cr+5-d) };
+  }
+}
+
+class ElectricZone {
+  constructor(x, y, radius) {
+    this.x = x; this.y = y; this.radius = radius;
+    this.type = 'electric'; this.color = '#ffe600';
+    this.on = true; this.timer = 0;
+    this.ON_DUR  = 2200 + Math.random() * 800;
+    this.OFF_DUR = 900  + Math.random() * 400;
+    this.dmgTimer = 0; this.dead = false;
+  }
+  update(dt) {
+    this.timer += dt;
+    if (this.timer >= (this.on ? this.ON_DUR : this.OFF_DUR)) { this.timer = 0; this.on = !this.on; }
+    if (this.on && player) {
+      const dx = player.x-this.x, dy = player.y-this.y;
+      if (Math.sqrt(dx*dx+dy*dy) < this.radius + player.radius) {
+        this.dmgTimer += dt;
+        if (this.dmgTimer >= 400) {
+          this.dmgTimer = 0;
+          player.hp -= 4; player.flashTimer = 60;
+          if (player.hp <= 0) endGame(false);
+          addFloatingText(player.x, player.y-20, '-4 ⚡', '#ffe600', 11);
+        }
+      } else { this.dmgTimer = 0; }
+    }
+  }
+  draw(ctx, camera) {
+    if (!this.on && this.timer > this.OFF_DUR * 0.7) return;
+    const sx = this.x-camera.x, sy = this.y-camera.y;
+    const alpha = this.on ? (0.18+Math.sin(Date.now()*0.008)*0.08) : 0.05+(1-this.timer/this.OFF_DUR)*0.08;
+    ctx.save();
+    ctx.shadowBlur = this.on ? 18 : 4; ctx.shadowColor = this.color;
+    ctx.strokeStyle = this.color; ctx.lineWidth = 2; ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(sx, sy, this.radius, 0, Math.PI*2); ctx.stroke();
+    if (this.on) {
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 6; i++) {
+        const a = (i/6)*Math.PI*2+Date.now()*0.002;
+        ctx.beginPath();
+        ctx.moveTo(sx+Math.cos(a)*this.radius*0.6, sy+Math.sin(a)*this.radius*0.6);
+        ctx.lineTo(sx+Math.cos(a)*this.radius, sy+Math.sin(a)*this.radius);
+        ctx.stroke();
+      }
+    }
+    ctx.font = 'bold 8px Orbitron,monospace'; ctx.fillStyle = this.color;
+    ctx.textAlign = 'center'; ctx.globalAlpha = alpha*1.5;
+    ctx.fillText(this.on ? '⚡ ELECTRIC' : '[ OFF ]', sx, sy);
+    ctx.restore();
+  }
+}
+
+class VirusPool {
+  constructor(x, y, radius) {
+    this.x = x; this.y = y; this.radius = radius;
+    this.type = 'pool'; this.color = '#39ff14';
+    this.pulseT = Math.random()*Math.PI*2; this.dmgTimer = 0; this.dead = false;
+  }
+  update(dt) {
+    this.pulseT += dt*0.002;
+    const r = this.radius+Math.sin(this.pulseT)*8;
+    if (player) {
+      const dx = player.x-this.x, dy = player.y-this.y;
+      if (Math.sqrt(dx*dx+dy*dy) < r+player.radius) {
+        player._inVirusPool = true;
+        this.dmgTimer += dt;
+        if (this.dmgTimer >= 600) {
+          this.dmgTimer = 0;
+          player.hp -= 3; player.flashTimer = 40;
+          if (player.hp <= 0) endGame(false);
+          addFloatingText(player.x, player.y-20, '-3 ☣', '#39ff14', 10);
+        }
+      }
+    }
+  }
+  draw(ctx, camera) {
+    const sx = this.x-camera.x, sy = this.y-camera.y;
+    const r  = this.radius+Math.sin(this.pulseT)*8;
+    ctx.save();
+    ctx.shadowBlur = 8; ctx.shadowColor = this.color;
+    ctx.globalAlpha = 0.12+Math.sin(this.pulseT)*0.04;
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.4; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 0.15; ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const a = (i/4)*Math.PI*2+this.pulseT;
+      ctx.beginPath(); ctx.moveTo(sx, sy);
+      ctx.lineTo(sx+Math.cos(a)*r*0.7, sy+Math.sin(a)*r*0.7); ctx.stroke();
+    }
+    ctx.globalAlpha = 0.45; ctx.font = 'bold 7px Orbitron,monospace';
+    ctx.fillStyle = this.color; ctx.textAlign = 'center';
+    ctx.fillText('☣ POOL', sx, sy);
+    ctx.restore();
+  }
+}
+
 class Boss {
   constructor(x, y) {
     this.x = x; this.y = y;
@@ -3120,8 +3269,6 @@ class Boss {
     bossStageStartMs = 0;
     if (!this.isMini) {
       pendingBossCurse = true;
-      bgCurrentPlanetIdx = Math.min(bgCurrentPlanetIdx + 1, PLANET_DEFS.length - 1);
-      bgPlanetDirty = true;
     } else {
       for (let i = 0; i < 6; i++) {
         const ang = Math.random() * Math.PI * 2;
@@ -3463,6 +3610,7 @@ function triggerStageClear() {
     createExplosionParticles(e.x, e.y, e.color, 5);
   }
   enemies.length = 0;
+  obstacles.length = 0;
   projectiles.length = 0;
   mines.length = 0;
   blackHoles.length = 0;
@@ -3538,6 +3686,7 @@ function advanceToNextStage() {
     if (currentStage % 3 === 0 && currentStage > 3) {
       setTimeout(() => spawnEliteEnemy(), 2000);
     }
+    spawnStageObstacles();
   }
 }
 
@@ -3572,6 +3721,40 @@ function spawnMiniBoss() {
   showStageOverlay('⚡ MINI BOSS', miniBoss.name, '#b026ff');
   triggerScreenShake(8, 600);
   playSynthSound([150, 200, 250], 0.2, 'sawtooth', 0.1);
+}
+
+function spawnStageObstacles() {
+  obstacles.length = 0;
+  if (!player || currentStage < 3) return;
+  if (currentStage % 10 === 0 || currentStage % 10 === 5) return;
+  const numWalls = currentStage >= 30 ? 2 : currentStage >= 10 ? 1 : 0;
+  const numElec  = currentStage >= 50 ? 2 : currentStage >= 30 ? 1 : 0;
+  const numPools = currentStage >= 20 ? 1 : 0;
+  const safeR = 260, cx = player.x, cy = player.y;
+  function randMapPos() {
+    let x, y, tries = 0;
+    do {
+      x = 150 + Math.random() * (MAP_WIDTH  - 300);
+      y = 150 + Math.random() * (MAP_HEIGHT - 300);
+      tries++;
+    } while (Math.sqrt((x-cx)**2+(y-cy)**2) < safeR && tries < 20);
+    return {x, y};
+  }
+  for (let i = 0; i < numWalls; i++) {
+    const p = randMapPos(), angle = Math.random()*Math.PI, len = 150+Math.random()*180;
+    obstacles.push(new FirewallWall(
+      p.x+Math.cos(angle)*len/2, p.y+Math.sin(angle)*len/2,
+      p.x-Math.cos(angle)*len/2, p.y-Math.sin(angle)*len/2
+    ));
+  }
+  for (let i = 0; i < numElec; i++) {
+    const p = randMapPos();
+    obstacles.push(new ElectricZone(p.x, p.y, 55+Math.random()*35));
+  }
+  for (let i = 0; i < numPools; i++) {
+    const p = randMapPos();
+    obstacles.push(new VirusPool(p.x, p.y, 65+Math.random()*40));
+  }
 }
 
 // ============================================================
@@ -4108,79 +4291,66 @@ function checkCollisions() {
 // ============================================================
 // 20. 배경 + 맵 격자 렌더링
 // ============================================================
-function lightenColor(hex, amt) {
-  const n = parseInt(hex.replace('#',''), 16);
-  const r = Math.min(255, (n>>16)+amt), g = Math.min(255, ((n>>8)&0xff)+amt), b = Math.min(255, (n&0xff)+amt);
-  return `rgb(${r},${g},${b})`;
-}
-function darkenColor(hex, amt) {
-  const n = parseInt(hex.replace('#',''), 16);
-  const r = Math.max(0, (n>>16)-amt), g = Math.max(0, ((n>>8)&0xff)-amt), b = Math.max(0, (n&0xff)-amt);
-  return `rgb(${r},${g},${b})`;
-}
-
-function _buildPlanetCanvas(pd, w, h) {
-  if (!bgPlanetCanvas) {
-    bgPlanetCanvas = document.createElement('canvas');
-    bgPlanetCtxOff = bgPlanetCanvas.getContext('2d');
-  }
-  bgPlanetCanvas.width  = w;
-  bgPlanetCanvas.height = h;
-  const c = bgPlanetCtxOff;
-  c.clearRect(0, 0, w, h);
-  if (pd.size === 0) { bgPlanetDirty = false; return; }
-
-  const px = w * 0.82, py = h * 0.18, r = pd.size;
-
-  // 행성 글로우
-  const grd = c.createRadialGradient(px, py, 0, px, py, r * 2.2);
-  grd.addColorStop(0, pd.glow);
-  grd.addColorStop(1, 'rgba(0,0,0,0)');
-  c.fillStyle = grd; c.fillRect(0, 0, w, h);
-
-  // 행성 본체
-  const bGrd = c.createRadialGradient(px - r*0.25, py - r*0.25, 0, px, py, r);
-  bGrd.addColorStop(0, lightenColor(pd.color, 60));
-  bGrd.addColorStop(0.6, pd.color);
-  bGrd.addColorStop(1, darkenColor(pd.color, 60));
-  c.fillStyle = bGrd;
-  c.beginPath(); c.arc(px, py, r, 0, Math.PI*2); c.fill();
-
-  // 바이러스 패턴
-  if (pd.spots) {
-    c.save(); c.globalAlpha = 0.18;
-    for (let i = 0; i < 6; i++) {
-      const sx = px + (Math.sin(i*1.1)*0.55)*r;
-      const sy = py + (Math.cos(i*1.3)*0.45)*r;
-      const sr = r*(0.12+(i%3)*0.05);
-      c.fillStyle = '#39ff14';
-      c.beginPath(); c.arc(sx, sy, sr, 0, Math.PI*2); c.fill();
-      c.strokeStyle = '#39ff14'; c.lineWidth = 1;
-      for (let ti = 0; ti < 5; ti++) {
-        const ta = (ti/5)*Math.PI*2;
-        c.beginPath(); c.moveTo(sx, sy);
-        c.lineTo(sx+Math.cos(ta)*sr*1.4, sy+Math.sin(ta)*sr*1.4); c.stroke();
-      }
+function _drawBgVirus(ctx, x, y, size, rot, type, color, glowColor, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = glowColor;
+  ctx.strokeStyle = color;
+  ctx.fillStyle   = glowColor;
+  ctx.lineWidth   = 1.5;
+  if (type === 'spike') {
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.38, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const r1 = size * 0.38, r2 = size * 0.58, r3 = size * 0.48;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a - 0.18) * r1, Math.sin(a - 0.18) * r1);
+      ctx.lineTo(Math.cos(a) * r2,         Math.sin(a) * r2);
+      ctx.lineTo(Math.cos(a + 0.18) * r1, Math.sin(a + 0.18) * r1);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(Math.cos(a) * r3, Math.sin(a) * r3, size * 0.06, 0, Math.PI * 2);
+      ctx.fill();
     }
-    c.restore();
+  } else if (type === 'hexa') {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+      i === 0 ? ctx.moveTo(Math.cos(a)*size*0.5, Math.sin(a)*size*0.5)
+              : ctx.lineTo(Math.cos(a)*size*0.5, Math.sin(a)*size*0.5);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = alpha * 0.5;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+      i === 0 ? ctx.moveTo(Math.cos(a)*size*0.28, Math.sin(a)*size*0.28)
+              : ctx.lineTo(Math.cos(a)*size*0.28, Math.sin(a)*size*0.28);
+    }
+    ctx.closePath(); ctx.stroke();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a)*size*0.5, Math.sin(a)*size*0.5); ctx.stroke();
+    }
+  } else {
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.44, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = alpha * 0.45;
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.28, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.28, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a)*size*0.28, Math.sin(a)*size*0.28);
+      ctx.lineTo(Math.cos(a)*size*0.44, Math.sin(a)*size*0.44);
+      ctx.lineWidth = 3; ctx.stroke(); ctx.lineWidth = 1.5;
+    }
   }
-
-  // 링 (토성/천왕성)
-  if (pd.ring) {
-    c.save(); c.globalAlpha = 0.55;
-    c.strokeStyle = pd.color; c.lineWidth = 5;
-    c.beginPath(); c.ellipse(px, py, r*1.65, r*0.28, -0.22, 0, Math.PI*2); c.stroke();
-    c.globalAlpha = 0.25; c.lineWidth = 9;
-    c.beginPath(); c.ellipse(px, py, r*1.85, r*0.32, -0.22, 0, Math.PI*2); c.stroke();
-    c.restore();
-  }
-
-  // 행성 이름 라벨
-  c.font = 'bold 9px Orbitron, monospace';
-  c.fillStyle = pd.color; c.globalAlpha = 0.55; c.textAlign = 'right';
-  c.fillText('[ ' + pd.name.toUpperCase() + ' ]', px + r - 2, py + r + 14);
-  c.globalAlpha = 1;
-  bgPlanetDirty = false;
+  ctx.restore();
 }
 
 function drawBackground(ctx, w, h, dt) {
@@ -4197,12 +4367,22 @@ function drawBackground(ctx, w, h, dt) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
-  // 행성 (offscreen cache)
-  if (bgPlanetDirty) _buildPlanetCanvas(PLANET_DEFS[bgCurrentPlanetIdx], w, h);
-  if (bgPlanetCanvas) ctx.drawImage(bgPlanetCanvas, 0, 0);
+  // 배경 바이러스 오브젝트 (움직이는 반투명 실루엣)
+  const dtMs = (dt || 16.66);
+  for (const v of bgVirusObjs) {
+    v.xNorm += v.vxNorm * dtMs;
+    v.yNorm += v.vyNorm * dtMs;
+    v.rot   += v.rotSpeed * dtMs;
+    if (v.xNorm < -0.15) v.xNorm = 1.15;
+    if (v.xNorm >  1.15) v.xNorm = -0.15;
+    if (v.yNorm < -0.15) v.yNorm = 1.15;
+    if (v.yNorm >  1.15) v.yNorm = -0.15;
+    const [col, glow] = BG_VIRUS_COLORS[v.colIdx];
+    _drawBgVirus(ctx, v.xNorm * w, v.yNorm * h, v.size, v.rot, v.type, col, glow, v.alpha);
+  }
 
   // 흘러가는 별 입자 (색상 테마 적용)
-  const elapsed = (dt || 16.66) / 1000;
+  const elapsed = dtMs / 1000;
   for (const s of bgStars) {
     s.xNorm -= s.speedNorm * elapsed;
     if (s.xNorm < -0.01) { s.xNorm = 1.02 + Math.random() * 0.05; s.yNorm = Math.random(); }
@@ -4211,6 +4391,51 @@ function drawBackground(ctx, w, h, dt) {
     ctx.beginPath();
     ctx.arc(s.xNorm * w, s.yNorm * h, s.size, 0, Math.PI * 2);
     ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // 보스 어프로치 연출: 스테이지 사이클 3~9에서 배경에 보스 실루엣이 점점 다가옴
+  if (typeof currentStage !== 'undefined' && gameState !== STATE_MENU) {
+    const stageInCycle = currentStage % 10;
+    const progress = stageInCycle === 0 ? 0 : Math.max(0, (stageInCycle - 3) / 6);
+    if (progress > 0) {
+      const silhAlpha = progress * 0.11;
+      const silhSize  = progress * 130 + 30;
+      const silhX     = w * 0.88 - progress * w * 0.16;
+      const silhY     = h * 0.5;
+      const bossColArr = ['#00f0ff','#b026ff','#ff4466','#ff8800','#ffe600','#ff0044','#39ff14','#ffffff','#ff6600','#b026ff'];
+      const bCol = bossColArr[Math.floor(currentStage / 10) % bossColArr.length];
+      ctx.save();
+      ctx.globalAlpha = silhAlpha;
+      ctx.shadowBlur  = 28 * progress;
+      ctx.shadowColor = bCol;
+      ctx.strokeStyle = bCol;
+      ctx.fillStyle   = 'rgba(0,0,0,0.04)';
+      ctx.lineWidth   = 2;
+      ctx.beginPath(); ctx.arc(silhX, silhY, silhSize * 0.5, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      const numSpikes = 6 + (Math.floor(currentStage / 10) % 3) * 2;
+      const rotOffset = Date.now() * 0.0001;
+      for (let i = 0; i < numSpikes; i++) {
+        const a  = (i / numSpikes) * Math.PI * 2 + rotOffset;
+        const r1 = silhSize * 0.5, r2 = silhSize * 0.75;
+        ctx.beginPath();
+        ctx.moveTo(silhX + Math.cos(a - 0.2)*r1, silhY + Math.sin(a - 0.2)*r1);
+        ctx.lineTo(silhX + Math.cos(a)*r2,        silhY + Math.sin(a)*r2);
+        ctx.lineTo(silhX + Math.cos(a + 0.2)*r1, silhY + Math.sin(a + 0.2)*r1);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(silhX, silhY, silhSize * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = bCol; ctx.globalAlpha = silhAlpha * 3; ctx.fill();
+      if (progress > 0.55) {
+        const txtSize = Math.floor(progress * 11);
+        ctx.font = `bold ${txtSize}px Orbitron, monospace`;
+        ctx.fillStyle = bCol; ctx.globalAlpha = (progress - 0.55) * 0.45;
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠ BOSS INCOMING', silhX, silhY - silhSize * 0.6);
+      }
+      ctx.restore();
+    }
   }
   ctx.globalAlpha = 1;
 
@@ -4509,8 +4734,7 @@ function startGame() {
   endlessModeStartTime = 0;
   isStageClearAnim  = false;
   stageClearAnimStartMs = 0;
-  bgCurrentPlanetIdx = 0;
-  bgPlanetDirty      = true;
+  obstacles         = [];
   gameLoopId        = null;
   screenShake       = { x: 0, y: 0, intensity: 0, duration: 0 };
   comboCount = 0; comboTimer = 0; maxCombo = 0;
@@ -4705,6 +4929,23 @@ function update(dt) {
     if (blackHoles[i].dead) blackHoles.splice(i, 1);
   }
 
+  // 장애물 업데이트 + 충돌 처리
+  if (player) player._inVirusPool = false;
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    obstacles[i].update(dt);
+    if (obstacles[i].dead) obstacles.splice(i, 1);
+  }
+  if (player) {
+    for (const obs of obstacles) {
+      if (obs.type === 'firewall' && obs.collidesWithCircle(player.x, player.y, player.radius)) {
+        const push = obs.pushOutVector(player.x, player.y, player.radius);
+        player.x = Math.max(player.radius, Math.min(MAP_WIDTH  - player.radius, player.x + push.x));
+        player.y = Math.max(player.radius, Math.min(MAP_HEIGHT - player.radius, player.y + push.y));
+      }
+    }
+    player._poolSpeedMult = player._inVirusPool ? 0.55 : 1.0;
+  }
+
   // 적 스폰
   updateEnemySpawning(dt);
 
@@ -4815,6 +5056,7 @@ function draw(dt) {
   for (let p of projectiles) p.draw(ctx, camera);
   for (let bp of bossProjectiles) bp.draw(ctx, camera);
 
+  for (const obs of obstacles) obs.draw(ctx, camera);
   for (let e of enemies) e.draw(ctx, camera);
 
   if (activeBoss) activeBoss.draw(ctx, camera);
