@@ -274,10 +274,13 @@ let mpSyncTimer = 0;
 let mpMsgSeq    = 0;      // 메시지 중복 방지용
 const MP_SYNC_MS    = 120;
 const MP_COLORS     = ['#00f0ff','#b026ff','#39ff14','#ff4466','#ffe600','#ff8800'];
-const MP_MAX_PLAYERS = 3;
-const MP_AURA_RANGE  = 220;
-let mpAuraActive     = false;
-let mpGameStartTime  = 0;
+const MP_MAX_PLAYERS   = 3;
+const MP_AURA_RANGE    = 220;
+const MP_RESPAWN_DELAY = 30;
+let mpAuraActive       = false;
+let mpGameStartTime    = 0;
+let mpSpectating       = false;
+let mpRespawnTimer     = 0;
 
 // 오브젝트 상한 (멀티 대비 성능 캡)
 const MAX_ENEMIES        = 120;
@@ -1150,6 +1153,7 @@ class Player {
   }
 
   update(dt) {
+    if (mpSpectating) return;
     let dx = 0, dy = 0;
     if (keys['w'] || keys['W'] || keys['ArrowUp'])    dy -= 1;
     if (keys['s'] || keys['S'] || keys['ArrowDown'])  dy += 1;
@@ -1343,6 +1347,7 @@ class Player {
   }
 
   takeDamage(amount) {
+    if (mpSpectating) return;
     if (devGodMode) {
       addFloatingText(this.x, this.y - this.radius - 5, '♦GOD♦', '#39ff14', 9);
       return;
@@ -1407,7 +1412,11 @@ class Player {
         createExplosionParticles(this.x, this.y, '#39ff14', 15);
         return;
       }
-      endGame(false);
+      if (mpMode && _mpHasAliveTeammates()) {
+        mpEnterSpectator();
+      } else {
+        endGame(false);
+      }
     }
   }
 }
@@ -4125,7 +4134,7 @@ function startGame() {
 
   // 전체 리셋
   killCount = 0; gameTime = 0; timeAccumulator = 0;
-  if (mpMode) mpGameStartTime = Date.now();
+  if (mpMode) { mpGameStartTime = Date.now(); mpSpectating = false; mpRespawnTimer = 0; }
   enemies = []; projectiles = []; gems = []; particles = [];
   activeLasersArr = []; fieldItems = []; floatingTexts = [];
   bossProjectiles = [];
@@ -4240,9 +4249,22 @@ function update(dt) {
 
   player.update(dt);
 
-  // 카메라 추종
-  let targetCamX = player.x - camera.width  / 2;
-  let targetCamY = player.y - camera.height / 2;
+  // 스펙테이터 카운트다운
+  if (mpSpectating) {
+    mpRespawnTimer -= dt / 1000;
+    if (mpRespawnTimer <= 0) mpDoRespawn();
+  }
+
+  // 카메라 추종 (스펙테이터 시 팀원 위치 추종)
+  let targetCamX, targetCamY;
+  if (mpSpectating) {
+    const t = _mpGetSpectateTarget();
+    targetCamX = (t ? (t.renderX ?? t.x) : player.x) - camera.width  / 2;
+    targetCamY = (t ? (t.renderY ?? t.y) : player.y) - camera.height / 2;
+  } else {
+    targetCamX = player.x - camera.width  / 2;
+    targetCamY = player.y - camera.height / 2;
+  }
   camera.x += (targetCamX - camera.x) * 0.1;
   camera.y += (targetCamY - camera.y) * 0.1;
   camera.x = Math.max(0, Math.min(MAP_WIDTH  - camera.width,  camera.x));
@@ -4443,6 +4465,24 @@ function draw(dt) {
 
   // MP 스코어보드
   if (mpMode) drawMpScoreboard(ctx, canvas.width, canvas.height);
+
+  // 스펙테이터 오버레이
+  if (mpSpectating) {
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.52)';
+    ctx.fillRect(0, cy - 38, canvas.width, 76);
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 15px Orbitron, monospace';
+    ctx.shadowBlur = 14; ctx.shadowColor = '#ff4466';
+    ctx.fillStyle = '#ff4466';
+    ctx.fillText('💀 SPECTATING', cx, cy - 14);
+    ctx.shadowBlur = 0;
+    ctx.font = '12px Orbitron, monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`부활까지  ${Math.ceil(Math.max(0, mpRespawnTimer))}초`, cx, cy + 10);
+    ctx.restore();
+  }
 
   // 비네트 오버레이 (화면 가장자리 어둡게)
   drawVignette(ctx, canvas.width, canvas.height);
@@ -5789,6 +5829,10 @@ function mpSetupChannel() {
       for (const [id, p] of Object.entries(all)) {
         if (id === mpMyId) continue;
         mpPlayers[id] = { ...mpPlayers[id], ...p, lastUpdate: Date.now() };
+        // 공유 보스 HP 동기화 (팀원 보스 HP가 더 낮으면 반영)
+        if (p.bossHp !== undefined && p.bossHp >= 0 && activeBoss) {
+          if (p.bossHp < activeBoss.hp) activeBoss.hp = p.bossHp;
+        }
       }
       // 사라진 플레이어 제거
       for (const id in mpPlayers) {
@@ -5966,7 +6010,9 @@ function syncMpState(dt) {
     hp: player.hp, maxHp: player.maxHp,
     level: player.level, kills: killCount,
     color: mpMyColor, name: mpPlayers[mpMyId]?.name || 'ME',
-    ts: Date.now()
+    ts: Date.now(),
+    alive: !mpSpectating,
+    bossHp: activeBoss?.hp ?? -1
   };
   mpPlayers[mpMyId] = { ...state, lastUpdate: Date.now() };
 
@@ -5985,6 +6031,40 @@ function syncMpState(dt) {
         delete mpPlayers[id];
     }
   }
+}
+
+function _mpHasAliveTeammates() {
+  return Object.entries(mpPlayers).some(([id, p]) => id !== mpMyId && p.alive !== false);
+}
+
+function _mpGetSpectateTarget() {
+  for (const [id, p] of Object.entries(mpPlayers)) {
+    if (id !== mpMyId && p.alive !== false) return p;
+  }
+  return null;
+}
+
+function mpEnterSpectator() {
+  mpSpectating = true;
+  mpRespawnTimer = MP_RESPAWN_DELAY;
+  if (player) player.hp = player.maxHp; // 재사망 방지
+  const survMs = mpGameStartTime > 0 ? Date.now() - mpGameStartTime : 0;
+  if (_fbDb) _fbDb.ref(`${_mpFbRoomPath()}/players/${mpMyId}`).update({ alive: false, survivalMs: survMs });
+  addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 50, '💀 스펙테이터 모드', '#ff4466', 16);
+}
+
+function mpDoRespawn() {
+  mpSpectating = false;
+  mpRespawnTimer = 0;
+  if (!player) return;
+  const t = _mpGetSpectateTarget();
+  const ox = (Math.random() - 0.5) * 180, oy = (Math.random() - 0.5) * 180;
+  player.x = Math.max(100, Math.min(MAP_WIDTH  - 100, (t ? (t.renderX ?? t.x) : MAP_WIDTH  / 2) + ox));
+  player.y = Math.max(100, Math.min(MAP_HEIGHT - 100, (t ? (t.renderY ?? t.y) : MAP_HEIGHT / 2) + oy));
+  player.hp = Math.ceil(player.maxHp * 0.5);
+  if (_fbDb) _fbDb.ref(`${_mpFbRoomPath()}/players/${mpMyId}`).update({ alive: true });
+  addFloatingText(player.x, player.y - 50, '🔄 부활!', '#39ff14', 20);
+  createExplosionParticles(player.x, player.y, '#39ff14', 15);
 }
 
 function mpUpdateGhostPositions(dt) {
