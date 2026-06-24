@@ -250,19 +250,15 @@ let devLastFpsTs  = 0;
 let devCurrentFps = 60;
 
 // ─── 멀티플레이어 ───
-// Firebase 설정: Firebase Console → 프로젝트 설정 → 앱 추가(웹) → SDK 설정에서 복사
-// null 로 두면 BroadcastChannel(같은 기기 탭) 폴백 모드로 동작
-const FIREBASE_CONFIG = null;
-/* 예시:
 const FIREBASE_CONFIG = {
-  apiKey: "AIza...",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abc123"
+  apiKey: "AIzaSyB8dgoM3W4KaNde7TNMQqKtJITn4dep03c",
+  authDomain: "antisurge-c0463.firebaseapp.com",
+  databaseURL: "https://antisurge-c0463-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "antisurge-c0463",
+  storageBucket: "antisurge-c0463.firebasestorage.app",
+  messagingSenderId: "309752114290",
+  appId: "1:309752114290:web:a63a7bb5732a1fd00c66eb"
 };
-*/
 
 let mpMode      = false;
 let mpIsHost    = false;
