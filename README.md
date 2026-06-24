@@ -3,7 +3,7 @@
 사이버펑크 네온 스타일의 생존 액션 웹게임.  
 적을 처치하고, 무기를 진화시키고, 보스를 쓰러뜨려라.
 
-**🎮 플레이:** https://personarpggg.github.io/AntiSurge/
+**🎮 플레이:** https://antisurge-c0463.web.app
 
 ---
 
@@ -52,7 +52,7 @@
 - HTML5 Canvas 2D 렌더링
 - Web Audio API (BGM 실시간 신스 생성)
 - Firebase Realtime DB (멀티플레이어, 선택사항)
-- GitHub Pages 배포
+- Firebase Hosting 배포
 
 ---
 

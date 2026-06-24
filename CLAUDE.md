@@ -3,7 +3,7 @@
 ## 프로젝트 개요
 뱀파이어 서바이벌 스타일 웹게임. 사이버펑크 네온 테마. 단일 파일 스택 (HTML + CSS + JS).
 
-**배포:** https://personarpggg.github.io/AntiSurge/
+**배포:** https://antisurge-c0463.web.app
 **버전:** v0.09
 **레포:** https://github.com/PERSONARPGGG/AntiSurge.git
 
