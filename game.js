@@ -191,6 +191,10 @@ const bgStars = Array.from({ length: 130 }, () => ({
   color:     Math.random() < 0.07 ? '#b026ff' : Math.random() < 0.1 ? '#ffe600' : '#00f0ff'
 }));
 let bgScanY = Math.random(); // 스캔 라인 위치 (0-1 normalized)
+let bgCurrentPlanetIdx = 0; // 현재 행성 인덱스 (보스 처치마다 증가)
+let bgPlanetCanvas = null;  // offscreen canvas
+let bgPlanetCtxOff = null;
+let bgPlanetDirty  = true;  // 행성 다시 그려야 할지
 
 // ── 배경 테마 (스테이지별 자동 전환) ──────────────────────────
 const BG_THEMES = [
@@ -229,6 +233,19 @@ const BG_THEMES = [
     borderColor:'rgba(255,200,0,0.85)', borderGlow:'#ffe600',
     vignetteColor:'rgba(6,4,0,0.7)'
   }
+];
+
+const PLANET_DEFS = [
+  { name:'수성',   color:'#8c7853', glow:'rgba(140,120,80,0.35)',   ring:false, spots:true,  size:55 },
+  { name:'금성',   color:'#e8cda0', glow:'rgba(255,210,120,0.30)',  ring:false, spots:false, size:70 },
+  { name:'지구',   color:'#1a6db5', glow:'rgba(30,120,200,0.35)',   ring:false, spots:true,  size:68 },
+  { name:'화성',   color:'#c1440e', glow:'rgba(200,70,20,0.35)',    ring:false, spots:true,  size:52 },
+  { name:'목성',   color:'#c88b3a', glow:'rgba(200,140,60,0.35)',   ring:false, spots:true,  size:95 },
+  { name:'토성',   color:'#e4d191', glow:'rgba(220,210,140,0.30)',  ring:true,  spots:false, size:78 },
+  { name:'천왕성', color:'#7de8e8', glow:'rgba(100,220,220,0.32)',  ring:true,  spots:false, size:72 },
+  { name:'해왕성', color:'#3f54ba', glow:'rgba(60,80,220,0.35)',    ring:false, spots:false, size:70 },
+  { name:'명왕성', color:'#8a8078', glow:'rgba(130,120,110,0.28)',  ring:false, spots:true,  size:38 },
+  { name:'은하계', color:'#b026ff', glow:'rgba(176,38,255,0.40)',   ring:false, spots:false, size:0  },
 ];
 
 function getCurrentBgTheme() {
@@ -1369,29 +1386,48 @@ class Player {
 
   draw(ctx, camera) {
     ctx.save();
-    // 실드 활성화 시 추가 외곽 링
+    const bx = this.x - camera.x, by = this.y - camera.y;
+    const r  = this.radius;
+
+    // 실드 링
     if (this.shieldTimer > 0) {
-      ctx.shadowBlur  = 25;
-      ctx.shadowColor = '#00f0ff';
-      ctx.strokeStyle = '#00f0ff';
-      ctx.lineWidth   = 2;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.arc(this.x - camera.x, this.y - camera.y, this.radius + 10, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.shadowBlur=28; ctx.shadowColor='#00f0ff';
+      ctx.strokeStyle='#00f0ff'; ctx.lineWidth=2;
+      ctx.setLineDash([6,4]);
+      ctx.beginPath(); ctx.arc(bx, by, r+12, 0, Math.PI*2); ctx.stroke();
       ctx.setLineDash([]);
     }
-    ctx.shadowBlur  = 15;
-    ctx.shadowColor = this.color;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth   = 3;
+
+    // 외곽 글로우 링
+    ctx.shadowBlur=22; ctx.shadowColor=this.color;
+    ctx.strokeStyle=this.color; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI*2); ctx.stroke();
+
+    // 회전 마커 (4점)
+    const rot = (Date.now()*0.0015) % (Math.PI*2);
+    ctx.strokeStyle=this.color; ctx.lineWidth=2; ctx.shadowBlur=10;
+    for (let i=0;i<4;i++){
+      const a = rot + (i/4)*Math.PI*2;
+      const ix = bx+Math.cos(a)*(r+5), iy = by+Math.sin(a)*(r+5);
+      ctx.beginPath();
+      ctx.moveTo(ix+Math.cos(a)*4, iy+Math.sin(a)*4);
+      ctx.lineTo(ix-Math.cos(a)*4, iy-Math.sin(a)*4);
+      ctx.stroke();
+    }
+
+    // 내부 다이아몬드 코어
+    ctx.shadowBlur=18; ctx.shadowColor='#ffffff'; ctx.fillStyle='#ffffff';
     ctx.beginPath();
-    ctx.arc(this.x - camera.x, this.y - camera.y, this.radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(this.x - camera.x, this.y - camera.y, this.radius * 0.5, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(bx,      by-r*0.52);
+    ctx.lineTo(bx+r*0.38, by);
+    ctx.lineTo(bx,      by+r*0.52);
+    ctx.lineTo(bx-r*0.38, by);
+    ctx.closePath(); ctx.fill();
+
+    // 중심 도트
+    ctx.fillStyle=this.color; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(bx, by, r*0.18, 0, Math.PI*2); ctx.fill();
+
     ctx.restore();
 
     for (let key in this.weapons) {
@@ -2497,34 +2533,89 @@ class Enemy {
   }
 
   draw(ctx, camera) {
+    const bx = this.x - camera.x, by = this.y - camera.y;
+    const r  = this.radius;
+    const t  = this.type;
+    const fl = this.flashTimer > 0;
+    const col = fl ? '#ffffff' : this.color;
+
     ctx.save();
-    const showGlow = this.type === 'bruiser' || this.type === 'elite' || this.flashTimer > 0;
-    if (showGlow) { ctx.shadowBlur = this.isElite ? 18 : 10; ctx.shadowColor = this.color; }
-    ctx.fillStyle = this.flashTimer > 0 ? '#ffffff' : this.color;
-    ctx.beginPath();
-    ctx.arc(this.x - camera.x, this.y - camera.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = this.isElite ? '#ffaa00' : '#ffffff';
-    ctx.lineWidth = this.isElite ? 2 : 1; ctx.stroke();
-    // 엘리트: 외곽 링 + 이름
-    if (this.isElite) {
-      ctx.strokeStyle = 'rgba(255,102,0,0.4)'; ctx.lineWidth = 1;
-      ctx.setLineDash([3,3]);
+
+    if (t === 'swarm') {
+      // 육각형 (shadowBlur 없음 — 성능)
+      ctx.fillStyle = col;
+      ctx.strokeStyle = fl ? '#ffffff' : '#39ff14';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(this.x - camera.x, this.y - camera.y, this.radius + 7, 0, Math.PI * 2);
-      ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const a = (i/6)*Math.PI*2 - Math.PI/6;
+        i === 0 ? ctx.moveTo(bx+Math.cos(a)*r, by+Math.sin(a)*r)
+                : ctx.lineTo(bx+Math.cos(a)*r, by+Math.sin(a)*r);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (this.hp < this.maxHp && this.hp > 0) {
+        const bw=r*1.6, bh=2;
+        ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(bx-bw/2, by-r-6, bw, bh);
+        ctx.fillStyle='#00ff66';          ctx.fillRect(bx-bw/2, by-r-6, bw*(this.hp/this.maxHp), bh);
+      }
+    } else if (t === 'rusher') {
+      // 뾰족 삼각형
+      ctx.shadowBlur=8; ctx.shadowColor=col;
+      ctx.fillStyle=col; ctx.strokeStyle='#ffffff'; ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(bx,    by-r*1.3);
+      ctx.lineTo(bx-r,  by+r*0.8);
+      ctx.lineTo(bx+r,  by+r*0.8);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.shadowBlur=4; ctx.fillStyle='#ffffff';
+      ctx.beginPath(); ctx.arc(bx, by+r*0.1, r*0.22, 0, Math.PI*2); ctx.fill();
+    } else if (t === 'bruiser') {
+      // 팔각형 + 스파이크
+      ctx.shadowBlur=14; ctx.shadowColor=col;
+      ctx.fillStyle=col; ctx.strokeStyle='#ffffff'; ctx.lineWidth=1.5;
+      ctx.beginPath();
+      for (let i=0;i<8;i++){
+        const a=(i/8)*Math.PI*2-Math.PI/8;
+        i===0?ctx.moveTo(bx+Math.cos(a)*r, by+Math.sin(a)*r)
+             :ctx.lineTo(bx+Math.cos(a)*r, by+Math.sin(a)*r);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle=col; ctx.lineWidth=2;
+      for(let i=0;i<4;i++){
+        const a=(i/4)*Math.PI*2;
+        ctx.beginPath();
+        ctx.moveTo(bx+Math.cos(a)*r, by+Math.sin(a)*r);
+        ctx.lineTo(bx+Math.cos(a)*(r+8), by+Math.sin(a)*(r+8));
+        ctx.stroke();
+      }
+      if (this.hp < this.maxHp) {
+        const bw=r*1.6, bh=3;
+        ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(bx-bw/2, by-r-8, bw, bh);
+        ctx.fillStyle='#ff007f';         ctx.fillRect(bx-bw/2, by-r-8, bw*(this.hp/this.maxHp), bh);
+      }
+    } else {
+      // elite: 다이아몬드 + 점선 링
+      ctx.shadowBlur=20; ctx.shadowColor='#ff6600';
+      ctx.fillStyle=fl?'#ffffff':'#ff6600'; ctx.strokeStyle='#ffaa00'; ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(bx,    by-r*1.35);
+      ctx.lineTo(bx+r,  by);
+      ctx.lineTo(bx,    by+r*1.35);
+      ctx.lineTo(bx-r,  by);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle='rgba(255,102,0,0.45)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.arc(bx, by, r+7, 0, Math.PI*2); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#ffaa00'; ctx.font = 'bold 7px Orbitron, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(this.eliteName, this.x - camera.x, this.y - camera.y - this.radius - 12);
+      ctx.font='bold 7px Orbitron,monospace'; ctx.fillStyle='#ffaa00';
+      ctx.textAlign='center'; ctx.shadowBlur=4;
+      ctx.fillText(this.eliteName||'ELITE', bx, by-r-13);
+      if (this.hp < this.maxHp) {
+        const bw=r*1.6, bh=3;
+        ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(bx-bw/2, by-r-8, bw, bh);
+        ctx.fillStyle='#ff6600';         ctx.fillRect(bx-bw/2, by-r-8, bw*(this.hp/this.maxHp), bh);
+      }
     }
-    if (this.hp < this.maxHp && this.hp > 0) {
-      let bw = this.radius * 1.6, bh = 3;
-      let bx = this.x - camera.x - bw/2, by = this.y - camera.y - this.radius - 8;
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = this.isElite ? '#ff6600' : '#ff0000';
-      ctx.fillRect(bx, by, bw * (this.hp / this.maxHp), bh);
-    }
+
     ctx.restore();
   }
 
@@ -3029,6 +3120,8 @@ class Boss {
     bossStageStartMs = 0;
     if (!this.isMini) {
       pendingBossCurse = true;
+      bgCurrentPlanetIdx = Math.min(bgCurrentPlanetIdx + 1, PLANET_DEFS.length - 1);
+      bgPlanetDirty = true;
     } else {
       for (let i = 0; i < 6; i++) {
         const ang = Math.random() * Math.PI * 2;
@@ -3462,7 +3555,11 @@ function spawnMiniBoss() {
   if (!player) return;
   // 상점/일시정지/레벨업 중이면 재시도 (isBossStage가 true인 채로 갇히는 버그 방지)
   if (gameState !== STATE_PLAYING) { setTimeout(() => spawnMiniBoss(), 500); return; }
-  const miniBoss = new Boss();
+  // x,y 없이 생성하면 NaN → 화면 밖. 플레이어 근처에 스폰
+  const _ang = Math.random() * Math.PI * 2;
+  const _bx  = Math.max(80, Math.min(MAP_WIDTH  - 80, player.x + Math.cos(_ang) * 380));
+  const _by  = Math.max(80, Math.min(MAP_HEIGHT - 80, player.y + Math.sin(_ang) * 380));
+  const miniBoss = new Boss(_bx, _by);
   miniBoss.maxHp  = Math.floor(miniBoss.maxHp * 0.40);
   miniBoss.hp     = miniBoss.maxHp;
   miniBoss.radius = Math.floor(miniBoss.radius * 0.75);
@@ -4011,6 +4108,81 @@ function checkCollisions() {
 // ============================================================
 // 20. 배경 + 맵 격자 렌더링
 // ============================================================
+function lightenColor(hex, amt) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, (n>>16)+amt), g = Math.min(255, ((n>>8)&0xff)+amt), b = Math.min(255, (n&0xff)+amt);
+  return `rgb(${r},${g},${b})`;
+}
+function darkenColor(hex, amt) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.max(0, (n>>16)-amt), g = Math.max(0, ((n>>8)&0xff)-amt), b = Math.max(0, (n&0xff)-amt);
+  return `rgb(${r},${g},${b})`;
+}
+
+function _buildPlanetCanvas(pd, w, h) {
+  if (!bgPlanetCanvas) {
+    bgPlanetCanvas = document.createElement('canvas');
+    bgPlanetCtxOff = bgPlanetCanvas.getContext('2d');
+  }
+  bgPlanetCanvas.width  = w;
+  bgPlanetCanvas.height = h;
+  const c = bgPlanetCtxOff;
+  c.clearRect(0, 0, w, h);
+  if (pd.size === 0) { bgPlanetDirty = false; return; }
+
+  const px = w * 0.82, py = h * 0.18, r = pd.size;
+
+  // 행성 글로우
+  const grd = c.createRadialGradient(px, py, 0, px, py, r * 2.2);
+  grd.addColorStop(0, pd.glow);
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = grd; c.fillRect(0, 0, w, h);
+
+  // 행성 본체
+  const bGrd = c.createRadialGradient(px - r*0.25, py - r*0.25, 0, px, py, r);
+  bGrd.addColorStop(0, lightenColor(pd.color, 60));
+  bGrd.addColorStop(0.6, pd.color);
+  bGrd.addColorStop(1, darkenColor(pd.color, 60));
+  c.fillStyle = bGrd;
+  c.beginPath(); c.arc(px, py, r, 0, Math.PI*2); c.fill();
+
+  // 바이러스 패턴
+  if (pd.spots) {
+    c.save(); c.globalAlpha = 0.18;
+    for (let i = 0; i < 6; i++) {
+      const sx = px + (Math.sin(i*1.1)*0.55)*r;
+      const sy = py + (Math.cos(i*1.3)*0.45)*r;
+      const sr = r*(0.12+(i%3)*0.05);
+      c.fillStyle = '#39ff14';
+      c.beginPath(); c.arc(sx, sy, sr, 0, Math.PI*2); c.fill();
+      c.strokeStyle = '#39ff14'; c.lineWidth = 1;
+      for (let ti = 0; ti < 5; ti++) {
+        const ta = (ti/5)*Math.PI*2;
+        c.beginPath(); c.moveTo(sx, sy);
+        c.lineTo(sx+Math.cos(ta)*sr*1.4, sy+Math.sin(ta)*sr*1.4); c.stroke();
+      }
+    }
+    c.restore();
+  }
+
+  // 링 (토성/천왕성)
+  if (pd.ring) {
+    c.save(); c.globalAlpha = 0.55;
+    c.strokeStyle = pd.color; c.lineWidth = 5;
+    c.beginPath(); c.ellipse(px, py, r*1.65, r*0.28, -0.22, 0, Math.PI*2); c.stroke();
+    c.globalAlpha = 0.25; c.lineWidth = 9;
+    c.beginPath(); c.ellipse(px, py, r*1.85, r*0.32, -0.22, 0, Math.PI*2); c.stroke();
+    c.restore();
+  }
+
+  // 행성 이름 라벨
+  c.font = 'bold 9px Orbitron, monospace';
+  c.fillStyle = pd.color; c.globalAlpha = 0.55; c.textAlign = 'right';
+  c.fillText('[ ' + pd.name.toUpperCase() + ' ]', px + r - 2, py + r + 14);
+  c.globalAlpha = 1;
+  bgPlanetDirty = false;
+}
+
 function drawBackground(ctx, w, h, dt) {
   const th = getCurrentBgTheme();
 
@@ -4024,6 +4196,10 @@ function drawBackground(ctx, w, h, dt) {
   grad.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
+
+  // 행성 (offscreen cache)
+  if (bgPlanetDirty) _buildPlanetCanvas(PLANET_DEFS[bgCurrentPlanetIdx], w, h);
+  if (bgPlanetCanvas) ctx.drawImage(bgPlanetCanvas, 0, 0);
 
   // 흘러가는 별 입자 (색상 테마 적용)
   const elapsed = (dt || 16.66) / 1000;
@@ -4333,6 +4509,8 @@ function startGame() {
   endlessModeStartTime = 0;
   isStageClearAnim  = false;
   stageClearAnimStartMs = 0;
+  bgCurrentPlanetIdx = 0;
+  bgPlanetDirty      = true;
   gameLoopId        = null;
   screenShake       = { x: 0, y: 0, intensity: 0, duration: 0 };
   comboCount = 0; comboTimer = 0; maxCombo = 0;
@@ -6704,7 +6882,26 @@ function drawMultiplayerGhosts(ctx, camera) {
     if (id === mpMyId) continue;
     const sx = (p.renderX ?? p.x) - camera.x;
     const sy = (p.renderY ?? p.y) - camera.y;
-    if (sx < -60 || sy < -60 || sx > canvas.width + 60 || sy > canvas.height + 60) continue;
+    const offscreen = sx < -60 || sy < -60 || sx > canvas.width + 60 || sy > canvas.height + 60;
+    if (offscreen) {
+      const angle = Math.atan2(sy - canvas.height/2, sx - canvas.width/2);
+      const margin = 28;
+      const ax = canvas.width/2  + Math.cos(angle)*(Math.min(canvas.width/2, canvas.height/2)-margin);
+      const ay = canvas.height/2 + Math.sin(angle)*(Math.min(canvas.width/2, canvas.height/2)-margin);
+      ctx.save();
+      ctx.translate(ax, ay); ctx.rotate(angle);
+      ctx.fillStyle=p.color; ctx.globalAlpha=0.85;
+      ctx.shadowBlur=8; ctx.shadowColor=p.color;
+      ctx.beginPath();
+      ctx.moveTo(12,0); ctx.lineTo(-8,-7); ctx.lineTo(-8,7);
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha=1; ctx.shadowBlur=0;
+      ctx.font='bold 8px Orbitron,monospace';
+      ctx.fillStyle=p.color; ctx.textAlign='center';
+      ctx.fillText((p.name||'P').slice(0,6), 0, -10);
+      ctx.restore();
+      continue;
+    }
     ctx.save();
     ctx.globalAlpha = 0.75;
     ctx.beginPath();
