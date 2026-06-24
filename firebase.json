@@ -5,6 +5,9 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      { "source": "/favicon.ico", "destination": "/icon-192.png" }
     ]
   }
 }

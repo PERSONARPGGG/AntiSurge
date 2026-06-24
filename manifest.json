@@ -1,6 +1,6 @@
 {
-  "name": "네온 서바이버즈",
-  "short_name": "NeonSurvivors",
+  "name": "AntiSurge",
+  "short_name": "AntiSurge",
   "description": "사이버펑크 네온 스타일 2D 생존 게임",
   "start_url": "./",
   "scope": "./",
