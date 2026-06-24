@@ -1,0 +1,56 @@
+# =============================================
+# AntiSurge — .gitignore
+# =============================================
+
+# ── 민감한 정보 (절대 커밋 금지) ──────────────
+# Firebase 설정을 별도 파일로 분리할 경우
+firebase-config.js
+firebase-config.local.js
+
+# 환경 변수 / 시크릿
+.env
+.env.local
+.env.*.local
+secrets.js
+secrets.json
+
+# GitHub 토큰, API 키 메모
+*.token
+token.txt
+api-key.txt
+
+# ── 배포 스크립트 로컬 오버라이드 ──────────────
+deploy.local.sh
+
+# ── OS 자동 생성 파일 ──────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ── 에디터 / IDE ───────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+
+# ── 로그 / 임시 파일 ──────────────────────────
+*.log
+*.tmp
+*.bak
+
+# ── 대화 기록 (개발 중 임시 파일) ─────────────
+conversation-*.txt
+
+# ── 노드 (향후 빌드 도구 추가 시) ─────────────
+node_modules/
+npm-debug.log*
