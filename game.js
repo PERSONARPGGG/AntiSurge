@@ -277,10 +277,13 @@ const MP_COLORS     = ['#00f0ff','#b026ff','#39ff14','#ff4466','#ffe600','#ff880
 const MP_MAX_PLAYERS   = 3;
 const MP_AURA_RANGE    = 220;
 const MP_RESPAWN_DELAY = 30;
+const MP_SABOTAGE_CD   = 30000;
 let mpAuraActive       = false;
 let mpGameStartTime    = 0;
 let mpSpectating       = false;
 let mpRespawnTimer     = 0;
+let mpGameMode         = 'coop'; // 'coop' | 'battle'
+let mpSabotageTimer    = 0;
 
 // 오브젝트 상한 (멀티 대비 성능 캡)
 const MAX_ENEMIES        = 120;
@@ -4082,6 +4085,7 @@ window.addEventListener('keydown', e => {
   keys[e.key] = true;
   if (e.key === 'm' || e.key === 'M') toggleBGM();
   if ((e.key === 'q' || e.key === 'Q') && (gameState === STATE_PLAYING || gameState === STATE_STAGE_CLEAR)) useActiveSkill();
+  if ((e.key === 'e' || e.key === 'E') && gameState === STATE_PLAYING && mpMode && mpGameMode === 'battle' && !mpSpectating) mpTriggerSabotage();
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
@@ -4249,10 +4253,15 @@ function update(dt) {
 
   player.update(dt);
 
-  // 스펙테이터 카운트다운
-  if (mpSpectating) {
+  // 스펙테이터 카운트다운 (협동 모드만 부활)
+  if (mpSpectating && mpGameMode === 'coop') {
     mpRespawnTimer -= dt / 1000;
     if (mpRespawnTimer <= 0) mpDoRespawn();
+  }
+
+  // 방해 스킬 쿨다운
+  if (mpMode && mpGameMode === 'battle' && mpSabotageTimer > 0) {
+    mpSabotageTimer -= dt;
   }
 
   // 카메라 추종 (스펙테이터 시 팀원 위치 추종)
@@ -4466,6 +4475,26 @@ function draw(dt) {
   // MP 스코어보드
   if (mpMode) drawMpScoreboard(ctx, canvas.width, canvas.height);
 
+  // 배틀 모드 방해 스킬 버튼 (E키)
+  if (mpMode && mpGameMode === 'battle' && !mpSpectating) {
+    const bx = canvas.width - 70, by = canvas.height - 70;
+    const ready = mpSabotageTimer <= 0;
+    ctx.save();
+    ctx.globalAlpha = ready ? 1 : 0.55;
+    ctx.fillStyle = ready ? 'rgba(255,68,102,0.18)' : 'rgba(40,40,40,0.5)';
+    ctx.strokeStyle = ready ? '#ff4466' : '#555';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(bx - 28, by - 28, 56, 56, 8); ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.font = '22px monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('💀', bx, by + 8);
+    ctx.font = 'bold 9px Orbitron, monospace';
+    ctx.fillStyle = ready ? '#ff4466' : '#888';
+    ctx.fillText(ready ? '[E] 방해' : `${Math.ceil(mpSabotageTimer/1000)}s`, bx, by + 24);
+    ctx.restore();
+  }
+
   // 스펙테이터 오버레이
   if (mpSpectating) {
     const cx = canvas.width / 2, cy = canvas.height / 2;
@@ -4476,11 +4505,15 @@ function draw(dt) {
     ctx.font = 'bold 15px Orbitron, monospace';
     ctx.shadowBlur = 14; ctx.shadowColor = '#ff4466';
     ctx.fillStyle = '#ff4466';
-    ctx.fillText('💀 SPECTATING', cx, cy - 14);
+    ctx.fillText(mpGameMode === 'battle' ? '💀 ELIMINATED' : '💀 SPECTATING', cx, cy - 14);
     ctx.shadowBlur = 0;
     ctx.font = '12px Orbitron, monospace';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`부활까지  ${Math.ceil(Math.max(0, mpRespawnTimer))}초`, cx, cy + 10);
+    if (mpGameMode === 'battle') {
+      ctx.fillText('관전 중 — 팀원을 응원하세요!', cx, cy + 10);
+    } else {
+      ctx.fillText(`부활까지  ${Math.ceil(Math.max(0, mpRespawnTimer))}초`, cx, cy + 10);
+    }
     ctx.restore();
   }
 
@@ -5809,7 +5842,10 @@ function mpSetupChannel() {
 
     // 연결 끊기면 자동 삭제
     myRef.onDisconnect().remove();
-    if (mpIsHost) roomRef.onDisconnect().remove();
+    if (mpIsHost) {
+      roomRef.onDisconnect().remove();
+      roomRef.child('mode').set(mpGameMode);
+    }
 
     myRef.set(playerData, err => {
       if (err) {
@@ -5864,7 +5900,8 @@ function mpSetupChannel() {
 }
 
 // ── 방 생성 / 참가 ───────────────────────────────────────────
-function mpCreateRoom() {
+function mpCreateRoom(mode) {
+  mpGameMode = mode || 'coop';
   mpRoomCode = mpGenCode();
   mpMyId     = 'H_' + Date.now().toString(36);
   mpIsHost   = true;
@@ -5879,8 +5916,12 @@ function mpJoinFromInput() {
   if (FIREBASE_CONFIG && typeof firebase !== 'undefined') {
     if (!_fbDb) _mpInitFirebase();
     if (_fbDb) {
-      _fbDb.ref(`neon_rooms/${code}/players`).once('value', snap => {
-        if (snap.numChildren() >= MP_MAX_PLAYERS) { alert(`방이 가득 찼습니다. (최대 ${MP_MAX_PLAYERS}명)`); return; }
+      const roomRef = _fbDb.ref(`neon_rooms/${code}`);
+      roomRef.once('value', snap => {
+        const room = snap.val() || {};
+        const playerCount = room.players ? Object.keys(room.players).length : 0;
+        if (playerCount >= MP_MAX_PLAYERS) { alert(`방이 가득 찼습니다. (최대 ${MP_MAX_PLAYERS}명)`); return; }
+        mpGameMode = room.mode || 'coop';
         mpJoinRoom(code);
       });
       return;
@@ -5928,10 +5969,26 @@ function _mpHandleMsg(msg) {
 // ── 게임 이벤트 처리 (공통) ──────────────────────────────────
 function _mpHandleEvent(msg) {
   if (msg.type === 'start') {
-    if (!mpIsHost) { closeInviteModal(); startGame(); }
+    if (!mpIsHost) {
+      if (msg.mode) mpGameMode = msg.mode;
+      closeInviteModal();
+      startGame();
+    }
   } else if (msg.type === 'leave') {
     delete mpPlayers[msg.id || msg.senderId];
     mpUpdatePlayerList();
+  } else if (msg.type === 'sabotage') {
+    _mpApplySabotage(msg.sabotageType, msg.curseIdx);
+  } else if (msg.type === 'eliminated') {
+    const id = msg.senderId || msg.id;
+    if (mpPlayers[id]) mpPlayers[id].alive = false;
+    if (mpGameMode === 'battle' && !mpSpectating) {
+      const anyAliveEnemy = Object.entries(mpPlayers).some(([pid, p]) => pid !== mpMyId && p.alive !== false);
+      if (!anyAliveEnemy) _mpShowBattleWin();
+    }
+  } else if (msg.type === 'battle_win') {
+    addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 80,
+      `🏆 ${msg.name || '?'} 최후 생존자!`, '#ffe600', 20);
   }
 }
 
@@ -5952,9 +6009,13 @@ function _mpShowRoom() {
   document.getElementById('invite-room').style.display  = 'block';
   document.getElementById('room-code-text').textContent = mpRoomCode;
   const desc = document.getElementById('mp-room-desc');
-  if (desc) desc.textContent = mpUseFb
+  const modeLabel = mpGameMode === 'battle' ? '⚔ 경쟁 (배틀로얄)' : '🤝 협동';
+  if (desc) desc.textContent = (mpUseFb
     ? '📱 다른 기기에서 이 코드로 참가하세요.'
-    : '🖥 같은 기기의 다른 탭에서 이 코드로 참가하세요.';
+    : '🖥 같은 기기의 다른 탭에서 이 코드로 참가하세요.')
+    + `  |  ${modeLabel}`;
+  const modeEl = document.getElementById('mp-game-mode-badge');
+  if (modeEl) { modeEl.textContent = modeLabel; modeEl.style.color = mpGameMode === 'battle' ? '#ff4466' : '#39ff14'; }
   mpUpdatePlayerList();
 }
 
@@ -5973,7 +6034,7 @@ function mpUpdatePlayerList() {
 
 function mpStartGame() {
   if (!mpIsHost) return;
-  mpBroadcast({ type: 'start', id: mpMyId });
+  mpBroadcast({ type: 'start', id: mpMyId, mode: mpGameMode });
   closeInviteModal();
   startGame();
 }
@@ -6044,13 +6105,62 @@ function _mpGetSpectateTarget() {
   return null;
 }
 
+function _mpCountAlive() {
+  return Object.values(mpPlayers).filter(p => p.alive !== false).length;
+}
+
+function mpTriggerSabotage() {
+  if (!player || mpSabotageTimer > 0) return;
+  const types = ['curse', 'boss_buff'];
+  const sabotageType = types[Math.floor(Math.random() * types.length)];
+  const curseIdx = sabotageType === 'curse' ? Math.floor(Math.random() * CURSE_DEFS.length) : -1;
+  mpBroadcast({ type: 'sabotage', sabotageType, curseIdx });
+  mpSabotageTimer = MP_SABOTAGE_CD;
+  const label = sabotageType === 'curse' ? '💀 저주 발송!' : '👿 보스 강화 발동!';
+  addFloatingText(player.x, player.y - 60, label, '#ff4466', 14);
+}
+
+function _mpApplySabotage(sabotageType, curseIdx) {
+  if (!player) return;
+  if (sabotageType === 'curse') {
+    const curse = CURSE_DEFS[curseIdx ?? 0];
+    if (curse) {
+      curse.debuffFn(player);
+      addFloatingText(player.x, player.y - 60, `⚠ 저주: ${curse.debuff}!`, '#ff4466', 14);
+    }
+  } else if (sabotageType === 'boss_buff') {
+    if (activeBoss) {
+      activeBoss.hp = Math.min(activeBoss.maxHp, activeBoss.hp * 1.25);
+      if (activeBoss.speed) activeBoss.speed *= 1.15;
+      addFloatingText(activeBoss.x, activeBoss.y - 60, '👿 BOSS BUFFED!', '#ff4466', 16);
+    } else {
+      addFloatingText(player.x, player.y - 60, '👿 보스 강화 예약됨!', '#ff8800', 14);
+    }
+  }
+}
+
+function _mpShowBattleWin() {
+  const myName = mpPlayers[mpMyId]?.name || 'ME';
+  mpBroadcast({ type: 'battle_win', name: myName });
+  addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 80,
+    '🏆 최후 생존자!', '#ffe600', 24);
+  setTimeout(() => endGame(true), 3000);
+}
+
 function mpEnterSpectator() {
   mpSpectating = true;
-  mpRespawnTimer = MP_RESPAWN_DELAY;
-  if (player) player.hp = player.maxHp; // 재사망 방지
+  if (player) player.hp = player.maxHp;
   const survMs = mpGameStartTime > 0 ? Date.now() - mpGameStartTime : 0;
   if (_fbDb) _fbDb.ref(`${_mpFbRoomPath()}/players/${mpMyId}`).update({ alive: false, survivalMs: survMs });
-  addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 50, '💀 스펙테이터 모드', '#ff4466', 16);
+
+  if (mpGameMode === 'battle') {
+    mpRespawnTimer = -1; // 부활 없음
+    mpBroadcast({ type: 'eliminated', id: mpMyId });
+    addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 50, '💀 탈락!', '#ff4466', 20);
+  } else {
+    mpRespawnTimer = MP_RESPAWN_DELAY;
+    addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 50, '💀 스펙테이터 모드', '#ff4466', 16);
+  }
 }
 
 function mpDoRespawn() {
@@ -6142,23 +6252,24 @@ function drawMultiplayerGhosts(ctx, camera) {
 function drawMpScoreboard(ctx, w, h) {
   const entries = Object.entries(mpPlayers).sort((a, b) => b[1].kills - a[1].kills);
   if (entries.length === 0) return;
-  const panelW = 160, rowH = 18, padX = 8, padY = 6;
+  const panelW = 168, rowH = 18, padX = 8, padY = 6;
   const panelH = padY * 2 + rowH * (entries.length + 1);
   const px = w - panelW - 10, py = 60;
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.62)';
   ctx.fillRect(px, py, panelW, panelH);
-  ctx.strokeStyle = 'rgba(0,240,255,0.25)';
+  ctx.strokeStyle = mpGameMode === 'battle' ? 'rgba(255,68,102,0.4)' : 'rgba(0,240,255,0.25)';
   ctx.lineWidth = 1;
   ctx.strokeRect(px, py, panelW, panelH);
   ctx.font = 'bold 9px Orbitron, monospace';
-  ctx.fillStyle = '#00f0ff';
+  ctx.fillStyle = mpGameMode === 'battle' ? '#ff4466' : '#00f0ff';
   ctx.textAlign = 'left';
-  ctx.fillText('PLAYERS', px + padX, py + padY + 8);
+  ctx.fillText(mpGameMode === 'battle' ? '⚔ BATTLE ROYALE' : '🤝 CO-OP', px + padX, py + padY + 8);
   entries.forEach(([id, p], i) => {
-    ctx.fillStyle = p.color;
+    const alive = p.alive !== false;
+    ctx.fillStyle = alive ? p.color : '#555';
     ctx.font = '9px Rajdhani, monospace';
-    const tag = id === mpMyId ? '▶' : '●';
+    const tag = id === mpMyId ? '▶' : (alive ? '●' : '✖');
     ctx.fillText(
       `${tag} ${(p.name || 'P').slice(0, 7).padEnd(7)}  Lv${p.level}  ${p.kills}K`,
       px + padX, py + padY + rowH + rowH * i + 12
