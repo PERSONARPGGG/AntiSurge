@@ -6142,18 +6142,18 @@ function shareResult() {
     ? [...activeSynergies].map(id => { const s = SYNERGY_DEFS.find(d => d.id === id); return s ? `${s.icon}${s.name}` : id; }).join(', ')
     : '없음';
   const text =
-    `🎮 네온 서바이버즈 v0.07\n` +
+    `⚡ AntiSurge β v0.09\n` +
     `👤 ${name} [${clsInfo?.icon || ''}${clsInfo?.name || ''}] [${diffLabel}]\n` +
     `🏆 STAGE ${stageStr} 도달\n` +
     `💀 ${killCount}마리 제거  ⭐ Lv.${player?.level ?? '?'}\n` +
     `⏱ ${timeStr}  💥 최대콤보 ${maxCombo}\n` +
     `🔗 시너지: ${synergyStr}\n` +
     (ascensionLevel > 0 ? `✨ 승천 Lv.${ascensionLevel}\n` : '') +
-    `\n#네온서바이버즈 #NeonSurvivors`;
+    `\n#AntiSurge #사이버펑크서바이벌`;
 
   const btn = document.getElementById('share-btn');
   if (navigator.share) {
-    navigator.share({ title: '네온 서바이버즈 v0.03', text }).catch(() => {});
+    navigator.share({ title: 'AntiSurge β v0.09', text }).catch(() => {});
   } else if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(text).then(() => {
       if (btn) { btn.textContent = '✓ 클립보드 복사!'; setTimeout(() => { btn.textContent = '📤 결과 공유'; }, 2500); }

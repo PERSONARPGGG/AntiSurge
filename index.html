@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>네온 서바이버즈 (Neon Survivors) - 사이버 생존 게임</title>
-  <meta name="description" content="사이버펑크 네온 스타일의 2D 탑다운 자동 공격 생존 게임, 네온 서바이버즈를 브라우저에서 즐겨보세요!">
+  <title>AntiSurge — 사이버펑크 바이러스 서바이벌</title>
+  <meta name="description" content="AntiSurge: 사이버펑크 테마의 2D 탑다운 바이러스 서바이벌 게임. 스테이지 100을 돌파하고 무한 생존에 도전하라!">
 
   <!-- PWA (HTTP 서버에서만 활성화, file:// 에서는 스킵) -->
   <meta name="theme-color" content="#00f0ff">
@@ -34,14 +34,24 @@
 
   <!-- 메인 메뉴 화면 -->
   <div id="menu-screen" class="screen active">
+    <div class="menu-bg-particles">
+      <div class="mbp mbp-1"></div>
+      <div class="mbp mbp-2"></div>
+      <div class="mbp mbp-3"></div>
+      <div class="mbp mbp-4"></div>
+      <div class="mbp mbp-5"></div>
+    </div>
     <div class="menu-content">
 
       <!-- 헤더: 타이틀 + 버전 -->
       <div class="menu-header">
-        <h1 class="neon-title" data-text="NEON SURVIVORS">NEON SURVIVORS</h1>
+        <div class="menu-title-block">
+          <div class="menu-title-eyebrow">[ VIRUS SURVIVAL ]</div>
+          <h1 class="neon-title"><span class="title-anti">ANTI</span><span class="title-surge">SURGE</span></h1>
+          <div class="menu-title-sub">사이버펑크 바이러스 서바이벌</div>
+        </div>
         <div class="menu-header-meta">
-          <span class="version-badge">v0.09</span>
-          <span class="menu-tagline">사이버펑크 바이러스 생존 게임</span>
+          <span class="version-badge version-beta">β v0.09 BETA</span>
         </div>
       </div>
 
