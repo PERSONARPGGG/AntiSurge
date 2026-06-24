@@ -272,8 +272,12 @@ let mpFbRoomRef = null;   // Firebase room reference
 let mpFbMsgRef  = null;   // Firebase messages reference
 let mpSyncTimer = 0;
 let mpMsgSeq    = 0;      // 메시지 중복 방지용
-const MP_SYNC_MS = 120;
-const MP_COLORS  = ['#00f0ff','#b026ff','#39ff14','#ff4466','#ffe600','#ff8800'];
+const MP_SYNC_MS    = 120;
+const MP_COLORS     = ['#00f0ff','#b026ff','#39ff14','#ff4466','#ffe600','#ff8800'];
+const MP_MAX_PLAYERS = 3;
+const MP_AURA_RANGE  = 220;
+let mpAuraActive     = false;
+let mpGameStartTime  = 0;
 
 // 오브젝트 상한 (멀티 대비 성능 캡)
 const MAX_ENEMIES        = 120;
@@ -1305,6 +1309,7 @@ class Player {
     const cls = CLASS_DEFS[this.classId];
     if (cls) mult *= cls.xpBonus;
     mult *= this.passiveXpMult;
+    if (mpMode && mpAuraActive) mult *= 1.05; // 오라 XP 보너스
     this.xp += amount * mult;
     while (this.xp >= this.nextLevelXp) {
       this.xp -= this.nextLevelXp;
@@ -4120,6 +4125,7 @@ function startGame() {
 
   // 전체 리셋
   killCount = 0; gameTime = 0; timeAccumulator = 0;
+  if (mpMode) mpGameStartTime = Date.now();
   enemies = []; projectiles = []; gems = []; particles = [];
   activeLasersArr = []; fieldItems = []; floatingTexts = [];
   bossProjectiles = [];
@@ -4362,8 +4368,12 @@ function update(dt) {
 
   // BGM 트랙은 설정 모달에서 수동 선택만 허용 — 자동 override 없음
 
-  // MP 상태 동기화
-  if (mpMode) syncMpState(dt);
+  // MP 상태 동기화 + 보간 + 오라
+  if (mpMode) {
+    syncMpState(dt);
+    mpUpdateGhostPositions(dt);
+    mpCheckAura();
+  }
 }
 
 // ============================================================
@@ -5292,6 +5302,24 @@ function endGame(isVictory) {
     }
   }
 
+  // 멀티 생존 순위
+  if (mpMode && mpGameStartTime > 0) {
+    const mySurvivalMs = Date.now() - mpGameStartTime;
+    if (_fbDb) _fbDb.ref(`${_mpFbRoomPath()}/players/${mpMyId}`).update({ survivalMs: mySurvivalMs, alive: false });
+    const rankEl = document.getElementById('mp-survival-rank');
+    if (rankEl) {
+      const allEntries = Object.entries(mpPlayers).map(([id, p]) => ({
+        name: p.name || 'P', color: p.color,
+        ms: id === mpMyId ? mySurvivalMs : (p.survivalMs || p.ts ? (Date.now() - (p.ts || 0)) : 0),
+        isMe: id === mpMyId
+      })).sort((a, b) => b.ms - a.ms);
+      const fmt = ms => { const s = Math.floor(ms/1000); return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; };
+      rankEl.innerHTML = '<div style="color:#00f0ff;font-size:11px;margin-bottom:4px">🏆 멀티 생존 순위</div>' +
+        allEntries.map((e,i) => `<div style="color:${e.color}">${['🥇','🥈','🥉'][i]||`${i+1}.`} ${e.name}${e.isMe?' (나)':''} — ${fmt(e.ms)}</div>`).join('');
+      rankEl.style.display = 'block';
+    }
+  }
+
   checkAchievements();
   const coresEarned = earnDataCores();
   const coresEl = document.getElementById('cores-earned-row');
@@ -5804,6 +5832,16 @@ function mpCreateRoom() {
 function mpJoinFromInput() {
   const code = (document.getElementById('invite-code-input')?.value || '').trim().toUpperCase();
   if (code.length !== 6) { alert('초대 코드는 6자리입니다.'); return; }
+  if (FIREBASE_CONFIG && typeof firebase !== 'undefined') {
+    if (!_fbDb) _mpInitFirebase();
+    if (_fbDb) {
+      _fbDb.ref(`neon_rooms/${code}/players`).once('value', snap => {
+        if (snap.numChildren() >= MP_MAX_PLAYERS) { alert(`방이 가득 찼습니다. (최대 ${MP_MAX_PLAYERS}명)`); return; }
+        mpJoinRoom(code);
+      });
+      return;
+    }
+  }
   mpJoinRoom(code);
 }
 
@@ -5885,6 +5923,8 @@ function mpUpdatePlayerList() {
   ).join('') || '<div class="mp-player-item" style="color:#475569">대기 중...</div>';
   const startBtn = document.getElementById('mp-start-btn');
   if (startBtn) startBtn.disabled = !mpIsHost || count < 2;
+  const countEl = document.getElementById('mp-player-count');
+  if (countEl) countEl.textContent = `${count}/${MP_MAX_PLAYERS}`;
 }
 
 function mpStartGame() {
@@ -5947,11 +5987,48 @@ function syncMpState(dt) {
   }
 }
 
-function drawMultiplayerGhosts(ctx, camera) {
+function mpUpdateGhostPositions(dt) {
+  const alpha = Math.min(1, dt / 55);
   for (const [id, p] of Object.entries(mpPlayers)) {
     if (id === mpMyId) continue;
-    const sx = p.x - camera.x;
-    const sy = p.y - camera.y;
+    if (p.renderX === undefined) { p.renderX = p.x; p.renderY = p.y; continue; }
+    p.renderX += (p.x - p.renderX) * alpha;
+    p.renderY += (p.y - p.renderY) * alpha;
+  }
+}
+
+function mpCheckAura() {
+  if (!player) { mpAuraActive = false; return; }
+  mpAuraActive = false;
+  for (const [id, p] of Object.entries(mpPlayers)) {
+    if (id === mpMyId) continue;
+    const rx = p.renderX ?? p.x, ry = p.renderY ?? p.y;
+    if (Math.hypot(player.x - rx, player.y - ry) < MP_AURA_RANGE) { mpAuraActive = true; break; }
+  }
+  // 오라 활성 시 데미지 +10%
+  player.damageMultiplier = mpAuraActive
+    ? player.damageMultiplier * (player._mpAuraApplied ? 1 : 1.1)
+    : player.damageMultiplier / (player._mpAuraApplied ? 1.1 : 1);
+  player._mpAuraApplied = mpAuraActive;
+}
+
+function drawMultiplayerGhosts(ctx, camera) {
+  // 오라 링 (내 캐릭터 주변)
+  if (mpAuraActive && player) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(player.x - camera.x, player.y - camera.y, MP_AURA_RANGE, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(185,255,100,0.18)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  for (const [id, p] of Object.entries(mpPlayers)) {
+    if (id === mpMyId) continue;
+    const sx = (p.renderX ?? p.x) - camera.x;
+    const sy = (p.renderY ?? p.y) - camera.y;
     if (sx < -60 || sy < -60 || sx > canvas.width + 60 || sy > canvas.height + 60) continue;
     ctx.save();
     ctx.globalAlpha = 0.75;
