@@ -42,7 +42,9 @@ fi
 # 4. Firebase Hosting 배포
 echo ""
 echo "🔥 Step 4/4 — Firebase Hosting 배포..."
-firebase deploy --only hosting
+FIREBASE_CLI="/mnt/c/Users/SDH/AppData/Roaming/npm/firebase"
+FB_TOKEN="${FIREBASE_TOKEN:-1//0eGiIiL1IzkBBCgYIARAAGA4SNwF-L9IrSamwdy6hJPr1VLZwT8eE3SzbpKvfWbVDwmmN2i9s-fnZfMgvByUim5gSyWCgOZlTQK4}"
+"$FIREBASE_CLI" deploy --only hosting --token "$FB_TOKEN"
 
 echo ""
 echo "╔══════════════════════════════════════╗"
