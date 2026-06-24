@@ -1,0 +1,30 @@
+#!/bin/bash
+# Neon Survivors — pre-commit 자동 검증 훅
+# 이 훅은 커밋 전에 validate.js를 실행해 버그 패턴을 차단합니다.
+# 설치: git config core.hooksPath .githooks
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+VALIDATOR="$REPO_ROOT/validate.js"
+
+if [ ! -f "$VALIDATOR" ]; then
+  echo "⚠️  validate.js 없음 — 검증 스킵"
+  exit 0
+fi
+
+echo ""
+echo "🛡  커밋 전 자동 검증 실행 중..."
+echo "──────────────────────────────────────"
+
+node "$VALIDATOR"
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+  echo ""
+  echo "❌ 검증 실패: 위 오류를 수정 후 다시 커밋하세요."
+  echo "   검증 건너뛰기(비권장): git commit --no-verify"
+  echo ""
+  exit 1
+fi
+
+echo ""
+exit 0

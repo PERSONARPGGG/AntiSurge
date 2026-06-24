@@ -3017,7 +3017,7 @@ function applyFieldItemEffect(type, x, y) {
       if (bossKilled) killCount++;
       addFloatingText(activeBoss.x, activeBoss.y - 60, 'NUKE HIT!', '#ffe600', 16);
     }
-    enemies = [];
+    enemies.length = 0;
     addFloatingText(x, y, `☢ NUKE x${nuked}!`, '#ffe600', 18);
     triggerScreenShake(14, 700);
     checkStageProgress();
@@ -5431,7 +5431,7 @@ function devKillAll() {
   if (gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
   const n = enemies.length;
   for (let e of enemies) createExplosionParticles(e.x, e.y, e.color, 5);
-  enemies = [];
+  enemies.length = 0;
   if (player) addFloatingText(player.x, player.y - 40, `DEV: 적 ${n}마리 제거`, '#ff4466', 13);
 }
 
@@ -5463,7 +5463,7 @@ function devJumpStage() {
 
   currentStage      = target;
   stageKillProgress = 0;
-  enemies = []; projectiles = []; activeBoss = null;
+  enemies.length = 0; projectiles.length = 0; activeBoss = null;
   isStageClearAnim  = false; levelUpInProgress = false; pendingLevelUps = 0;
   activeFieldEvent  = null;
   isEndlessMode     = target > 100;
