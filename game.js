@@ -182,36 +182,34 @@ let menuBgmStarted = false;
 let pendingNearDeathCurse = false;
 
 // ─── 배경 별 효과 (시각적) ───
-const bgStars = Array.from({ length: 130 }, () => ({
+// 별: 70개로 축소 (130→70), 색상 인덱스로 관리
+const bgStars = Array.from({ length: 70 }, () => ({
   xNorm:     Math.random(),
   yNorm:     Math.random(),
   speedNorm: 0.000025 + Math.random() * 0.00006,
-  size:      0.4 + Math.random() * 1.6,
-  alpha:     0.18 + Math.random() * 0.52,
+  size:      0.5 + Math.random() * 1.4,
+  alpha:     0.15 + Math.random() * 0.45,
   color:     Math.random() < 0.07 ? '#b026ff' : Math.random() < 0.1 ? '#ffe600' : '#00f0ff'
 }));
-let bgScanY = Math.random(); // 스캔 라인 위치 (0-1 normalized)
+let bgScanY = Math.random();
 
-// 배경 바이러스 오브젝트 (부유하는 거대 바이러스 실루엣)
+// 배경 바이러스 오브젝트 — 6개로 축소, offscreen 캐시로 성능 최적화
 const BG_VIRUS_TYPES = ['spike', 'hexa', 'double'];
-const BG_VIRUS_COLORS = [
-  ['#00f0ff','rgba(0,240,255,0.08)'],
-  ['#b026ff','rgba(176,38,255,0.07)'],
-  ['#39ff14','rgba(57,255,20,0.06)'],
-  ['#ff4466','rgba(255,68,102,0.07)'],
-];
-const bgVirusObjs = Array.from({ length: 10 }, (_, i) => ({
+const BG_VIRUS_COLORS = ['#00f0ff','#b026ff','#39ff14','#ff4466'];
+const bgVirusObjs = Array.from({ length: 6 }, (_, i) => ({
   xNorm:    Math.random(),
   yNorm:    Math.random(),
-  size:     60 + Math.random() * 100,
-  vxNorm:   (Math.random() - 0.5) * 0.000012,
-  vyNorm:   (Math.random() - 0.5) * 0.000008,
+  size:     70 + Math.random() * 90,
+  vxNorm:   (Math.random() - 0.5) * 0.000010,
+  vyNorm:   (Math.random() - 0.5) * 0.000007,
   rot:      Math.random() * Math.PI * 2,
-  rotSpeed: (Math.random() - 0.5) * 0.00018,
+  rotSpeed: (Math.random() - 0.5) * 0.00015,
   type:     BG_VIRUS_TYPES[i % 3],
   colIdx:   i % 4,
-  alpha:    0.04 + Math.random() * 0.07,
+  alpha:    0.05 + Math.random() * 0.06,
 }));
+// offscreen canvas — 3프레임마다 갱신, 메인 캔버스엔 drawImage 1회
+let _bgOC = null, _bgOCtx = null, _bgOCAge = 99, _bgOCW = 0, _bgOCH = 0;
 
 let obstacles = [];
 
@@ -4291,30 +4289,27 @@ function checkCollisions() {
 // ============================================================
 // 20. 배경 + 맵 격자 렌더링
 // ============================================================
-function _drawBgVirus(ctx, x, y, size, rot, type, color, glowColor, alpha) {
+// shadowBlur 없이 path만으로 바이러스 실루엣 그리기 (성능 최적화)
+function _drawBgVirus(ctx, x, y, size, rot, type, color, alpha) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   ctx.rotate(rot);
-  ctx.shadowBlur = 12;
-  ctx.shadowColor = glowColor;
   ctx.strokeStyle = color;
-  ctx.fillStyle   = glowColor;
-  ctx.lineWidth   = 1.5;
+  ctx.fillStyle   = 'transparent';
+  ctx.lineWidth   = 1.2;
   if (type === 'spike') {
-    ctx.beginPath(); ctx.arc(0, 0, size * 0.38, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      const r1 = size * 0.38, r2 = size * 0.58, r3 = size * 0.48;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a - 0.18) * r1, Math.sin(a - 0.18) * r1);
-      ctx.lineTo(Math.cos(a) * r2,         Math.sin(a) * r2);
-      ctx.lineTo(Math.cos(a + 0.18) * r1, Math.sin(a + 0.18) * r1);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(Math.cos(a) * r3, Math.sin(a) * r3, size * 0.06, 0, Math.PI * 2);
-      ctx.fill();
+    // 단일 path로 원+스파이크 통합 (draw call 1회)
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.38, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const r1 = size * 0.38, r2 = size * 0.56;
+      ctx.moveTo(Math.cos(a - 0.16) * r1, Math.sin(a - 0.16) * r1);
+      ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+      ctx.lineTo(Math.cos(a + 0.16) * r1, Math.sin(a + 0.16) * r1);
     }
+    ctx.stroke();
   } else if (type === 'hexa') {
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
@@ -4322,8 +4317,9 @@ function _drawBgVirus(ctx, x, y, size, rot, type, color, glowColor, alpha) {
       i === 0 ? ctx.moveTo(Math.cos(a)*size*0.5, Math.sin(a)*size*0.5)
               : ctx.lineTo(Math.cos(a)*size*0.5, Math.sin(a)*size*0.5);
     }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.globalAlpha = alpha * 0.5;
+    ctx.closePath(); ctx.stroke();
+    // 내부 작은 육각형 하나만
+    ctx.globalAlpha = alpha * 0.4;
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
@@ -4331,24 +4327,11 @@ function _drawBgVirus(ctx, x, y, size, rot, type, color, glowColor, alpha) {
               : ctx.lineTo(Math.cos(a)*size*0.28, Math.sin(a)*size*0.28);
     }
     ctx.closePath(); ctx.stroke();
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
-      ctx.beginPath(); ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(a)*size*0.5, Math.sin(a)*size*0.5); ctx.stroke();
-    }
   } else {
+    // double: 두 원만 (stroke only)
     ctx.beginPath(); ctx.arc(0, 0, size * 0.44, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = alpha * 0.45;
-    ctx.beginPath(); ctx.arc(0, 0, size * 0.28, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = alpha;
-    ctx.beginPath(); ctx.arc(0, 0, size * 0.28, 0, Math.PI * 2); ctx.stroke();
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a)*size*0.28, Math.sin(a)*size*0.28);
-      ctx.lineTo(Math.cos(a)*size*0.44, Math.sin(a)*size*0.44);
-      ctx.lineWidth = 3; ctx.stroke(); ctx.lineWidth = 1.5;
-    }
+    ctx.globalAlpha = alpha * 0.5;
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.26, 0, Math.PI * 2); ctx.stroke();
   }
   ctx.restore();
 }
@@ -4367,19 +4350,26 @@ function drawBackground(ctx, w, h, dt) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, w, h);
 
-  // 배경 바이러스 오브젝트 (움직이는 반투명 실루엣)
+  // 배경 바이러스 오브젝트 — offscreen canvas에 3프레임마다 갱신, 메인엔 drawImage 1회
   const dtMs = (dt || 16.66);
-  for (const v of bgVirusObjs) {
-    v.xNorm += v.vxNorm * dtMs;
-    v.yNorm += v.vyNorm * dtMs;
-    v.rot   += v.rotSpeed * dtMs;
-    if (v.xNorm < -0.15) v.xNorm = 1.15;
-    if (v.xNorm >  1.15) v.xNorm = -0.15;
-    if (v.yNorm < -0.15) v.yNorm = 1.15;
-    if (v.yNorm >  1.15) v.yNorm = -0.15;
-    const [col, glow] = BG_VIRUS_COLORS[v.colIdx];
-    _drawBgVirus(ctx, v.xNorm * w, v.yNorm * h, v.size, v.rot, v.type, col, glow, v.alpha);
+  _bgOCAge++;
+  if (_bgOCAge >= 3 || _bgOCW !== w || _bgOCH !== h) {
+    _bgOCAge = 0; _bgOCW = w; _bgOCH = h;
+    if (!_bgOC) { _bgOC = document.createElement('canvas'); _bgOCtx = _bgOC.getContext('2d'); }
+    if (_bgOC.width !== w || _bgOC.height !== h) { _bgOC.width = w; _bgOC.height = h; }
+    _bgOCtx.clearRect(0, 0, w, h);
+    for (const v of bgVirusObjs) {
+      v.xNorm += v.vxNorm * dtMs * 3;
+      v.yNorm += v.vyNorm * dtMs * 3;
+      v.rot   += v.rotSpeed * dtMs * 3;
+      if (v.xNorm < -0.15) v.xNorm = 1.15;
+      if (v.xNorm >  1.15) v.xNorm = -0.15;
+      if (v.yNorm < -0.15) v.yNorm = 1.15;
+      if (v.yNorm >  1.15) v.yNorm = -0.15;
+      _drawBgVirus(_bgOCtx, v.xNorm * w, v.yNorm * h, v.size, v.rot, v.type, BG_VIRUS_COLORS[v.colIdx], v.alpha);
+    }
   }
+  if (_bgOC) ctx.drawImage(_bgOC, 0, 0);
 
   // 흘러가는 별 입자 (색상 테마 적용)
   const elapsed = dtMs / 1000;
@@ -4394,46 +4384,32 @@ function drawBackground(ctx, w, h, dt) {
   }
   ctx.globalAlpha = 1;
 
-  // 보스 어프로치 연출: 스테이지 사이클 3~9에서 배경에 보스 실루엣이 점점 다가옴
+  // 보스 어프로치 연출 (shadowBlur 없음 — 단순 stroke + alpha만)
   if (typeof currentStage !== 'undefined' && gameState !== STATE_MENU) {
     const stageInCycle = currentStage % 10;
-    const progress = stageInCycle === 0 ? 0 : Math.max(0, (stageInCycle - 3) / 6);
+    const progress = stageInCycle === 0 ? 0 : Math.max(0, (stageInCycle - 4) / 5);
     if (progress > 0) {
-      const silhAlpha = progress * 0.11;
-      const silhSize  = progress * 130 + 30;
-      const silhX     = w * 0.88 - progress * w * 0.16;
+      const silhAlpha = progress * 0.09;
+      const silhSize  = progress * 110 + 40;
+      const silhX     = w * 0.87 - progress * w * 0.14;
       const silhY     = h * 0.5;
       const bossColArr = ['#00f0ff','#b026ff','#ff4466','#ff8800','#ffe600','#ff0044','#39ff14','#ffffff','#ff6600','#b026ff'];
       const bCol = bossColArr[Math.floor(currentStage / 10) % bossColArr.length];
       ctx.save();
       ctx.globalAlpha = silhAlpha;
-      ctx.shadowBlur  = 28 * progress;
-      ctx.shadowColor = bCol;
       ctx.strokeStyle = bCol;
-      ctx.fillStyle   = 'rgba(0,0,0,0.04)';
-      ctx.lineWidth   = 2;
-      ctx.beginPath(); ctx.arc(silhX, silhY, silhSize * 0.5, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
-      const numSpikes = 6 + (Math.floor(currentStage / 10) % 3) * 2;
-      const rotOffset = Date.now() * 0.0001;
-      for (let i = 0; i < numSpikes; i++) {
-        const a  = (i / numSpikes) * Math.PI * 2 + rotOffset;
-        const r1 = silhSize * 0.5, r2 = silhSize * 0.75;
-        ctx.beginPath();
-        ctx.moveTo(silhX + Math.cos(a - 0.2)*r1, silhY + Math.sin(a - 0.2)*r1);
-        ctx.lineTo(silhX + Math.cos(a)*r2,        silhY + Math.sin(a)*r2);
-        ctx.lineTo(silhX + Math.cos(a + 0.2)*r1, silhY + Math.sin(a + 0.2)*r1);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineWidth   = 1.5;
+      // 원 하나 + 6스파이크 (단일 stroke pass, shadowBlur 없음)
+      ctx.beginPath(); ctx.arc(silhX, silhY, silhSize * 0.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a  = (i / 6) * Math.PI * 2;
+        const r1 = silhSize * 0.5, r2 = silhSize * 0.72;
+        ctx.moveTo(silhX + Math.cos(a - 0.18)*r1, silhY + Math.sin(a - 0.18)*r1);
+        ctx.lineTo(silhX + Math.cos(a)*r2,         silhY + Math.sin(a)*r2);
+        ctx.lineTo(silhX + Math.cos(a + 0.18)*r1, silhY + Math.sin(a + 0.18)*r1);
       }
-      ctx.beginPath(); ctx.arc(silhX, silhY, silhSize * 0.2, 0, Math.PI * 2);
-      ctx.fillStyle = bCol; ctx.globalAlpha = silhAlpha * 3; ctx.fill();
-      if (progress > 0.55) {
-        const txtSize = Math.floor(progress * 11);
-        ctx.font = `bold ${txtSize}px Orbitron, monospace`;
-        ctx.fillStyle = bCol; ctx.globalAlpha = (progress - 0.55) * 0.45;
-        ctx.textAlign = 'center';
-        ctx.fillText('⚠ BOSS INCOMING', silhX, silhY - silhSize * 0.6);
-      }
+      ctx.stroke();
       ctx.restore();
     }
   }
