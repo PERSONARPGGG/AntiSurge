@@ -513,6 +513,106 @@ const WEAPON_FUSIONS = [
   }
 ];
 
+// ─── 미션 풀 ───────────────────────────────────────────────────
+const MISSION_POOL = [
+  // 킬 미션
+  { id: 'kill_50',    cat: 'kill',    icon: '⚔',  name: '격리 작전',   desc: '바이러스 50마리 처치',     goal: 50,  trackKey: 'mKills',        reward: { type: 'gold',  val: 40 } },
+  { id: 'kill_100',   cat: 'kill',    icon: '🔫',  name: '대규모 격리', desc: '바이러스 100마리 처치',    goal: 100, trackKey: 'mKills',        reward: { type: 'cores', val: 6 } },
+  { id: 'stun_kill',  cat: 'kill',    icon: '⚡',  name: '무력화 처치', desc: '스턴 중 적 8마리 처치',    goal: 8,   trackKey: 'mStunKills',    reward: { type: 'heal',  val: 30 } },
+  { id: 'combo_20',   cat: 'kill',    icon: '🔥',  name: '연속 처치',   desc: '콤보 20 달성',              goal: 20,  trackKey: 'mCombo',        reward: { type: 'xp',    val: 0 } },
+  // 생존 미션
+  { id: 'nodmg_20',   cat: 'survive', icon: '👁',  name: '완전 회피',   desc: '피격 없이 20초 생존',      goal: 20,  trackKey: 'mNoDmgSec',     reward: { type: 'heal',  val: 40 } },
+  { id: 'highHp_90',  cat: 'survive', icon: '❤',  name: '고체력 유지', desc: 'HP 60% 이상 90초 유지',    goal: 90,  trackKey: 'mHighHpSec',    reward: { type: 'gold',  val: 35 } },
+  // 보스/스테이지 미션
+  { id: 'boss_fast',  cat: 'boss',    icon: '⏱',  name: '신속 격리',   desc: '보스를 60초 내에 처치',    goal: 1,   trackKey: 'mBossTimedKill',reward: { type: 'gold',  val: 60 } },
+  { id: 'stage_10',   cat: 'stage',   icon: '📡',  name: '심층 침투',   desc: '스테이지 10 도달',          goal: 10,  trackKey: 'mStage',        reward: { type: 'cores', val: 5 } },
+  { id: 'boss_2',     cat: 'boss',    icon: '💀',  name: '코어 파괴',   desc: '이번 런 보스 2개 처치',    goal: 2,   trackKey: 'mBossKills',    reward: { type: 'cores', val: 8 } },
+];
+
+let runMissions = [];
+let mTrack = { mKills: 0, mStunKills: 0, mCombo: 0, mNoDmgSec: 0, mHighHpSec: 0, mBossTimedKill: 0, mStage: 1, mBossKills: 0, _noDmgStreak: 0 };
+
+function initMissions() {
+  const pool = [...MISSION_POOL];
+  runMissions = [];
+  while (runMissions.length < 3 && pool.length > 0) {
+    const i = Math.floor(Math.random() * pool.length);
+    runMissions.push({ ...pool[i], progress: 0, done: false });
+    pool.splice(i, 1);
+  }
+  mTrack = { mKills: 0, mStunKills: 0, mCombo: 0, mNoDmgSec: 0, mHighHpSec: 0, mBossTimedKill: 0, mStage: 1, mBossKills: 0, _noDmgStreak: 0 };
+  const panel = document.getElementById('mission-panel');
+  if (panel) panel.style.display = 'block';
+  renderMissionPanel();
+}
+
+function updateMissions(dt) {
+  if (!player || runMissions.length === 0 || gameState !== STATE_PLAYING) return;
+  mTrack._noDmgStreak += dt / 1000;
+  mTrack.mNoDmgSec = mTrack._noDmgStreak;
+  if (player.hp >= player.maxHp * 0.6) mTrack.mHighHpSec += dt / 1000;
+  mTrack.mCombo = Math.max(mTrack.mCombo, comboCount);
+  mTrack.mStage = Math.max(mTrack.mStage, currentStage);
+  checkMissions();
+}
+
+function checkMissions() {
+  let anyChanged = false;
+  for (const m of runMissions) {
+    if (m.done) continue;
+    const val = mTrack[m.trackKey] || 0;
+    const prev = m.progress;
+    m.progress = Math.min(val, m.goal);
+    if (val >= m.goal) { m.done = true; anyChanged = true; completeMission(m); }
+    else if (Math.floor(m.progress) !== Math.floor(prev)) anyChanged = true;
+  }
+  if (anyChanged) renderMissionPanel();
+}
+
+function completeMission(m) {
+  if (m.reward.type === 'gold' && player) {
+    player.gold = (player.gold || 0) + m.reward.val;
+    addFloatingText(player.x, player.y - 64, `+${m.reward.val} 🪙 미션`, '#ffe600', 13);
+  }
+  if (m.reward.type === 'heal' && player) {
+    player.hp = Math.min(player.hp + m.reward.val, player.maxHp);
+    addFloatingText(player.x, player.y - 64, `+${m.reward.val} HP 미션`, '#00ffaa', 13);
+  }
+  if (m.reward.type === 'xp' && player) {
+    player.xp += player.xpToNext * 0.85;
+  }
+  if (m.reward.type === 'cores') {
+    saveData.dataCores += m.reward.val;
+    saveSaveData();
+    addFloatingText(player?.x || 0, (player?.y || 0) - 64, `+${m.reward.val} 코어 미션`, '#00f0ff', 13);
+  }
+  if (!saveData.completedMissions) saveData.completedMissions = {};
+  saveData.completedMissions[m.id] = (saveData.completedMissions[m.id] || 0) + 1;
+  saveSaveData();
+  _checkClassUnlocks();
+  triggerScreenShake(4, 250);
+  playSynthSound([400, 650, 900], 0.18, 'triangle', 0.09);
+}
+
+function renderMissionPanel() {
+  const list = document.getElementById('mission-list');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const m of runMissions) {
+    const pct = Math.min(100, (m.progress / m.goal) * 100);
+    const card = document.createElement('div');
+    card.className = 'mission-card' + (m.done ? ' mission-done' : '');
+    const rewardLabel = m.reward.type === 'gold' ? `+${m.reward.val}🪙` : m.reward.type === 'heal' ? `+${m.reward.val}HP` : m.reward.type === 'cores' ? `+${m.reward.val}코어` : 'XP';
+    card.innerHTML = `
+      <div class="mission-name">${m.icon} ${m.name}${m.done ? ' <span class="mission-check">✓</span>' : ''}</div>
+      <div class="mission-desc">${m.desc}</div>
+      <div class="mission-bar-wrap"><div class="mission-bar-fill" style="width:${pct}%"></div></div>
+      <div class="mission-progress">${m.done ? `완료! 보상: ${rewardLabel}` : `${m.trackKey === 'mNoDmgSec' || m.trackKey === 'mHighHpSec' ? Math.floor(m.progress) + 's' : Math.floor(m.progress)} / ${m.goal}`}</div>
+    `;
+    list.appendChild(card);
+  }
+}
+
 // ─── 저주 정의 ───
 const CURSE_DEFS = [
   {
@@ -1705,6 +1805,7 @@ class Player {
     if (this._curseDamageMult) dmg *= this._curseDamageMult;
     if (this.damageReduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - this.damageReduction)));
     this.hp -= dmg;
+    mTrack._noDmgStreak = 0; // 피격 시 무피격 스트릭 초기화
     if (this.passives.thorns > 0) this.thornsTrigger = true;
     if ((this.regenAfterHit || 0) > 0) { this._regenAfterHitTimer = 3000; }
     playHitSound();
@@ -2895,6 +2996,9 @@ class Enemy {
   die(sourceKey) {
     if (this.dead) return;
     this.dead = true;
+    // 미션 트래킹
+    mTrack.mKills++;
+    if (this.stunTimer > 0) mTrack.mStunKills++;
     createExplosionParticles(this.x, this.y, this.color, this.isElite ? 20 : 12);
     playEnemyExplosionSound();
     if (weaponStats[sourceKey]) weaponStats[sourceKey].kills++;
@@ -3504,6 +3608,12 @@ class Boss {
     fieldItems.push(new FieldItem(this.x + (Math.random() - 0.5) * 60, this.y + (Math.random() - 0.5) * 60, bossDropType));
     addFloatingText(this.x, this.y - this.radius - 20, '★ BOSS DROP!', '#ffe600', 15);
     _statAdd('totalBossKills', 1);
+    // 미션 트래킹
+    if (!this.isMini) {
+      mTrack.mBossKills++;
+      const bossElapsedSec = bossStageStartMs > 0 ? (Date.now() - bossStageStartMs) / 1000 : 999;
+      if (bossElapsedSec <= 60) mTrack.mBossTimedKill = 1;
+    }
     activeBoss = null;
     isBossStage = false;
     isMiniBossStage = false;
@@ -5059,6 +5169,7 @@ function startGame() {
   stageGemMagnet = false;
   currentStage = 1;
   _lastZoneIdx = -1; // 존 초기화 (첫 스테이지엔 오버레이 없이 배지만)
+  initMissions();
   stageKillProgress = 0;
   stageKillGoal     = getStageKillGoal(1);
   isBossStage       = false;
@@ -5406,6 +5517,9 @@ function update(dt) {
     isMiniBossStage = false;
     triggerStageClear();
   }
+
+  // 미션 진행 업데이트
+  updateMissions(dt);
 
   // HUD 동기화
   updateHUD();
@@ -6423,6 +6537,8 @@ function endGame(isVictory) {
   }
   const _hudEl = document.getElementById('hud');
   if (_hudEl) _hudEl.style.visibility = 'hidden';
+  const _mpEl = document.getElementById('mission-panel');
+  if (_mpEl) _mpEl.style.display = 'none';
   if (!isDailyRun) {
     _statAdd('totalKills', killCount);
     _statAdd('totalGamesPlayed', 1);
