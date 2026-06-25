@@ -1,20 +1,42 @@
 # AntiSurge — Claude 개발 가이드
 
 ## 프로젝트 개요
-뱀파이어 서바이벌 스타일 웹게임. 사이버펑크 네온 테마. 단일 파일 스택 (HTML + CSS + JS).
+뱀파이어 서바이벌 스타일 웹게임. 사이버펑크 네온 테마.
 
 **배포:** https://antisurge-c0463.web.app
 **버전:** v0.09
 **레포:** https://github.com/PERSONARPGGG/AntiSurge.git
 
 ## 파일 구조
-- `game.js` — 메인 게임 로직 (~6000줄)
-- `index.html` — UI 모달, HUD, 메뉴 화면
+
+### 핵심 파일
+- `index.html` — UI 모달, HUD, 메뉴 화면 (스크립트 로딩 순서 포함)
 - `style.css` — 네온 사이버펑크 스타일링
 - `validate.js` — 배포 전 자동 검증 (node validate.js)
-- `deploy.sh` — 검증 후 GitHub Pages 배포
+- `deploy.sh` — 검증 후 Firebase 배포
 - `.githooks/pre-commit` — 커밋 전 자동 검증 훅
-- `assets/` — 이미지/오디오 (BGM은 Web Audio API 신스 생성)
+- `game.js` — 더 이상 사용 안 함 (빈 파일, 백업: game.js.bak)
+
+### src/ 모듈 (로딩 순서 중요)
+| 파일 | 내용 | 규모 |
+|---|---|---|
+| `src/config.js` | 전역 상수 + 상태 선언 (CLASS_DEFS, UPGRADES 등) | ~938줄 |
+| `src/audio.js` | Web Audio, BGM, 스킬/난이도/저장 유틸 | ~507줄 |
+| `src/player.js` | Player 클래스 | ~480줄 |
+| `src/weapons.js` | 모든 무기 클래스 | ~753줄 |
+| `src/projectiles.js` | 투사체, 레이저, 보스 위험물 | ~174줄 |
+| `src/enemies.js` | Enemy, Boss 클래스 | ~885줄 |
+| `src/entities.js` | FieldItem, Gem, Particle 등 | ~260줄 |
+| `src/stage.js` | 스테이지/콤보/저장/스폰/충돌/배경 | ~939줄 |
+| `src/flow.js` | 게임 라이프사이클, showScreen, startGame | ~427줄 |
+| `src/loop.js` | gameLoop, update, draw, HUD, minimap | ~616줄 |
+| `src/upgrades.js` | 레벨업, 상점, 저주, 시너지 | ~669줄 |
+| `src/endgame.js` | 게임 종료, 빅토리, NG+, 전체화면 | ~357줄 |
+| `src/extras.js` | 개발자 패널, 필드 이벤트 | ~212줄 |
+| `src/input.js` | 터치, 유틸(dist), 설정 | ~176줄 |
+| `src/multiplayer.js` | 멀티플레이어, 리더보드, 초기화 | ~758줄 |
+
+> **코드 수정 시:** 해당 기능이 어느 src/ 파일에 있는지 위 표로 확인.
 
 ## 브랜치 전략
 - `master` — 배포 전용 (안정 버전, GitHub Pages)

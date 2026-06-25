@@ -739,10 +739,25 @@
     <div class="dev-footer">키보드: 7501 입력 시 토글</div>
   </div>
 
-  <!-- Firebase compat SDK (game.js보다 먼저 로드 필수) -->
+  <!-- Firebase compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="game.js"></script>
+  <!-- AntiSurge 모듈 (로딩 순서 중요) -->
+  <script src="src/config.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/player.js"></script>
+  <script src="src/weapons.js"></script>
+  <script src="src/projectiles.js"></script>
+  <script src="src/enemies.js"></script>
+  <script src="src/entities.js"></script>
+  <script src="src/stage.js"></script>
+  <script src="src/flow.js"></script>
+  <script src="src/loop.js"></script>
+  <script src="src/upgrades.js"></script>
+  <script src="src/endgame.js"></script>
+  <script src="src/extras.js"></script>
+  <script src="src/input.js"></script>
+  <script src="src/multiplayer.js"></script>
 </body>
 </html>

@@ -1,0 +1,885 @@
+// ============================================================
+function getEnemyStageScale() {
+  const diff = DIFFICULTY_SETTINGS[gameDifficulty] || DIFFICULTY_SETTINGS.normal;
+  const asc  = getAscensionScale();
+  return {
+    hpMult:    (1 + (currentStage - 1) * 0.18) * diff.enemyHpMult * asc,
+    dmgMult:   (1 + (currentStage - 1) * 0.10) * diff.enemyHpMult,
+    speedMult: (1 + (currentStage - 1) * 0.025) * diff.enemySpeedMult
+  };
+}
+
+class Enemy {
+  constructor(x, y, type) {
+    this.x = x; this.y = y; this.type = type;
+    this.speedMultiplier = 1.0;
+    this.stunTimer = 0;
+    this.stormDX = 0; this.stormDY = 0; this.stormTimer = 0;
+    switch (type) {
+      case 'swarm':
+        this.radius = 12; this.color = '#00ff66'; this.baseSpeed = 1.6;
+        this.hp = 12; this.maxHp = 12; this.damage = 6; this.xpValue = 1; break;
+      case 'rusher':
+        this.radius = 10; this.color = '#ffe600'; this.baseSpeed = 2.8;
+        this.hp = 6;  this.maxHp = 6;  this.damage = 10; this.xpValue = 2; break;
+      case 'bruiser':
+        this.radius = 22; this.color = '#ff007f'; this.baseSpeed = 0.9;
+        this.hp = 85; this.maxHp = 85; this.damage = 18; this.xpValue = 6; break;
+      case 'elite':
+        this.radius = 18; this.color = '#ff6600'; this.baseSpeed = 2.1;
+        this.hp = 140; this.maxHp = 140; this.damage = 20; this.xpValue = 12;
+        this.isElite = true;
+        this.eliteName = ELITE_NAMES[Math.floor(Math.random() * ELITE_NAMES.length)];
+        break;
+    }
+    // 스테이지 스케일링 적용
+    let s = getEnemyStageScale();
+    this.hp      = Math.floor(this.hp    * s.hpMult);
+    this.maxHp   = this.hp;
+    this.damage  = Math.ceil(this.damage * s.dmgMult);
+    this.baseSpeed *= s.speedMult;
+    this.speed   = this.baseSpeed;
+    this.flashTimer = 0;
+  }
+
+  update(dt) {
+    if (!player) return;
+    // 스턴 처리
+    if (this.stunTimer > 0) {
+      this.stunTimer -= dt;
+      this.flashTimer = 60;
+      return;
+    }
+    // 데이터 폭풍: 불규칙 이동
+    if (activeFieldEvent?.id === 'data_storm') {
+      this.stormTimer -= dt;
+      if (this.stormTimer <= 0) {
+        const a = Math.random() * Math.PI * 2;
+        this.stormDX = Math.cos(a); this.stormDY = Math.sin(a);
+        this.stormTimer = 600 + Math.random() * 800;
+      }
+      let spd = this.baseSpeed * 1.1 * this.speedMultiplier;
+      this.x += this.stormDX * spd * (dt / 16.66);
+      this.y += this.stormDY * spd * (dt / 16.66);
+      this.speedMultiplier = 1.0;
+      if (this.flashTimer > 0) this.flashTimer -= dt;
+      return;
+    }
+    let dx, dy;
+    // 팬텀 시프트 이벤트: 적 AI 오작동 — 랜덤 방향으로 이동
+    if (activeFieldEvent?.id === 'phantom_shift') {
+      if (!this._phantomAngle) this._phantomAngle = Math.random() * Math.PI * 2;
+      this._phantomAngle += (Math.random() - 0.5) * 0.15;
+      dx = Math.cos(this._phantomAngle);
+      dy = Math.sin(this._phantomAngle);
+    } else {
+      dx = player.x - this.x; dy = player.y - this.y;
+      let d = Math.sqrt(dx*dx + dy*dy);
+      if (d > 0) { dx /= d; dy /= d; }
+    }
+    let spd = this.baseSpeed * this.speedMultiplier;
+    // 바이러스 광란 이벤트
+    if (activeFieldEvent?.id === 'virus_frenzy') spd *= 1.7;
+    // 엘리트 침공 이벤트: 20% 속도 증가
+    if (activeFieldEvent?.id === 'elite_invasion') spd *= 1.2;
+    // 프리즈 존: 적 속도 -60%
+    if (activeFieldEvent?.id === 'freeze_zone') spd *= 0.4;
+    this.x += dx * spd * (dt / 16.66);
+    this.y += dy * spd * (dt / 16.66);
+    this.speedMultiplier = 1.0;
+    if (this.flashTimer > 0) this.flashTimer -= dt;
+  }
+
+  draw(ctx, camera) {
+    const bx = this.x - camera.x, by = this.y - camera.y;
+    const r  = this.radius;
+    const t  = this.type;
+    const fl = this.flashTimer > 0;
+    const col = fl ? '#ffffff' : this.color;
+
+    ctx.save();
+
+    if (t === 'swarm') {
+      // 육각형 (shadowBlur 없음 — 성능)
+      ctx.fillStyle = col;
+      ctx.strokeStyle = fl ? '#ffffff' : '#39ff14';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i/6)*Math.PI*2 - Math.PI/6;
+        i === 0 ? ctx.moveTo(bx+Math.cos(a)*r, by+Math.sin(a)*r)
+                : ctx.lineTo(bx+Math.cos(a)*r, by+Math.sin(a)*r);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (this.hp < this.maxHp && this.hp > 0) {
+        const bw=r*1.6, bh=2;
+        ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(bx-bw/2, by-r-6, bw, bh);
+        ctx.fillStyle='#00ff66';          ctx.fillRect(bx-bw/2, by-r-6, bw*(this.hp/this.maxHp), bh);
+      }
+    } else if (t === 'rusher') {
+      // 뾰족 삼각형
+      ctx.shadowBlur=8; ctx.shadowColor=col;
+      ctx.fillStyle=col; ctx.strokeStyle='#ffffff'; ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(bx,    by-r*1.3);
+      ctx.lineTo(bx-r,  by+r*0.8);
+      ctx.lineTo(bx+r,  by+r*0.8);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.shadowBlur=4; ctx.fillStyle='#ffffff';
+      ctx.beginPath(); ctx.arc(bx, by+r*0.1, r*0.22, 0, Math.PI*2); ctx.fill();
+    } else if (t === 'bruiser') {
+      // 팔각형 + 스파이크
+      ctx.shadowBlur=14; ctx.shadowColor=col;
+      ctx.fillStyle=col; ctx.strokeStyle='#ffffff'; ctx.lineWidth=1.5;
+      ctx.beginPath();
+      for (let i=0;i<8;i++){
+        const a=(i/8)*Math.PI*2-Math.PI/8;
+        i===0?ctx.moveTo(bx+Math.cos(a)*r, by+Math.sin(a)*r)
+             :ctx.lineTo(bx+Math.cos(a)*r, by+Math.sin(a)*r);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle=col; ctx.lineWidth=2;
+      for(let i=0;i<4;i++){
+        const a=(i/4)*Math.PI*2;
+        ctx.beginPath();
+        ctx.moveTo(bx+Math.cos(a)*r, by+Math.sin(a)*r);
+        ctx.lineTo(bx+Math.cos(a)*(r+8), by+Math.sin(a)*(r+8));
+        ctx.stroke();
+      }
+      if (this.hp < this.maxHp) {
+        const bw=r*1.6, bh=3;
+        ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(bx-bw/2, by-r-8, bw, bh);
+        ctx.fillStyle='#ff007f';         ctx.fillRect(bx-bw/2, by-r-8, bw*(this.hp/this.maxHp), bh);
+      }
+    } else {
+      // elite: 다이아몬드 + 점선 링
+      ctx.shadowBlur=20; ctx.shadowColor='#ff6600';
+      ctx.fillStyle=fl?'#ffffff':'#ff6600'; ctx.strokeStyle='#ffaa00'; ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(bx,    by-r*1.35);
+      ctx.lineTo(bx+r,  by);
+      ctx.lineTo(bx,    by+r*1.35);
+      ctx.lineTo(bx-r,  by);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle='rgba(255,102,0,0.45)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.arc(bx, by, r+7, 0, Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font='bold 7px Orbitron,monospace'; ctx.fillStyle='#ffaa00';
+      ctx.textAlign='center'; ctx.shadowBlur=4;
+      ctx.fillText(this.eliteName||'ELITE', bx, by-r-13);
+      if (this.hp < this.maxHp) {
+        const bw=r*1.6, bh=3;
+        ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(bx-bw/2, by-r-8, bw, bh);
+        ctx.fillStyle='#ff6600';         ctx.fillRect(bx-bw/2, by-r-8, bw*(this.hp/this.maxHp), bh);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  takeDamage(amount, sourceKey) {
+    // 크리티컬 코어 패시브 + 메타 크리티컬 보너스
+    const _hasCrit = player && (player.passives.critical > 0 || (player.critBonus || 0) > 0);
+    if (_hasCrit && sourceKey !== 'thorns' && sourceKey !== 'boss_proj') {
+      const baseChance = player.passives.critical === 2 ? 0.25 : (player.passives.critical === 1 ? 0.15 : 0);
+      const chance = Math.min(0.70, baseChance + (player.critBonus || 0));
+      const mult   = player.passives.critical === 2 ? 3.0  : 2.5;
+      if (Math.random() < chance) {
+        amount *= mult;
+        addFloatingText(this.x, this.y - this.radius - 8, '💥CRIT!', '#ffe600', 13);
+      }
+    }
+    // 코어 과부하 이벤트: 플레이어 공격력 3배
+    if (activeFieldEvent?.id === 'core_overload' && sourceKey !== 'thorns' && sourceKey !== 'boss_proj') {
+      amount *= 3;
+    }
+    this.hp -= amount;
+    this.flashTimer = 80;
+    if (weaponStats[sourceKey]) weaponStats[sourceKey].damage += amount;
+    createExplosionParticles(this.x, this.y, this.color, 3);
+    if (Math.random() < 0.25) {
+      addFloatingText(this.x + (Math.random()-0.5)*20, this.y - this.radius, Math.floor(amount).toString(), '#ffffff', 11);
+    }
+    if (this.hp <= 0) { this.die(sourceKey); return true; }
+    return false;
+  }
+
+  die(sourceKey) {
+    if (this.dead) return;
+    this.dead = true;
+    // 미션 트래킹
+    mTrack.mKills++;
+    if (this.stunTimer > 0) mTrack.mStunKills++;
+    createExplosionParticles(this.x, this.y, this.color, this.isElite ? 20 : 12);
+    playEnemyExplosionSound();
+    if (weaponStats[sourceKey]) weaponStats[sourceKey].kills++;
+
+    // 폭발 연쇄 패시브
+    if (player && player.passives.explosive > 0) {
+      const chance = player.passives.explosive === 2 ? 0.5 : 0.3;
+      const radius = player.passives.explosive === 2 ? 160 : 120;
+      const dmg    = player.passives.explosive === 2 ? 60  : 40;
+      if (Math.random() < chance) {
+        createExplosionParticles(this.x, this.y, '#ff8800', 14);
+        // 스냅샷으로 이터레이션 중 배열 변경 방지
+        const nearby = enemies.filter(e => e !== this && dist(this.x, this.y, e.x, e.y) < radius);
+        for (let e of nearby) {
+          if (e.takeDamage(dmg, 'explosive')) killCount++;
+        }
+        if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < radius)
+          activeBoss.takeDamage(dmg, 'explosive');
+      }
+    }
+
+    // 리듬 비트 시스템: 비트 윈도우 안에 처치하면 XP 보너스
+    if (beatWindowActive) {
+      beatChain++;
+      beatChainTimer = BEAT_CHAIN_DECAY;
+      const beatMult = Math.min(1.0 + beatChain * 0.25, 4.0);
+      gems.push(new Gem(this.x, this.y, Math.ceil(this.xpValue * beatMult)));
+      addFloatingText(this.x, this.y - this.radius - 14,
+        `♪ BEAT! x${beatMult.toFixed(1)}`, '#ffe600', beatChain >= 5 ? 15 : 12);
+      createBeatParticles(this.x, this.y);
+    } else {
+      gems.push(new Gem(this.x, this.y, this.xpValue));
+    }
+
+    // 스테이지 킬 진행
+    stageKillProgress++;
+    onEnemyKilled();
+    checkStageProgress();
+
+    // 필드 아이템 드롭 (elite 20%, bruiser 12%, rusher 4%, swarm 2%)
+    let dropChance = this.isElite ? 0.20 : this.type === 'bruiser' ? 0.12 : this.type === 'rusher' ? 0.04 : 0.02;
+    if (Math.random() < dropChance && fieldItems.length < 8) {
+      let dropTypes = ['health', 'health', 'magnet', 'surge'];
+      let dropType  = dropTypes[Math.floor(Math.random() * dropTypes.length)];
+      fieldItems.push(new FieldItem(this.x, this.y, dropType));
+    }
+
+    // 골드 드롭 (골든 러쉬 이벤트 중엔 3배 + 항상 드롭)
+    let goldMult = activeFieldEvent?.id === 'golden_rush' ? 3 : 1;
+    let goldAmt = 0;
+    if (this.isElite) goldAmt = 4 + Math.floor(Math.random() * 4);
+    else if (this.type === 'bruiser') goldAmt = 2 + Math.floor(Math.random() * 3);
+    else if (activeFieldEvent?.id === 'golden_rush') goldAmt = 1;
+    else if (this.type === 'rusher'  && Math.random() < 0.4) goldAmt = 1 + (Math.random() < 0.3 ? 1 : 0);
+    else if (this.type === 'swarm'   && Math.random() < 0.2) goldAmt = 1;
+    if (goldAmt > 0) spawnGoldCoins(this.x, this.y, Math.ceil(goldAmt * goldMult));
+
+    let idx = enemies.indexOf(this);
+    if (idx !== -1) enemies.splice(idx, 1);
+  }
+}
+
+// ============================================================
+// 10. 보스 클래스
+// ============================================================
+// 보스 타입 팔레트 (인덱스 % 4 순환)
+const BOSS_TYPES = [
+  { id: 'berserker', label: 'BERSERKER', outerColor: '#ff0044', innerColor: '#ff4466', glowColor: '#ff0044' },
+  { id: 'sharpshooter', label: 'SNIPER',  outerColor: '#00f0ff', innerColor: '#00aaff', glowColor: '#00f0ff' },
+  { id: 'summoner',  label: 'SUMMONER',  outerColor: '#b026ff', innerColor: '#cc66ff', glowColor: '#b026ff' },
+  { id: 'titan',     label: 'TITAN',     outerColor: '#ffe600', innerColor: '#ffaa00', glowColor: '#ff8800' },
+];
+
+// ============================================================
+// 장애물 시스템
+// ============================================================
+class FirewallWall {
+  constructor(x1, y1, x2, y2) {
+    this.x1 = x1; this.y1 = y1; this.x2 = x2; this.y2 = y2;
+    this.type = 'firewall'; this.color = '#00f0ff';
+    this.pulseT = Math.random() * Math.PI * 2; this.dead = false;
+  }
+  update(dt) { this.pulseT += dt * 0.003; }
+  draw(ctx, camera) {
+    const sx1 = this.x1 - camera.x, sy1 = this.y1 - camera.y;
+    const sx2 = this.x2 - camera.x, sy2 = this.y2 - camera.y;
+    const pulse = 0.6 + Math.sin(this.pulseT) * 0.3;
+    ctx.save();
+    ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+    ctx.strokeStyle = this.color; ctx.lineWidth = 3; ctx.globalAlpha = pulse;
+    ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2); ctx.stroke();
+    ctx.lineWidth = 1; ctx.globalAlpha = pulse * 0.4;
+    const dx = sx2-sx1, dy = sy2-sy1, len = Math.sqrt(dx*dx+dy*dy);
+    const nx = -dy/len*6, ny = dx/len*6;
+    const segs = Math.max(2, Math.floor(len / 40));
+    for (let i = 0; i <= segs; i++) {
+      const t = i/segs, mx = sx1+dx*t, my = sy1+dy*t;
+      ctx.beginPath(); ctx.moveTo(mx-nx, my-ny); ctx.lineTo(mx+nx, my+ny); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  collidesWithCircle(cx, cy, cr) {
+    const dx = this.x2-this.x1, dy = this.y2-this.y1, lenSq = dx*dx+dy*dy;
+    if (lenSq === 0) return false;
+    let t = Math.max(0, Math.min(1, ((cx-this.x1)*dx+(cy-this.y1)*dy)/lenSq));
+    return Math.sqrt((cx-this.x1-t*dx)**2+(cy-this.y1-t*dy)**2) < cr + 4;
+  }
+  pushOutVector(cx, cy, cr) {
+    const dx = this.x2-this.x1, dy = this.y2-this.y1, lenSq = dx*dx+dy*dy;
+    if (lenSq === 0) return {x:0,y:0};
+    let t = Math.max(0, Math.min(1, ((cx-this.x1)*dx+(cy-this.y1)*dy)/lenSq));
+    const nearX = this.x1+t*dx, nearY = this.y1+t*dy;
+    let pvx = cx-nearX, pvy = cy-nearY;
+    const d = Math.sqrt(pvx*pvx+pvy*pvy);
+    if (d === 0) { pvx = -dy/Math.sqrt(lenSq); pvy = dx/Math.sqrt(lenSq); return {x:pvx*(cr+5),y:pvy*(cr+5)}; }
+    return { x: pvx/d*(cr+5-d), y: pvy/d*(cr+5-d) };
+  }
+}
+
+class ElectricZone {
+  constructor(x, y, radius) {
+    this.x = x; this.y = y; this.radius = radius;
+    this.type = 'electric'; this.color = '#ffe600';
+    this.on = true; this.timer = 0;
+    this.ON_DUR  = 2200 + Math.random() * 800;
+    this.OFF_DUR = 900  + Math.random() * 400;
+    this.dmgTimer = 0; this.dead = false;
+  }
+  update(dt) {
+    this.timer += dt;
+    if (this.timer >= (this.on ? this.ON_DUR : this.OFF_DUR)) { this.timer = 0; this.on = !this.on; }
+    if (this.on && player) {
+      const dx = player.x-this.x, dy = player.y-this.y;
+      if (Math.sqrt(dx*dx+dy*dy) < this.radius + player.radius) {
+        this.dmgTimer += dt;
+        if (this.dmgTimer >= 400) {
+          this.dmgTimer = 0;
+          player.hp -= 4; player.flashTimer = 60;
+          if (player.hp <= 0) endGame(false);
+          addFloatingText(player.x, player.y-20, '-4 ⚡', '#ffe600', 11);
+        }
+      } else { this.dmgTimer = 0; }
+    }
+  }
+  draw(ctx, camera) {
+    if (!this.on && this.timer > this.OFF_DUR * 0.7) return;
+    const sx = this.x-camera.x, sy = this.y-camera.y;
+    const alpha = this.on ? (0.18+Math.sin(Date.now()*0.008)*0.08) : 0.05+(1-this.timer/this.OFF_DUR)*0.08;
+    ctx.save();
+    ctx.shadowBlur = this.on ? 18 : 4; ctx.shadowColor = this.color;
+    ctx.strokeStyle = this.color; ctx.lineWidth = 2; ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(sx, sy, this.radius, 0, Math.PI*2); ctx.stroke();
+    if (this.on) {
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 6; i++) {
+        const a = (i/6)*Math.PI*2+Date.now()*0.002;
+        ctx.beginPath();
+        ctx.moveTo(sx+Math.cos(a)*this.radius*0.6, sy+Math.sin(a)*this.radius*0.6);
+        ctx.lineTo(sx+Math.cos(a)*this.radius, sy+Math.sin(a)*this.radius);
+        ctx.stroke();
+      }
+    }
+    ctx.font = 'bold 8px Orbitron,monospace'; ctx.fillStyle = this.color;
+    ctx.textAlign = 'center'; ctx.globalAlpha = alpha*1.5;
+    ctx.fillText(this.on ? '⚡ ELECTRIC' : '[ OFF ]', sx, sy);
+    ctx.restore();
+  }
+}
+
+class VirusPool {
+  constructor(x, y, radius) {
+    this.x = x; this.y = y; this.radius = radius;
+    this.type = 'pool'; this.color = '#39ff14';
+    this.pulseT = Math.random()*Math.PI*2; this.dmgTimer = 0; this.dead = false;
+  }
+  update(dt) {
+    this.pulseT += dt*0.002;
+    const r = this.radius+Math.sin(this.pulseT)*8;
+    if (player) {
+      const dx = player.x-this.x, dy = player.y-this.y;
+      if (Math.sqrt(dx*dx+dy*dy) < r+player.radius) {
+        player._inVirusPool = true;
+        this.dmgTimer += dt;
+        if (this.dmgTimer >= 600) {
+          this.dmgTimer = 0;
+          player.hp -= 3; player.flashTimer = 40;
+          if (player.hp <= 0) endGame(false);
+          addFloatingText(player.x, player.y-20, '-3 ☣', '#39ff14', 10);
+        }
+      }
+    }
+  }
+  draw(ctx, camera) {
+    const sx = this.x-camera.x, sy = this.y-camera.y;
+    const r  = this.radius+Math.sin(this.pulseT)*8;
+    ctx.save();
+    ctx.shadowBlur = 8; ctx.shadowColor = this.color;
+    ctx.globalAlpha = 0.12+Math.sin(this.pulseT)*0.04;
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.4; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 0.15; ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const a = (i/4)*Math.PI*2+this.pulseT;
+      ctx.beginPath(); ctx.moveTo(sx, sy);
+      ctx.lineTo(sx+Math.cos(a)*r*0.7, sy+Math.sin(a)*r*0.7); ctx.stroke();
+    }
+    ctx.globalAlpha = 0.45; ctx.font = 'bold 7px Orbitron,monospace';
+    ctx.fillStyle = this.color; ctx.textAlign = 'center';
+    ctx.fillText('☣ POOL', sx, sy);
+    ctx.restore();
+  }
+}
+
+class Boss {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.type   = 'boss';
+    this.speedMultiplier = 1.0;
+    this.flashTimer = 0;
+    this.pulseTimer = 0;
+    this.stunTimer  = 0;
+    this.shieldActive = false;
+    this.shieldTimer  = 0;
+
+    let bossIdx = Math.max(0, Math.floor(currentStage / 10) - 1);
+    this.isFinalBoss = (currentStage === 100);
+
+    // 반경: 스테이지 높을수록 조금씩 성장
+    this.radius = this.isFinalBoss ? 90 : Math.min(50 + bossIdx * 2, 70);
+
+    let scale   = 1 + bossIdx * 0.95;
+    // 최종 보스: HP 3.5배 추가
+    this.maxHp  = Math.floor(750 * scale * (this.isFinalBoss ? 3.5 : 1));
+    this.hp     = this.maxHp;
+    this.damage = Math.floor(32 * (1 + bossIdx * 0.35));
+    this.xpValue = 60 + bossIdx * 20;
+    this.baseSpeed = this.isFinalBoss ? 2.0 : Math.min(1.7 + bossIdx * 0.05, 2.4);
+    this.name   = BOSS_NAMES[Math.min(bossIdx, BOSS_NAMES.length - 1)];
+    this.phase  = 1;
+    this.bossIdx = bossIdx;
+    // 최종 보스는 TITAN 패턴 기반 (유도탄 + 전 패턴 동시 활성)
+    this.patternType = this.isFinalBoss
+      ? { id: 'final', label: 'FINAL PROTOCOL', outerColor: '#ffe600', innerColor: '#ff0044', glowColor: '#ffffff' }
+      : BOSS_TYPES[bossIdx % 4];
+
+    // 공격성 스케일: bossIdx 높을수록 쿨다운 최대 65% 단축
+    const ag = Math.max(0.35, 1.0 - bossIdx * 0.07);
+
+    // 돌진 공격
+    this.chargeTimer    = 0;
+    this.chargeCooldown = Math.round((this.isFinalBoss ? 2000 : (this.patternType.id === 'berserker' ? 2800 : 3800)) * ag);
+    this.isCharging     = false;
+    this.chargeVx = 0; this.chargeVy = 0;
+    this.chargeDuration = 0;
+    this.pendingCharges = 0;
+
+    // 미니언 소환
+    this.minionTimer    = 0;
+    this.minionCooldown = Math.round((this.isFinalBoss ? 3500 : (this.patternType.id === 'summoner' ? 4000 : 6500)) * ag);
+
+    // 궤도 사격 (bossIdx 1 이상부터 기본 활성 — 스테이지 20+)
+    this.orbShotTimer    = 0;
+    this.orbShotCooldown = Math.round((this.isFinalBoss ? 3000 : 4200) * ag);
+
+    // 유도탄 (bossIdx 3 이상부터 기본 활성 — 스테이지 40+)
+    this.homingTimer    = 0;
+    this.homingCooldown = Math.round((this.isFinalBoss ? 3500 : 5000) * ag);
+
+    // 방어막 (summoner + 최종 보스)
+    this.shieldCooldown = Math.round((this.isFinalBoss ? 9000 : 12000) * ag);
+    this.shieldCDTimer  = 0;
+
+    // 최종 보스 전용: 엘리트 파동
+    this.eliteWaveTimer    = 0;
+    this.eliteWaveCooldown = 7000;
+  }
+
+  update(dt) {
+    this.pulseTimer += dt;
+    this.speedMultiplier = 1.0;
+    if (this.flashTimer > 0) this.flashTimer -= dt;
+
+    // 스턴 처리
+    if (this.stunTimer > 0) { this.stunTimer -= dt; return; }
+
+    // 방어막 처리
+    if (this.shieldActive) {
+      this.shieldTimer -= dt;
+      if (this.shieldTimer <= 0) {
+        this.shieldActive = false;
+        addFloatingText(this.x, this.y - 70, '🛡 방어막 해제!', '#b026ff', 13);
+      }
+      // 방어막 중에도 이동은 함
+    }
+
+    // 페이즈 2 전환 (HP 55% 이하, 미니보스 제외) — 더 일찍 격해짐
+    if (!this.isMini && this.phase === 1 && this.hp <= this.maxHp * 0.55) {
+      this.phase = 2;
+      this.baseSpeed    *= 1.6;
+      this.chargeCooldown = this.patternType.id === 'berserker' ? 1700 : 2200;
+      this.minionCooldown = this.patternType.id === 'summoner'  ? 2500 : 4000;
+      this.orbShotCooldown = 2800;
+      this.homingCooldown  = 3200;
+      createExplosionParticles(this.x, this.y, this.patternType.outerColor, 25);
+      triggerScreenShake(8, 500);
+      addFloatingText(this.x, this.y - 70, 'PHASE 2!', '#ff6600', 18);
+      playSynthSound([80, 200], 0.5, 'sawtooth', 0.12);
+    }
+
+    // 페이즈 3 전환 (HP 25% 이하, bossIdx >= 2 또는 최종 보스, 미니보스 제외)
+    if (!this.isMini && this.phase === 2 && (this.bossIdx >= 1 || this.isFinalBoss) && this.hp <= this.maxHp * 0.25) {
+      this.phase = 3;
+      this.baseSpeed    *= 1.35;
+      this.chargeCooldown  = 1400;
+      this.minionCooldown  = 2000;
+      this.orbShotCooldown = 2000;
+      this.homingCooldown  = 2000;
+      createExplosionParticles(this.x, this.y, '#ffffff', 35);
+      triggerScreenShake(14, 800);
+      addFloatingText(this.x, this.y - 70, '⚠ PHASE 3!', '#ffffff', 20);
+      playSynthSound([60, 120, 240], 0.6, 'sawtooth', 0.14);
+    }
+
+    if (this.isCharging) {
+      this.x += this.chargeVx * (dt / 16.66);
+      this.y += this.chargeVy * (dt / 16.66);
+      this.chargeDuration -= dt;
+      if (this.chargeDuration <= 0) {
+        this.isCharging = false;
+        const baseSpd = this.phase === 3 ? 3.0 : this.phase === 2 ? 2.4 : this.baseSpeed;
+        this.baseSpeed = baseSpd;
+        // 베르세르커: 연속 돌진
+        if (this.patternType.id === 'berserker' && this.pendingCharges > 0) {
+          this.pendingCharges--;
+          setTimeout(() => { if (activeBoss === this) this.startCharge(false); }, 200);
+        }
+      }
+    } else {
+      if (player) {
+        let dx = player.x - this.x, dy = player.y - this.y;
+        let d  = Math.sqrt(dx*dx + dy*dy);
+        if (d > 0) { dx /= d; dy /= d; }
+        let spd = this.baseSpeed * this.speedMultiplier;
+        this.x += dx * spd * (dt / 16.66);
+        this.y += dy * spd * (dt / 16.66);
+      }
+    }
+
+    this.chargeTimer += dt;
+    if (this.chargeTimer >= this.chargeCooldown && player) {
+      this.chargeTimer = 0;
+      this.startCharge(true);
+    }
+
+    this.minionTimer += dt;
+    if (this.minionTimer >= this.minionCooldown) {
+      this.minionTimer = 0;
+      this.spawnMinions();
+    }
+
+    // 궤도 사격 (sharpshooter + 페이즈2 이상 + bossIdx 1 이상 = 스테이지 20+ + 최종 보스)
+    if (this.patternType.id === 'sharpshooter' || this.phase >= 2 || this.bossIdx >= 1 || this.isFinalBoss) {
+      this.orbShotTimer += dt;
+      if (this.orbShotTimer >= this.orbShotCooldown) {
+        this.orbShotTimer = 0;
+        this.orbitalShot();
+      }
+    }
+
+    // 유도탄 (titan + 페이즈3 + bossIdx 3 이상 = 스테이지 40+ + 최종 보스)
+    if (this.patternType.id === 'titan' || this.phase >= 3 || this.bossIdx >= 3 || this.isFinalBoss) {
+      this.homingTimer += dt;
+      if (this.homingTimer >= this.homingCooldown) {
+        this.homingTimer = 0;
+        this.homingShot();
+      }
+    }
+
+    // 방어막 쿨다운 (summoner + 최종 보스)
+    if ((this.patternType.id === 'summoner' || this.isFinalBoss) && !this.shieldActive) {
+      this.shieldCDTimer += dt;
+      if (this.shieldCDTimer >= this.shieldCooldown) {
+        this.shieldCDTimer = 0;
+        this.activateShield();
+      }
+    }
+
+    // 최종 보스 전용: 엘리트 파동
+    if (this.isFinalBoss) {
+      this.eliteWaveTimer += dt;
+      if (this.eliteWaveTimer >= this.eliteWaveCooldown) {
+        this.eliteWaveTimer = 0;
+        this.spawnEliteWave();
+      }
+    }
+  }
+
+  startCharge(isNew) {
+    if (!player) return;
+    let dx = player.x - this.x, dy = player.y - this.y;
+    let d  = Math.sqrt(dx*dx + dy*dy);
+    if (d > 0) { dx /= d; dy /= d; }
+    const phase3 = this.phase >= 3;
+    let chargeSpd = phase3 ? 22 : (this.phase === 2 ? 17 : 12);
+    this.chargeVx = dx * chargeSpd;
+    this.chargeVy = dy * chargeSpd;
+    this.isCharging     = true;
+    this.chargeDuration = 600;
+    this.baseSpeed      = 0;
+    // 베르세르커: 연속 2-3회 돌진
+    if (isNew && this.patternType.id === 'berserker') {
+      this.pendingCharges = this.phase >= 2 ? 2 : 1;
+    }
+    addFloatingText(this.x, this.y - 60, '⚡ CHARGE!', '#ff6600', 13);
+    playSynthSound([200, 600], 0.3, 'sawtooth', 0.1);
+    triggerScreenShake(4, 300);
+  }
+
+  orbitalShot() {
+    if (!player) return;
+    const shotCount = this.phase >= 3 ? 16 : (this.phase >= 2 ? 12 : 10);
+    const spd = 6.5;
+    const dmg = this.damage * 0.85;
+    if (bossProjectiles.length >= MAX_BOSS_PROJ) return;
+    addFloatingText(this.x, this.y - 60, '🔵 궤도 사격!', this.patternType.glowColor, 12);
+    playSynthSound([500, 300, 700], 0.12, 'triangle', 0.07);
+    for (let i = 0; i < shotCount; i++) {
+      const angle = (i / shotCount) * Math.PI * 2;
+      bossProjectiles.push(new BossProjectile(
+        this.x, this.y,
+        Math.cos(angle) * spd, Math.sin(angle) * spd,
+        dmg, 7, this.patternType.glowColor, false
+      ));
+    }
+  }
+
+  homingShot() {
+    if (!player) return;
+    const count = this.phase >= 3 ? 4 : (this.phase >= 2 ? 3 : 2);
+    const dmg = this.damage * 1.1;
+    if (bossProjectiles.length >= MAX_BOSS_PROJ) return;
+    addFloatingText(this.x, this.y - 60, '🎯 유도탄!', '#ff8800', 12);
+    playSynthSound([150, 400], 0.15, 'sawtooth', 0.08);
+    for (let i = 0; i < count; i++) {
+      const spread = (i - (count - 1) / 2) * 0.28;
+      const angle = Math.atan2(player.y - this.y, player.x - this.x) + spread;
+      bossProjectiles.push(new BossProjectile(
+        this.x, this.y,
+        Math.cos(angle) * 4.5, Math.sin(angle) * 4.5,
+        dmg, 9, '#ff8800', true
+      ));
+    }
+  }
+
+  activateShield() {
+    this.shieldActive = true;
+    this.shieldTimer  = 5000;
+    addFloatingText(this.x, this.y - 70, '🛡 방어막 발동!', '#b026ff', 14);
+    createExplosionParticles(this.x, this.y, '#b026ff', 20);
+    playSynthSound([400, 800, 1200], 0.15, 'triangle', 0.08);
+  }
+
+  spawnEliteWave() {
+    if (!player) return;
+    const count = this.phase >= 3 ? 8 : (this.phase === 2 ? 6 : 4);
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const r = 180 + Math.random() * 80;
+      const ex = Math.max(20, Math.min(MAP_WIDTH  - 20, this.x + Math.cos(angle) * r));
+      const ey = Math.max(20, Math.min(MAP_HEIGHT - 20, this.y + Math.sin(angle) * r));
+      enemies.push(new Enemy(ex, ey, 'elite'));
+    }
+    addFloatingText(this.x, this.y - this.radius - 20, '☠ ELITE WAVE!', '#ff0044', 15);
+    triggerScreenShake(9, 500);
+    playSynthSound([80, 160, 320], 0.35, 'sawtooth', 0.12);
+  }
+
+  spawnMinions() {
+    const isSummoner = this.patternType.id === 'summoner';
+    const count = this.phase >= 3 ? 6 : (this.phase === 2 ? 4 : (isSummoner ? 3 : 2));
+    const minionType = isSummoner && this.phase >= 2 ? 'elite' : 'rusher';
+    for (let i = 0; i < count; i++) {
+      let angle = Math.random() * Math.PI * 2;
+      let r  = 80 + Math.random() * 60;
+      let ex = Math.max(20, Math.min(MAP_WIDTH  - 20, this.x + Math.cos(angle) * r));
+      let ey = Math.max(20, Math.min(MAP_HEIGHT - 20, this.y + Math.sin(angle) * r));
+      enemies.push(new Enemy(ex, ey, minionType));
+    }
+    addFloatingText(this.x, this.y - 60, '▶ 소환!', '#ff0044', 12);
+  }
+
+  draw(ctx, camera) {
+    ctx.save();
+    const pt  = this.patternType;
+    let pulse = Math.sin(this.pulseTimer * 0.006) * (this.isFinalBoss ? 8 : 5);
+    let drawR = this.radius + pulse;
+    let bx = this.x - camera.x, by = this.y - camera.y;
+
+    // 최종 보스: 회전 링 장식
+    if (this.isFinalBoss) {
+      const rot = this.pulseTimer * 0.002;
+      const ringCols = ['#ffe600', '#ff0044', '#00f0ff', '#b026ff'];
+      for (let r = 0; r < 4; r++) {
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.rotate(rot + r * Math.PI / 2);
+        ctx.strokeStyle = ringCols[r];
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.6 + Math.sin(this.pulseTimer * 0.008 + r) * 0.2;
+        ctx.shadowBlur = 20; ctx.shadowColor = ringCols[r];
+        ctx.beginPath();
+        ctx.arc(0, 0, drawR + 12 + r * 8, -0.6, 0.6);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // 방어막 링
+    if (this.shieldActive) {
+      ctx.strokeStyle = '#b026ff'; ctx.lineWidth = 3;
+      ctx.shadowBlur = 25; ctx.shadowColor = '#b026ff';
+      const sAlpha = 0.4 + Math.sin(this.pulseTimer * 0.01) * 0.2;
+      ctx.globalAlpha = sAlpha;
+      ctx.beginPath(); ctx.arc(bx, by, drawR + 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    let outerCol;
+    if (this.isFinalBoss) {
+      // 최종 보스: 페이즈별 색상
+      outerCol = this.phase >= 3 ? '#ffffff' : (this.phase === 2 ? '#ff6600' : '#ffe600');
+    } else {
+      outerCol = this.phase >= 3 ? '#ffffff' : (this.phase === 2 ? '#ff6600' : pt.outerColor);
+    }
+    ctx.shadowBlur  = this.isFinalBoss ? 60 : 35;
+    ctx.shadowColor = this.isFinalBoss ? '#ffe600' : (this.shieldActive ? '#b026ff' : pt.glowColor);
+    ctx.fillStyle   = this.flashTimer > 0 ? '#ffffff' : outerCol;
+    ctx.beginPath(); ctx.arc(bx, by, drawR, 0, Math.PI * 2); ctx.fill();
+
+    ctx.shadowBlur  = 15;
+    ctx.fillStyle   = this.isFinalBoss
+      ? (this.phase >= 2 ? '#ff2200' : '#ff0044')
+      : (this.phase >= 2 ? '#ff8800' : pt.innerColor);
+    ctx.beginPath(); ctx.arc(bx, by, drawR * 0.55, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = this.isFinalBoss ? 3 : 2; ctx.stroke();
+
+    // 보스 이름 + 타입 라벨
+    ctx.font      = `bold ${this.isFinalBoss ? 13 : 11}px Orbitron, sans-serif`;
+    ctx.fillStyle = this.isFinalBoss ? '#ffe600' : '#fff';
+    ctx.textAlign = 'center';
+    ctx.shadowBlur  = this.isFinalBoss ? 12 : 5;
+    ctx.shadowColor = this.isFinalBoss ? '#ffe600' : pt.glowColor;
+    ctx.fillText(this.name, bx, by - drawR - 20);
+    ctx.font = '8px Orbitron, sans-serif';
+    ctx.fillStyle = this.isFinalBoss ? '#ff0044' : pt.glowColor;
+    ctx.fillText(`[${pt.label}]`, bx, by - drawR - 10);
+
+    // HP 바
+    let barW = this.radius * 2.5, barH = this.isFinalBoss ? 9 : 6;
+    let barX = bx - barW / 2, barY = by - drawR - 30;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(barX, barY, barW, barH);
+    let pct = Math.max(this.hp / this.maxHp, 0);
+    ctx.fillStyle = pct > 0.5 ? (this.isFinalBoss ? '#ffe600' : pt.outerColor) : pct > 0.25 ? '#ff6600' : '#ff0000';
+    ctx.fillRect(barX, barY, barW * pct, barH);
+    // 페이즈 경계 표시
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(barX + barW * 0.5 - 1, barY, 2, barH);
+    if (this.bossIdx >= 2 || this.isFinalBoss) ctx.fillRect(barX + barW * 0.25 - 1, barY, 2, barH);
+
+    ctx.restore();
+  }
+
+  takeDamage(amount, sourceKey) {
+    // 방어막 중: 피해 80% 감소
+    if (this.shieldActive) amount *= 0.2;
+    this.hp -= amount;
+    this.flashTimer = 80;
+    if (weaponStats[sourceKey]) weaponStats[sourceKey].damage += amount;
+    createExplosionParticles(this.x, this.y, '#ff0044', 2);
+    addFloatingText(this.x + (Math.random()-0.5)*30, this.y - this.radius, Math.floor(amount).toString(), '#ff4466', 13);
+    if (this.hp <= 0) { this.hp = 0; this.die(sourceKey); return true; }
+    return false;
+  }
+
+  die(sourceKey) {
+    if (this.dead) return;
+    this.dead = true;
+    bossProjectiles.length = 0;
+    createExplosionParticles(this.x, this.y, '#ff0044', 35);
+    createExplosionParticles(this.x, this.y, '#ffe600', 25);
+    createExplosionParticles(this.x, this.y, this.patternType.outerColor, 20);
+    triggerScreenShake(18, 900);
+    if (weaponStats[sourceKey]) weaponStats[sourceKey].kills++;
+    for (let i = 0; i < 12; i++) {
+      let ang = Math.random() * Math.PI * 2;
+      let r   = Math.random() * 70;
+      gems.push(new Gem(this.x + Math.cos(ang)*r, this.y + Math.sin(ang)*r, this.xpValue));
+    }
+    playBossDeathSound();
+    spawnGoldCoins(this.x, this.y, 12 + Math.floor(Math.random() * 9));
+    // 보스 처치 보너스 드롭: HP 또는 서지 아이템
+    const bossDropType = ['health', 'health', 'surge', 'magnet'][Math.floor(Math.random() * 4)];
+    fieldItems.push(new FieldItem(this.x + (Math.random() - 0.5) * 60, this.y + (Math.random() - 0.5) * 60, bossDropType));
+    addFloatingText(this.x, this.y - this.radius - 20, '★ BOSS DROP!', '#ffe600', 15);
+    _statAdd('totalBossKills', 1);
+    // 미션 트래킹
+    if (!this.isMini) {
+      mTrack.mBossKills++;
+      const bossElapsedSec = bossStageStartMs > 0 ? (Date.now() - bossStageStartMs) / 1000 : 999;
+      if (bossElapsedSec <= 60) mTrack.mBossTimedKill = 1;
+    }
+    activeBoss = null;
+    isBossStage = false;
+    isMiniBossStage = false;
+    bossStageStartMs = 0;
+    if (!this.isMini) {
+      if (!this.isFinalBoss) pendingBossCurse = true; // 최종 보스 후엔 저주 없음
+    } else {
+      for (let i = 0; i < 6; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        gems.push(new Gem(this.x + Math.cos(ang) * 50, this.y + Math.sin(ang) * 50, this.xpValue * 2));
+      }
+      spawnGoldCoins(this.x, this.y, 8 + Math.floor(Math.random() * 5));
+      addFloatingText(this.x, this.y - 80, '⚡ MINI BOSS 처치!', '#ffe600', 16);
+    }
+    triggerStageClear();
+  }
+}
+
+// 보스 발사체 클래스
+class BossProjectile {
+  constructor(x, y, vx, vy, damage, radius, color, homing) {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.damage = damage; this.radius = radius; this.color = color;
+    this.homing = homing;
+    this.speed  = Math.sqrt(vx*vx + vy*vy);
+    this.life   = homing ? 5000 : 3500;
+  }
+  update(dt) {
+    if (this.homing && player) {
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const d  = Math.sqrt(dx*dx + dy*dy);
+      if (d > 0) {
+        const tx = (dx/d) * this.speed;
+        const ty = (dy/d) * this.speed;
+        this.vx += (tx - this.vx) * 0.022 * (dt / 16.66);
+        this.vy += (ty - this.vy) * 0.022 * (dt / 16.66);
+      }
+    }
+    this.x += this.vx * (dt / 16.66);
+    this.y += this.vy * (dt / 16.66);
+    this.life -= dt;
+  }
+  draw(ctx, camera) {
+    ctx.save();
+    ctx.shadowBlur = 14; ctx.shadowColor = this.color;
+    ctx.fillStyle  = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x - camera.x, this.y - camera.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    if (this.homing) {
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ============================================================
