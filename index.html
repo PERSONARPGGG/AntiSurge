@@ -47,7 +47,7 @@
       <div class="menu-header">
         <div class="menu-title-block">
           <div class="menu-title-eyebrow">[ VIRUS SURVIVAL ]</div>
-          <h1 class="neon-title"><span class="title-anti">ANTI</span><span class="title-surge">SURGE</span></h1>
+          <h1 class="neon-title"><span class="title-anti">ANTI</span><span class="title-surge">SURGE</span><span id="ascension-menu-badge" class="ascension-menu-badge" style="display:none">NG+0</span></h1>
           <div class="menu-title-sub">사이버펑크 바이러스 서바이벌</div>
         </div>
         <div class="menu-header-meta">
@@ -497,6 +497,12 @@
       <div id="mp-survival-rank" style="display:none;background:rgba(0,0,0,0.5);border:1px solid #00f0ff33;border-radius:6px;padding:8px 12px;margin:6px 0;font-size:12px;line-height:1.8"></div>
       <div id="cores-earned-row" class="cores-earned-row"></div>
       <div id="best-record-row" class="best-record-row"></div>
+
+      <!-- NG+ 빅토리 전용 섹션 (스테이지 100 클리어 시만 표시) -->
+      <div id="victory-extra" class="victory-extra" style="display:none">
+        <div id="ascension-display" class="ascension-display">승천 Lv.0 → Lv.1</div>
+        <button id="ng-plus-btn" class="neon-btn ng-plus-btn" onclick="startNewGamePlus()">✨ NG+1 시작</button>
+      </div>
 
       <div class="result-details">
         <h3>[ 업그레이드 이력 및 무기 기여도 ]</h3>

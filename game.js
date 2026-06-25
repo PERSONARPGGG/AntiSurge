@@ -3619,7 +3619,7 @@ class Boss {
     isMiniBossStage = false;
     bossStageStartMs = 0;
     if (!this.isMini) {
-      pendingBossCurse = true;
+      if (!this.isFinalBoss) pendingBossCurse = true; // 최종 보스 후엔 저주 없음
     } else {
       for (let i = 0; i < 6; i++) {
         const ang = Math.random() * Math.PI * 2;
@@ -3971,9 +3971,9 @@ function triggerStageClear() {
 
   const isEntry = currentStage === 100;
   showStageOverlay(
-    `STAGE ${currentStage} CLEAR!`,
+    isEntry             ? '🏆 PROTOCOL COMPLETE' : `STAGE ${currentStage} CLEAR!`,
     currentStage > 100  ? '∞ 다음 파동으로 진입!' :
-    isEntry             ? '★ ENDLESS MODE 진입! ★' : '보너스 보상을 선택하세요!',
+    isEntry             ? '★ 최종 바이러스 코어 격리 완료! ★' : '보너스 보상을 선택하세요!',
     currentStage >= 100 ? '#ffe600' : '#39ff14'
   );
   playStageClearSound();
@@ -4007,7 +4007,13 @@ function advanceToNextStage() {
   currentStage++;
   checkZoneTransition();
 
-  if (currentStage > 100 && !isEndlessMode) {
+  // 스테이지 100 클리어 → 빅토리 시퀀스 (엔들리스 모드로 가지 않음)
+  if (currentStage === 101) {
+    triggerFinalVictory();
+    return;
+  }
+
+  if (currentStage > 101 && !isEndlessMode) {
     isEndlessMode = true;
     endlessModeStartTime = gameTime;
   }
@@ -6508,6 +6514,124 @@ function applyLegendaryUpgrade(id) {
 // ============================================================
 // 26. 게임 종료 / 결과 화면
 // ============================================================
+// ============================================================
+// Priority 06 — 스테이지 100 엔딩 + NG+
+// ============================================================
+function triggerFinalVictory() {
+  gameState = STATE_GAME_OVER;
+  stopBGM();
+  const _hudEl = document.getElementById('hud');
+  if (_hudEl) _hudEl.style.visibility = 'hidden';
+  const _mpEl = document.getElementById('mission-panel');
+  if (_mpEl) _mpEl.style.display = 'none';
+
+  if (!isDailyRun) {
+    _statAdd('totalKills', killCount);
+    _statAdd('totalGamesPlayed', 1);
+    _statSet('maxStage', 100);
+    _statSet('maxSurviveTime', gameTime);
+    _statSet('maxCombo', maxCombo);
+    if (!player) return;
+    const cls = player.classId;
+    _statAdd(`cls_${cls}_games`, 1);
+    _statSet(`cls_${cls}_maxStage`, 100);
+    _statAdd(`cls_${cls}_kills`, killCount);
+    _checkCloudAchievements();
+    _checkClassUnlocks();
+    _syncToCloud();
+    submitLeaderboard(true);
+  }
+  if (100 > (saveData.bestStage || 0)) { saveData.bestStage = 100; }
+  if (killCount > (saveData.bestKills || 0)) { saveData.bestKills = killCount; }
+  saveData.completions = (saveData.completions || 0) + 1;
+  saveSaveData();
+
+  // 승리 파티클 연출
+  const cx = player?.x || MAP_WIDTH / 2;
+  const cy = player?.y || MAP_HEIGHT / 2;
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => {
+      createExplosionParticles(cx, cy, '#ffe600', 30);
+      createExplosionParticles(cx, cy, '#00f0ff', 20);
+      createExplosionParticles(cx, cy, '#b026ff', 15);
+      triggerScreenShake(18, 800);
+      playSynthSound([200 + i * 150, 400 + i * 100], 0.25, 'sine', 0.1);
+    }, i * 500);
+  }
+  setTimeout(() => showVictoryScreen(), 3500);
+}
+
+function showVictoryScreen() {
+  const title    = document.getElementById('result-title');
+  const subtitle = document.getElementById('result-subtitle');
+  const deathRow = document.getElementById('death-cause-row');
+  const victoryExtra = document.getElementById('victory-extra');
+  const coresRow = document.getElementById('cores-earned-row');
+  const bestRow  = document.getElementById('best-record-row');
+
+  const bm = Math.floor(gameTime / 60000), bs = Math.floor((gameTime % 60000) / 1000);
+  const statTime   = document.getElementById('stat-time');
+  const statStage  = document.getElementById('stat-stage');
+  const statKills  = document.getElementById('stat-kills');
+  const statLevel  = document.getElementById('stat-level');
+  const statCombo  = document.getElementById('stat-maxcombo');
+  const statEvo    = document.getElementById('stat-evolutions');
+  if (statTime)  statTime.textContent  = `${String(bm).padStart(2,'0')}:${String(bs).padStart(2,'0')}`;
+  if (statStage) statStage.textContent = '100';
+  if (statKills) statKills.textContent = killCount;
+  if (statLevel) statLevel.textContent = `Lv. ${player?.level || 1}`;
+  if (statCombo) statCombo.textContent = maxCombo;
+  if (statEvo)   statEvo.textContent   = evolutionCount;
+
+  if (title) {
+    title.textContent = '🏆 PROTOCOL COMPLETE';
+    title.style.color = '#ffe600';
+    title.style.textShadow = '0 0 12px #ffe600, 0 0 40px #ffe600, 0 0 80px #ff8800';
+  }
+  if (subtitle) subtitle.textContent = '시스템 위협 완전 제압. 승천 레벨 해금!';
+  if (deathRow) deathRow.style.display = 'none';
+
+  const coresBonus = 30 + (saveData.completions || 1) * 5;
+  saveData.dataCores += coresBonus;
+  saveSaveData();
+  if (coresRow) { coresRow.textContent = `+${coresBonus} 데이터 코어 획득`; coresRow.style.color = '#00f0ff'; }
+  if (bestRow)  bestRow.textContent = '';
+
+  const nextAsc = (saveData.ascensionLevel || 0) + 1;
+  const ngBtn   = document.getElementById('ng-plus-btn');
+  const ascDisp = document.getElementById('ascension-display');
+  if (ngBtn)   ngBtn.textContent = `✨ NG+${nextAsc} 시작`;
+  if (ascDisp) ascDisp.textContent = `승천 Lv.${saveData.ascensionLevel || 0} → Lv.${nextAsc}  |  적 HP +${nextAsc * 25}%  |  플레이어 +${nextAsc * 15} HP`;
+  if (victoryExtra) victoryExtra.style.display = 'block';
+
+  gameOverModal.classList.add('active');
+  playSynthSound([300, 500, 700, 1000, 700, 500, 300], 0.3, 'triangle', 0.15);
+}
+
+function startNewGamePlus() {
+  saveData.ascensionLevel = (saveData.ascensionLevel || 0) + 1;
+  saveSaveData();
+  gameOverModal.classList.remove('active');
+  // 빅토리 extra 숨김 + 타이틀 초기화 (다음 게임오버 때 일반 화면 나오도록)
+  const ve = document.getElementById('victory-extra');
+  if (ve) ve.style.display = 'none';
+  const title = document.getElementById('result-title');
+  if (title) { title.style.color = ''; title.style.textShadow = ''; }
+  // 클래스 선택 화면으로 (클래스는 재선택 가능)
+  menuScreen.classList.remove('active');
+  document.getElementById('class-select-screen').classList.add('active');
+  refreshClassCardLockState();
+  updateMenuAscensionBadge();
+}
+
+function updateMenuAscensionBadge() {
+  const badge = document.getElementById('ascension-menu-badge');
+  if (!badge) return;
+  const lv = saveData.ascensionLevel || 0;
+  badge.style.display = lv > 0 ? 'inline-block' : 'none';
+  badge.textContent   = `NG+${lv}`;
+}
+
 function _checkClassUnlocks() {
   for (const [cls, def] of Object.entries(CLASS_UNLOCK_DEFS)) {
     if (!def) continue;
@@ -7881,6 +8005,7 @@ function closeLeaderboardModal() {
 saveData = loadSaveData();
 ascensionLevel = saveData.ascensionLevel || 0;
 updateMenuMetaBadge();
+updateMenuAscensionBadge();
 _initAuth();
 
 // 터치 컨트롤 초기화
