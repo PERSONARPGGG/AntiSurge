@@ -235,35 +235,40 @@ let obstacles = [];
 
 // ── 배경 테마 (스테이지별 자동 전환) ──────────────────────────
 const BG_THEMES = [
-  { // Stage 1-24: Cyan / Neon
+  { // Stage 1-24: Cyan / Neon — 슬럼 지구
+    zoneName:'🌆 슬럼 지구', zoneTag:'SLUM DISTRICT', zoneColor:'#00f0ff',
     bgDark:'#01010a', glow:'rgba(0,18,45,0.4)',
     stars:['#00f0ff','#b026ff','#ffe600'],
     gridRgb:'0,240,255', scanRgb:'0,240,255',
     borderColor:'rgba(255,0,127,0.75)', borderGlow:'#ff007f',
     vignetteColor:'rgba(0,0,10,0.6)'
   },
-  { // Stage 25-49: Void / Purple
+  { // Stage 25-49: Void / Purple — 서버 팜
+    zoneName:'🖥 서버 팜', zoneTag:'SERVER FARM', zoneColor:'#b026ff',
     bgDark:'#07010e', glow:'rgba(35,0,65,0.45)',
     stars:['#b026ff','#ff00cc','#00f0ff'],
     gridRgb:'160,0,255', scanRgb:'176,38,255',
     borderColor:'rgba(176,38,255,0.8)', borderGlow:'#b026ff',
     vignetteColor:'rgba(5,0,15,0.65)'
   },
-  { // Stage 50-74: Crimson / Red
+  { // Stage 50-74: Crimson / Red — 바이러스 코어
+    zoneName:'☣ 바이러스 코어', zoneTag:'VIRUS CORE', zoneColor:'#ff4466',
     bgDark:'#0a0101', glow:'rgba(50,0,5,0.45)',
     stars:['#ff4466','#ff8800','#ffe600'],
     gridRgb:'255,50,80', scanRgb:'255,68,102',
     borderColor:'rgba(255,20,0,0.8)', borderGlow:'#ff2200',
     vignetteColor:'rgba(12,0,0,0.65)'
   },
-  { // Stage 75-99: Matrix / Green
+  { // Stage 75-99: Matrix / Green — 붕괴 지대
+    zoneName:'💀 붕괴 지대', zoneTag:'COLLAPSE ZONE', zoneColor:'#39ff14',
     bgDark:'#000a01', glow:'rgba(0,30,5,0.4)',
     stars:['#39ff14','#00f0ff','#ffe600'],
     gridRgb:'57,255,20', scanRgb:'57,255,20',
     borderColor:'rgba(57,255,20,0.8)', borderGlow:'#39ff14',
     vignetteColor:'rgba(0,8,0,0.65)'
   },
-  { // Stage 100+: Endless / Gold
+  { // Stage 100+: Endless / Gold — 엔드리스 존
+    zoneName:'∞ 엔드리스 존', zoneTag:'ENDLESS ZONE', zoneColor:'#ffe600',
     bgDark:'#060400', glow:'rgba(60,40,0,0.45)',
     stars:['#ffe600','#ff8800','#ffffff'],
     gridRgb:'255,200,0', scanRgb:'255,230,0',
@@ -273,13 +278,59 @@ const BG_THEMES = [
 ];
 
 
-function getCurrentBgTheme() {
+function getCurrentZoneIdx() {
   const s = (typeof currentStage !== 'undefined' && gameState !== STATE_MENU) ? currentStage : 1;
-  if (s >= 100) return BG_THEMES[4];
-  if (s >= 75)  return BG_THEMES[3];
-  if (s >= 50)  return BG_THEMES[2];
-  if (s >= 25)  return BG_THEMES[1];
-  return BG_THEMES[0];
+  if (s >= 100) return 4;
+  if (s >= 75)  return 3;
+  if (s >= 50)  return 2;
+  if (s >= 25)  return 1;
+  return 0;
+}
+function getCurrentBgTheme() { return BG_THEMES[getCurrentZoneIdx()]; }
+
+let _lastZoneIdx = -1;
+
+function checkZoneTransition() {
+  if (gameState !== STATE_PLAYING) return;
+  const zIdx = getCurrentZoneIdx();
+  if (_lastZoneIdx === -1) { _lastZoneIdx = zIdx; return; }
+  if (zIdx !== _lastZoneIdx) {
+    _lastZoneIdx = zIdx;
+    const th = BG_THEMES[zIdx];
+    showZoneEntryOverlay(th);
+    updateZoneHUDBadge(th);
+  }
+}
+
+function showZoneEntryOverlay(th) {
+  const ov      = document.getElementById('zone-entry-overlay');
+  const tagEl   = document.getElementById('zone-entry-tag');
+  const nameEl  = document.getElementById('zone-entry-name');
+  if (!ov || !tagEl || !nameEl) return;
+  ov.style.color = th.zoneColor;
+  tagEl.textContent  = `— ${th.zoneTag} —`;
+  nameEl.textContent = th.zoneName;
+  ov.classList.remove('active');
+  void ov.offsetWidth; // reflow for re-animation
+  ov.classList.add('active');
+  clearTimeout(ov._zt);
+  ov._zt = setTimeout(() => {
+    ov.style.transition = 'opacity 0.7s';
+    ov.style.opacity = '0';
+    setTimeout(() => { ov.classList.remove('active'); ov.style.opacity = ''; ov.style.transition = ''; }, 750);
+  }, 2400);
+  triggerScreenShake(6, 400);
+  playSynthSound([300, 600, 900, 600, 300], 0.18, 'triangle', 0.12);
+}
+
+function updateZoneHUDBadge(th) {
+  const badge = document.getElementById('zone-hud-badge');
+  if (!badge) return;
+  badge.textContent = th.zoneName;
+  badge.style.color = th.zoneColor;
+  badge.style.borderColor = th.zoneColor;
+  badge.style.textShadow = `0 0 6px ${th.zoneColor}`;
+  badge.style.boxShadow = `0 0 8px ${th.zoneColor}44`;
 }
 
 // 별 색상 매핑 (기존 고정 색 → 테마 인덱스)
@@ -3844,6 +3895,7 @@ function showStageBonusSafe(retries = 0) {
 
 function advanceToNextStage() {
   currentStage++;
+  checkZoneTransition();
 
   if (currentStage > 100 && !isEndlessMode) {
     isEndlessMode = true;
@@ -5006,6 +5058,7 @@ function startGame() {
   if (_gemMagnetTimer) { clearTimeout(_gemMagnetTimer); _gemMagnetTimer = null; }
   stageGemMagnet = false;
   currentStage = 1;
+  _lastZoneIdx = -1; // 존 초기화 (첫 스테이지엔 오버레이 없이 배지만)
   stageKillProgress = 0;
   stageKillGoal     = getStageKillGoal(1);
   isBossStage       = false;
@@ -5623,6 +5676,8 @@ function updateHUD() {
   document.getElementById('player-level').innerText = player.level;
   document.getElementById('kill-count').innerText   = killCount;
   document.getElementById('stage-number').innerText = currentStage;
+  // 존 배지 (매 HUD 업데이트 시 현재 테마 반영)
+  updateZoneHUDBadge(getCurrentBgTheme());
   const cls = CLASS_DEFS[player.classId];
   const clsEl = document.getElementById('class-icon');
   if (clsEl && cls) { clsEl.textContent = cls.icon; clsEl.style.color = cls.color; clsEl.style.textShadow = `0 0 5px ${cls.color}`; }
