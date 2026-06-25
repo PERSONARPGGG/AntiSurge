@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AntiSurge β v0.09 — 종합 평가 리포트</title>
+<style>
+  /* ─── 기본 ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cyan:   #00f0ff;
+    --purple: #b026ff;
+    --green:  #39ff14;
+    --yellow: #ffe600;
+    --pink:   #ff4466;
+    --teal:   #00ffaa;
+    --bg:     #03050f;
+    --card:   #0a0f1e;
+    --border: rgba(0,240,255,0.18);
+    --text:   #cbd5e1;
+    --muted:  #475569;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    font-size: 15px;
+    line-height: 1.75;
+    min-height: 100vh;
+  }
+
+  /* ─── 네온 배경 ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,240,255,0.05) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 80% 90%, rgba(176,38,255,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── 레이아웃 ─── */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+  }
+
+  /* ─── 헤더 ─── */
+  .report-header {
+    text-align: center;
+    padding: 3rem 1rem 2.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2.5rem;
+  }
+  .report-eyebrow {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    opacity: 0.8;
+  }
+  .report-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 2.6rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 8px var(--cyan), 0 0 24px var(--cyan), 0 0 60px rgba(0,240,255,0.3);
+    letter-spacing: 2px;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+  }
+  .report-sub {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.8rem;
+    color: var(--purple);
+    text-shadow: 0 0 8px var(--purple);
+    letter-spacing: 2px;
+  }
+  .report-meta {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .report-meta span {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Orbitron', monospace;
+  }
+  .report-meta span strong { color: var(--cyan); }
+
+  /* ─── 총점 배너 ─── */
+  .score-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    background: linear-gradient(135deg, rgba(0,240,255,0.06), rgba(176,38,255,0.06));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem 2rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+  }
+  .score-item { text-align: center; }
+  .score-label {
+    font-size: 0.62rem;
+    font-family: 'Orbitron', monospace;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+  .score-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan);
+  }
+  .score-value.purple { color: var(--purple); text-shadow: 0 0 12px var(--purple); }
+  .score-value.green  { color: var(--green);  text-shadow: 0 0 12px var(--green); }
+  .score-value.yellow { color: var(--yellow); text-shadow: 0 0 12px var(--yellow); }
+  .score-divider { width: 1px; height: 60px; background: var(--border); }
+
+  /* ─── 섹션 ─── */
+  .section { margin-bottom: 2.75rem; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1px;
+  }
+  .section-badge {
+    font-size: 0.58rem;
+    font-family: 'Orbitron', monospace;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .badge-cyan   { background: rgba(0,240,255,0.12); color: var(--cyan);   border: 1px solid rgba(0,240,255,0.3); }
+  .badge-purple { background: rgba(176,38,255,0.12); color: var(--purple); border: 1px solid rgba(176,38,255,0.3); }
+  .badge-green  { background: rgba(57,255,20,0.10); color: var(--green);  border: 1px solid rgba(57,255,20,0.3); }
+  .badge-pink   { background: rgba(255,68,102,0.12); color: var(--pink);  border: 1px solid rgba(255,68,102,0.3); }
+
+  /* ─── 카드 ─── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card:last-child { margin-bottom: 0; }
+  .card-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: 'Orbitron', monospace;
+    margin-bottom: 0.65rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card-title.good  { color: var(--green); }
+  .card-title.bad   { color: var(--pink); }
+  .card-title.warn  { color: var(--yellow); }
+  .card-title.info  { color: var(--cyan); }
+
+  /* ─── 체크리스트 ─── */
+  ul.checklist { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+  ul.checklist li {
+    padding-left: 1.4rem;
+    position: relative;
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+  ul.checklist li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--cyan);
+    font-size: 0.75rem;
+    top: 3px;
+  }
+  ul.checklist li.good::before  { color: var(--green);  content: '✓'; }
+  ul.checklist li.bad::before   { color: var(--pink);   content: '✗'; }
+  ul.checklist li.warn::before  { color: var(--yellow); content: '!'; }
+
+  /* ─── 테이블 ─── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+  }
+  .data-table th {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text);
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(0,240,255,0.03); }
+  .tag {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-family: 'Orbitron', monospace;
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .tag-hard   { background: rgba(255,68,102,0.15); color: var(--pink);   border: 1px solid rgba(255,68,102,0.3); }
+  .tag-mid    { background: rgba(255,230,0,0.12);  color: var(--yellow); border: 1px solid rgba(255,230,0,0.3); }
+  .tag-easy   { background: rgba(57,255,20,0.10);  color: var(--green);  border: 1px solid rgba(57,255,20,0.3); }
+
+  /* ─── 인용 박스 ─── */
+  .quote-box {
+    background: linear-gradient(135deg, rgba(0,240,255,0.04), rgba(176,38,255,0.04));
+    border-left: 3px solid var(--cyan);
+    border-radius: 0 10px 10px 0;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    font-style: italic;
+    color: #94a3b8;
+  }
+  .quote-box strong { color: #e2e8f0; font-style: normal; }
+
+  /* ─── 결론 배너 ─── */
+  .conclusion {
+    background: linear-gradient(135deg, rgba(0,240,255,0.07), rgba(176,38,255,0.07));
+    border: 1px solid rgba(0,240,255,0.25);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-top: 2.5rem;
+    text-align: center;
+  }
+  .conclusion h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.1rem;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .conclusion p { font-size: 0.9rem; color: #94a3b8; margin-bottom: 1.25rem; }
+  .top3 {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1.25rem;
+  }
+  .top3-item {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1.25rem;
+    min-width: 200px;
+    text-align: left;
+    flex: 1;
+  }
+  .top3-rank {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .top3-title { font-weight: 700; color: var(--cyan); font-size: 0.88rem; margin-bottom: 0.25rem; }
+  .top3-desc { font-size: 0.78rem; color: #64748b; }
+
+  /* ─── 프린트/PDF 버튼 ─── */
+  .print-btn-wrap {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 999;
+  }
+  .print-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0,240,255,0.12);
+    border: 1px solid rgba(0,240,255,0.5);
+    color: var(--cyan);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s;
+    text-shadow: 0 0 8px var(--cyan);
+    box-shadow: 0 0 18px rgba(0,240,255,0.15);
+  }
+  .print-btn:hover {
+    background: rgba(0,240,255,0.22);
+    box-shadow: 0 0 28px rgba(0,240,255,0.3);
+  }
+  .print-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+  /* ─── 진행 바 ─── */
+  .score-bar-wrap { margin: 0.35rem 0; }
+  .score-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.76rem;
+    margin-bottom: 0.2rem;
+    color: #94a3b8;
+  }
+  .score-bar-label span:last-child { color: var(--cyan); font-family: 'Orbitron', monospace; font-size: 0.7rem; }
+  .score-bar-outer {
+    height: 5px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-bar-inner {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--cyan), var(--purple));
+    box-shadow: 0 0 6px rgba(0,240,255,0.5);
+  }
+
+  /* ─── 2열 그리드 ─── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  /* ─── 인라인 강조 ─── */
+  strong { color: #e2e8f0; }
+  em { color: var(--yellow); font-style: normal; }
+  code {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.78rem;
+    background: rgba(0,240,255,0.08);
+    color: var(--cyan);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  /* ─── 구분선 ─── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  /* ─── 푸터 ─── */
+  footer {
+    text-align: center;
+    padding: 1.5rem 0 0.5rem;
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 1px;
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  /* ─── 프린트 ─── */
+  @media print {
+    body { background: #fff; color: #111; font-size: 12px; }
+    body::before { display: none; }
+    .print-btn-wrap { display: none; }
+    .container { max-width: 100%; padding: 1rem; }
+    .card { border: 1px solid #ddd; background: #fafafa; break-inside: avoid; }
+    .section { break-inside: avoid; }
+    .report-title { color: #000; text-shadow: none; font-size: 1.8rem; }
+    .report-sub { color: #555; text-shadow: none; }
+    .section-title { color: #111; }
+    .card-title.good { color: #22c55e; }
+    .card-title.bad  { color: #ef4444; }
+    .card-title.warn { color: #eab308; }
+    .card-title.info { color: #06b6d4; }
+    .score-value { color: #06b6d4; text-shadow: none; }
+    .score-bar-inner { background: #06b6d4; box-shadow: none; }
+    ul.checklist li::before { color: #06b6d4; }
+    ul.checklist li.good::before { color: #22c55e; }
+    ul.checklist li.bad::before  { color: #ef4444; }
+    ul.checklist li.warn::before { color: #eab308; }
+    .quote-box { border-left-color: #06b6d4; background: #f0f9ff; }
+    .conclusion { background: #f0f9ff; border-color: #06b6d4; }
+    .top3-item { border-color: #ddd; background: #f9f9f9; }
+    .section-badge { display: none; }
+    code { background: #f1f5f9; color: #0284c7; }
+    .score-banner { background: #f8fafc; border-color: #e2e8f0; }
+    footer { color: #888; border-top-color: #ddd; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PDF 저장 버튼 -->
+<div class="print-btn-wrap">
+  <button class="print-btn" onclick="window.print()">
+    <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><rect x="6" y="14" width="12" height="8"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/></svg>
+    PDF 저장
+  </button>
+</div>
+
+<div class="container">
+
+  <!-- ── 헤더 ── -->
+  <div class="report-header">
+    <div class="report-eyebrow">Game Evaluation Report</div>
+    <div class="report-title">ANTISURGE</div>
+    <div class="report-sub">β v0.09 · Cyberpunk Virus Survival</div>
+    <div class="report-meta">
+      <span>작성일 <strong>2026.06.25</strong></span>
+      <span>버전 <strong>β v0.09</strong></span>
+      <span>플랫폼 <strong>Web (PWA)</strong></span>
+      <span>장르 <strong>Roguelite Survival</strong></span>
+    </div>
+  </div>
+
+  <!-- ── 종합 점수 ── -->
+  <div class="score-banner">
+    <div class="score-item">
+      <span class="score-label">종합 점수</span>
+      <span class="score-value">6.8</span>
+      <span class="score-label" style="margin-top:0.2rem;">/ 10</span>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-item">
+      <span class="score-label">기술 완성도</span>
+      <span class="score-value purple">8.5</span>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-item">
+      <span class="score-label">콘텐츠 깊이</span>
+      <span class="score-value" style="color:var(--pink);text-shadow:0 0 12px var(--pink);">4.5</span>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-item">
+      <span class="score-label">리텐션 잠재력</span>
+      <span class="score-value green">7.0</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- 1. 게임 평론가                                      -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🎮</span>
+      <span class="section-title">게임 평론가 시점</span>
+      <span class="section-badge badge-cyan">CRITIC · 6.5 / 10</span>
+    </div>
+
+    <div class="quote-box">
+      "안티바이러스 컨셉은 선명하고 독창적이다. 시스템 완성도는 상업 게임 수준에 가깝지만,
+      <strong>3판 이후 새로운 걸 보여주지 못한다</strong>는 점이 치명적 약점이다."
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title good">▲ 강점</div>
+        <ul class="checklist">
+          <li class="good"><strong>테마 차별성</strong> — 루트킷·방화벽·패치봇 등 용어 통일로 사이버펑크 세계관 몰입감 탁월</li>
+          <li class="good"><strong>즉각 진입</strong> — 설치 없이 URL 하나로 플레이, 클래스 미리보기로 진입 장벽 최소화</li>
+          <li class="good"><strong>멀티플레이</strong> — 웹 브라우저 기반 실시간 협동/경쟁은 이 장르에서 극히 드물다</li>
+          <li class="good"><strong>감염 협약 시스템</strong> — 보스 처치 후 리스크/리워드 선택 구조, 긴장감 있는 결정 순간 제공</li>
+          <li class="good"><strong>메타 루프</strong> — 데이터 코어 → 영구 업그레이드 → 다음 런 동기 부여 기본 구조 완성</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title bad">▼ 약점</div>
+        <ul class="checklist">
+          <li class="bad"><strong>콘텐츠 밀도 부족</strong> — 적 4종 vs 뱀파이어 서바이버스 50+종. 10판 후 새로운 게 없음</li>
+          <li class="bad"><strong>온보딩 부재</strong> — 감염 협약, 메타 업그레이드, 멀티 시스템 설명이 전혀 없다</li>
+          <li class="bad"><strong>보스 단조로움</strong> — "더 크고 빠른 원"에 불과. 패턴·페이즈 없는 보스는 긴장감을 만들지 못함</li>
+          <li class="bad"><strong>타격감 약함</strong> — SFX 피드백이 얕아 도파민 루프가 약하다. 킬 쾌감이 떨어짐</li>
+          <li class="bad"><strong>스테이지 100 이후 공허</strong> — 무한 모드에 목표·보상·변화가 없다</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem;">
+      <div class="card-title info">세부 항목별 점수</div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>시스템 설계</span><span>8 / 10</span></div>
+        <div class="score-bar-outer"><div class="score-bar-inner" style="width:80%"></div></div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>UI / UX</span><span>7.5 / 10</span></div>
+        <div class="score-bar-outer"><div class="score-bar-inner" style="width:75%"></div></div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>콘텐츠 볼륨</span><span>4.5 / 10</span></div>
+        <div class="score-bar-outer"><div class="score-bar-inner" style="width:45%"></div></div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>비주얼 / 그래픽</span><span>5 / 10</span></div>
+        <div class="score-bar-outer"><div class="score-bar-inner" style="width:50%"></div></div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>사운드</span><span>5 / 10</span></div>
+        <div class="score-bar-outer"><div class="score-bar-inner" style="width:50%"></div></div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>온보딩 / 접근성</span><span>3 / 10</span></div>
+        <div class="score-bar-outer"><div class="score-bar-inner" style="width:30%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- 2. 게임 제작자                                      -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🔧</span>
+      <span class="section-title">게임 제작자 시점</span>
+      <span class="section-badge badge-purple">DEVELOPER · 8.5 / 10</span>
+    </div>
+
+    <div class="quote-box">
+      "단일 파일 7400줄에 Firebase 실시간 동기화, Web Audio API 신스 BGM, PWA, 자동 검증 파이프라인까지.
+      <strong>솔로 개발로 이 수준은 진짜 이례적이다.</strong>"
+    </div>
+
+    <div class="card">
+      <div class="card-title good">▲ 기술적 성취</div>
+      <ul class="checklist">
+        <li class="good">HTML + CSS + JS 단일 파일 스택으로 상업 게임 수준 기능 구현</li>
+        <li class="good">Web Audio API 신스 BGM 4트랙 — 음원 파일 없이 실시간 사운드 생성</li>
+        <li class="good">Firebase RTDB 실시간 협동/경쟁 멀티플레이 + BroadcastChannel 폴백</li>
+        <li class="good">Offscreen Canvas 캐싱, shadowBlur 최적화로 60fps 유지</li>
+        <li class="good"><code>validate.js</code> 13개 자동 검사 — pre-commit 훅으로 배포 전 버그 방지</li>
+        <li class="good">Safe-area-inset 대응, 모바일 자동 전체화면, 터치 조이스틱 완성</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title warn">△ 기술 부채 / 리스크</div>
+      <ul class="checklist">
+        <li class="warn"><strong>단일 파일 한계</strong> — 7400줄 돌파 후 기능 추가 시 충돌·디버그 비용 급증. 장기적으로 ES Modules 분리 검토 필요</li>
+        <li class="warn"><strong>Object Pooling 미적용</strong> — <code>enemies</code>, <code>projectiles</code>, <code>particles</code> 매 프레임 생성/소멸 → 장시간 GC 히칭 발생 가능</li>
+        <li class="warn"><strong>Firebase 비용 구조</strong> — 유저 100명+ 시 RTDB 읽기 비용 급증. Firestore + 클라이언트 캐싱 전환 미리 설계 권장</li>
+        <li class="warn"><strong>세이브 마이그레이션 취약</strong> — 버전업마다 세이브 구조 변경 시 유저 데이터 손실 위험. 버전 플래그 + 마이그레이션 함수 필요</li>
+        <li class="warn"><strong>콘텐츠 추가 확장성</strong> — 무기/적 데이터가 하드코딩. JSON 외부 데이터 분리 시 콘텐츠 추가 비용 대폭 감소</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- 3. 기획자                                           -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">📋</span>
+      <span class="section-title">기획자 시점</span>
+      <span class="section-badge badge-green">DESIGNER · 게임 루프 분석</span>
+    </div>
+
+    <div class="quote-box">
+      "현재 게임 루프는 <strong>'플레이 → 죽음 → 코어 → 업그레이드 → 반복'</strong>인데,
+      메타 업그레이드 12개를 모두 찍으면 루프가 끊긴다.
+      <em>리텐션의 핵심은 '다음 판에서 뭔가 달라진다'는 기대감</em>이다."
+    </div>
+
+    <div class="card">
+      <div class="card-title bad">핵심 문제: "3판 이탈" 현상</div>
+      <ul class="checklist">
+        <li class="bad">모든 무기·클래스가 처음부터 해금 → 탐색 동기 없음</li>
+        <li class="bad">메타 업그레이드 포화 후 추가 진행 목표 없음</li>
+        <li class="bad">적 4종, 무기 11종 — 런 안에서 패턴이 빠르게 읽힘</li>
+        <li class="bad">보스 패턴 없음 → 긴장감·성취감 약함</li>
+        <li class="bad">스테이지 100 이후 실질적 콘텐츠 없음</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title info">추가 기획 요소 (우선순위 순)</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>우선순위</th>
+            <th>기능</th>
+            <th>효과</th>
+            <th>난이도</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1</strong></td>
+            <td><strong>무기 시너지 진화</strong><br><span style="font-size:0.75rem;color:#64748b">특정 무기 조합 시 새 진화 무기 생성</span></td>
+            <td>빌드 다양성 폭발, 재플레이 핵심</td>
+            <td><span class="tag tag-mid">중</span></td>
+          </tr>
+          <tr>
+            <td><strong>2</strong></td>
+            <td><strong>콘텐츠 잠금 해제 트리</strong><br><span style="font-size:0.75rem;color:#64748b">새 클래스·무기를 조건 달성 시 해금</span></td>
+            <td>탐색 동기, 장기 목표 제공</td>
+            <td><span class="tag tag-easy">하</span></td>
+          </tr>
+          <tr>
+            <td><strong>3</strong></td>
+            <td><strong>보스 패턴 다양화</strong><br><span style="font-size:0.75rem;color:#64748b">보스당 3페이즈, 각 페이즈별 탄막/기믹</span></td>
+            <td>클라이맥스 긴장감, 성취감 대폭 상승</td>
+            <td><span class="tag tag-mid">중</span></td>
+          </tr>
+          <tr>
+            <td><strong>4</strong></td>
+            <td><strong>맵 다양성</strong><br><span style="font-size:0.75rem;color:#64748b">스테이지 구간별 맵 테마 변경</span></td>
+            <td>시각적 단조로움 해소</td>
+            <td><span class="tag tag-mid">중</span></td>
+          </tr>
+          <tr>
+            <td><strong>5</strong></td>
+            <td><strong>미션 시스템</strong><br><span style="font-size:0.75rem;color:#64748b">"드론 1000킬", "3분 내 보스 격리" 등</span></td>
+            <td>단기 목표 제공, 다양한 플레이 유도</td>
+            <td><span class="tag tag-easy">하</span></td>
+          </tr>
+          <tr>
+            <td><strong>6</strong></td>
+            <td><strong>스테이지 100 엔딩 + NG+</strong><br><span style="font-size:0.75rem;color:#64748b">컷신 엔딩 + 뉴게임플러스 모드</span></td>
+            <td>장기 목표, 클리어 성취감</td>
+            <td><span class="tag tag-hard">상</span></td>
+          </tr>
+          <tr>
+            <td><strong>7</strong></td>
+            <td><strong>클래스 전용 패시브 트리</strong><br><span style="font-size:0.75rem;color:#64748b">클래스별 3가지 성장 방향 선택</span></td>
+            <td>빌드 아이덴티티 강화, 전략 깊이</td>
+            <td><span class="tag tag-hard">상</span></td>
+          </tr>
+          <tr>
+            <td><strong>8</strong></td>
+            <td><strong>간단한 튜토리얼</strong><br><span style="font-size:0.75rem;color:#64748b">첫 플레이 시 감염 협약, 메타 업그레이드 안내</span></td>
+            <td>신규 유저 이탈 방지</td>
+            <td><span class="tag tag-easy">하</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title info">롱런을 만드는 핵심 요소</div>
+      <table class="data-table">
+        <thead>
+          <tr><th>요소</th><th>설명</th><th>구현 ROI</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>무기 시너지 진화</strong></td>
+            <td>조합으로 새 무기 생성. 뱀서가 오래된 이유의 50%</td>
+            <td style="color:var(--green)">★★★★★</td>
+          </tr>
+          <tr>
+            <td><strong>시크릿 클래스 해금</strong></td>
+            <td>특정 조건 달성 시 숨겨진 클래스 등장</td>
+            <td style="color:var(--green)">★★★★☆</td>
+          </tr>
+          <tr>
+            <td><strong>주간 이벤트 런</strong></td>
+            <td>매주 바뀌는 특수 조건 런 (무기 제한, 버프 이벤트 등)</td>
+            <td style="color:var(--cyan)">★★★★☆</td>
+          </tr>
+          <tr>
+            <td><strong>데일리 챌린지 강화</strong></td>
+            <td>제한 조건 + 글로벌 랭킹 연동 → 커뮤니티 형성</td>
+            <td style="color:var(--cyan)">★★★★☆</td>
+          </tr>
+          <tr>
+            <td><strong>클래스별 스토리 텍스트</strong></td>
+            <td>런 시작 시 클래스 배경 1~2줄, 세계관 몰입 강화</td>
+            <td style="color:var(--yellow)">★★★☆☆</td>
+          </tr>
+          <tr>
+            <td><strong>PvP 관전 + 배팅 시스템</strong></td>
+            <td>경쟁 멀티에서 관전자가 코어 배팅</td>
+            <td style="color:var(--yellow)">★★★☆☆</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- 4. 마케팅 담당                                       -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">📣</span>
+      <span class="section-title">마케팅 담당 시점</span>
+      <span class="section-badge badge-pink">MARKETING · 전략 분석</span>
+    </div>
+
+    <div class="quote-box">
+      "설치 없이 링크 하나로 실행되는 사이버펑크 멀티 생존 게임.
+      <strong>IT/개발자 커뮤니티에 정확히 꽂히는 USP가 있다.</strong>
+      지금 필요한 건 콘텐츠 완성도와 바이럴 트리거다."
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title info">핵심 USP (차별점)</div>
+        <ul class="checklist">
+          <li>설치 불필요 — URL 하나로 즉시 플레이</li>
+          <li>"바이러스를 막아라" — IT/개발자 직접 소구 테마</li>
+          <li>브라우저 기반 실시간 멀티플레이 (희귀)</li>
+          <li>모바일/PC 동일 경험</li>
+          <li>무료, 로그인 선택 사항</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title info">타겟 유저층</div>
+        <ul class="checklist">
+          <li><strong>1순위</strong> — IT 종사자·개발자 (테마 직접 소구)</li>
+          <li><strong>2순위</strong> — 뱀서 장르 팬 (국내 약 20만명)</li>
+          <li><strong>3순위</strong> — 직장인 캐주얼 게이머 (점심시간 플레이)</li>
+          <li><strong>4순위</strong> — 인디 게임 팬 (웹게임 재조명 트렌드)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title warn">현재 마케팅 약점</div>
+      <ul class="checklist">
+        <li class="bad"><strong>스크린샷 임팩트 부족</strong> — 도형 기반 그래픽은 SNS에서 눈에 안 띈다. 스프라이트 한 장만 있어도 공유율 10배</li>
+        <li class="bad"><strong>영상 자산 없음</strong> — 30초 GIF/영상이 SNS 전파력을 극대화. 현재 비주얼로는 공유 욕구 낮음</li>
+        <li class="warn"><strong>게임 이름 모호성</strong> — "AntiSurge"가 바이러스 테마인지 불명확. 부제 "바이러스 서바이버" 추가 권장</li>
+        <li class="warn"><strong>SNS 공유 동선 약함</strong> — 결과 화면 공유 버튼 있으나 이미지 생성·자동 텍스트 포함 필요</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title info">바이럴 채널 전략</div>
+      <table class="data-table">
+        <thead>
+          <tr><th>채널</th><th>접근 방식</th><th>기대 효과</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>개발자 커뮤니티</strong><br><span style="font-size:0.75rem;color:#64748b">클리앙, 개발바닥, 디시 프게</span></td>
+            <td>"솔로 개발 웹게임 공개" 개발 스토리 공유</td>
+            <td>초기 유저 500~2000명</td>
+          </tr>
+          <tr>
+            <td><strong>Reddit</strong><br><span style="font-size:0.75rem;color:#64748b">r/webgames, r/indiegaming</span></td>
+            <td>영문 게임플레이 GIF + 링크</td>
+            <td>글로벌 노출 가능</td>
+          </tr>
+          <tr>
+            <td><strong>YouTube Shorts</strong></td>
+            <td>30초 "루트킷으로 스테이지 50 클리어" 영상</td>
+            <td>알고리즘 유입</td>
+          </tr>
+          <tr>
+            <td><strong>트위터/X</strong></td>
+            <td>결과 화면 인증샷 + 점수 공유 문화 유도</td>
+            <td>커뮤니티 형성</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- 종합 결론                                           -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div class="conclusion">
+    <h2>🎯 종합 결론</h2>
+    <p>
+      현재 상태: <strong>탄탄한 프로토타입, 얕은 콘텐츠</strong><br>
+      목표 상태: <strong>3판 → 30판으로 만드는 리텐션 루프</strong>
+    </p>
+    <div class="quote-box" style="text-align:left;margin:1rem 0;">
+      "오픈 소스 클론이 아닌, 자기 색깔을 가진 웹게임.
+      시스템은 상업 게임 수준에 가깝지만, 유저를 3판 이상 잡아둘 콘텐츠와
+      첫인상이 아직 부족하다. <strong>무기 시너지 + 콘텐츠 해금 + 보스 패턴</strong> 3가지만
+      추가해도 6.5점 → 8점+ 도달 가능하다."
+    </div>
+
+    <div class="top3">
+      <div class="top3-item">
+        <span class="top3-rank">PRIORITY 01</span>
+        <div class="top3-title">무기 시너지 진화</div>
+        <div class="top3-desc">2~3개 조합 진화 무기만 추가해도 빌드 다양성이 폭발적으로 증가. 뱀서 리텐션의 핵심.</div>
+      </div>
+      <div class="top3-item">
+        <span class="top3-rank">PRIORITY 02</span>
+        <div class="top3-title">콘텐츠 잠금 해제</div>
+        <div class="top3-desc">클래스·무기가 조건부 해금되어야 탐색 욕구가 생긴다. 처음부터 다 열리면 동기가 없다.</div>
+      </div>
+      <div class="top3-item">
+        <span class="top3-rank">PRIORITY 03</span>
+        <div class="top3-title">보스 패턴 1개</div>
+        <div class="top3-desc">페이즈가 있는 보스 하나만 있어도 게임 인상이 완전히 달라진다. 클라이맥스 제공.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    ANTISURGE β v0.09 · EVALUATION REPORT · 2026.06.25<br>
+    Generated for internal development reference
+  </footer>
+
+</div>
+
+<script>
+  // 스크롤 애니메이션
+  const bars = document.querySelectorAll('.score-bar-inner');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const w = e.target.style.width;
+        e.target.style.width = '0%';
+        requestAnimationFrame(() => {
+          e.target.style.transition = 'width 1s ease';
+          e.target.style.width = w;
+        });
+        obs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.3 });
+  bars.forEach(b => obs.observe(b));
+</script>
+</body>
+</html>

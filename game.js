@@ -26,45 +26,45 @@ const STATE_CURSE        = 'CURSE';
 const CLASS_DEFS = {
   hacker: {
     name: '해커', icon: '💻', color: '#00f0ff',
-    desc: '올라운더. 균형 잡힌 스탯. XP 획득 +10%, 리롤 +1회.',
-    hp: 100, speed: 3.2, damageMult: 1.0, magnetRadius: 90,
-    startWeapon: 'flare', rerolls: 3, xpBonus: 1.1,
-    activeSkill: { name: 'EMP 펄스', icon: '🔌', cd: 15000, desc: '주변 반경 200 내 적 3초 스턴' }
+    desc: '침투형. 빠른 레벨업, 리롤 3회. EMP로 적 집단 무력화.',
+    hp: 100, speed: 3.4, damageMult: 1.0, magnetRadius: 90,
+    startWeapon: 'flare', rerolls: 3, xpBonus: 1.15,
+    activeSkill: { name: 'EMP 펄스', icon: '🔌', cd: 12000, desc: '반경 250 내 모든 적 3초 스턴 + 보스 1.5초 스턴' }
   },
   cyborg: {
-    name: '사이보그', icon: '🤖', color: '#b026ff',
-    desc: '방어형. HP가 높고 오비터로 근접 방어. 실드 지속 +3초.',
-    hp: 160, speed: 2.4, damageMult: 0.9, magnetRadius: 75,
+    name: '방화벽', icon: '🔥', color: '#b026ff',
+    desc: '방어형. HP 최고, 방어막으로 피해 차단. 근접전 특화.',
+    hp: 200, speed: 2.8, damageMult: 0.9, magnetRadius: 80,
     startWeapon: 'orbiter', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '강화 방어막', icon: '🛡', cd: 20000, desc: '10초간 피해 감소 50%' }
+    activeSkill: { name: '방어막 가동', icon: '🛡', cd: 15000, desc: '8초간 피해 감소 60% + 주변 적 밀쳐냄' }
   },
   ghost: {
-    name: '고스트', icon: '👻', color: '#39ff14',
-    desc: '공격형. 이동속도 +40%, 피해량 +25%. HP가 낮음.',
-    hp: 70, speed: 4.5, damageMult: 1.25, magnetRadius: 70,
+    name: '루트킷', icon: '🔓', color: '#39ff14',
+    desc: '기동형. 속도 최고, 무적 대시로 전장 누빔. 순수 기동 특화.',
+    hp: 65, speed: 5.0, damageMult: 1.05, magnetRadius: 70,
     startWeapon: 'flare', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '위상 도약', icon: '👁', cd: 12000, desc: '3초간 무적 + 속도 2배' }
+    activeSkill: { name: '위상 침투', icon: '👁', cd: 10000, desc: '4초간 무적 + 이동속도 2배' }
   },
   engineer: {
-    name: '엔지니어', icon: '🔧', color: '#ffe600',
-    desc: '지원형. 존으로 시작. 자석 범위 2배, 회복 아이템 +50%.',
-    hp: 110, speed: 3.0, damageMult: 1.0, magnetRadius: 180,
-    startWeapon: 'zone', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '긴급 수리', icon: '🔋', cd: 18000, desc: '최대 HP의 30% 즉시 회복' }
+    name: '드론.exe', icon: '🤖', color: '#ffe600',
+    desc: '자동화형. 드론이 자동 격리. Q스킬로 근접 적 밀쳐냄.',
+    hp: 115, speed: 3.2, damageMult: 1.0, magnetRadius: 180,
+    startWeapon: 'drone', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '드론 폭발', icon: '💥', cd: 14000, desc: '반경 180 적 밀쳐냄 + 폭발 피해 + HP 20% 회복' }
   },
   sniper: {
-    name: '스나이퍼', icon: '🎯', color: '#ff4466',
-    desc: '저격형. 단일 피해량 최고, 빠른 미사일로 시작.',
-    hp: 80, speed: 2.8, damageMult: 1.6, magnetRadius: 60,
+    name: '스캐너', icon: '🎯', color: '#ff4466',
+    desc: '원거리형. 피해량 최고, 원거리에서 코어 저격. 근접 취약.',
+    hp: 80, speed: 3.2, damageMult: 1.6, magnetRadius: 70,
     startWeapon: 'missile', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '정밀 조준', icon: '🎯', cd: 10000, desc: '다음 미사일 피해 5배' }
+    activeSkill: { name: '정밀 스캔', icon: '🎯', cd: 8000, desc: '다음 미사일 5발 피해 5배 + 자동 추적' }
   },
   support: {
-    name: '서포터', icon: '🔵', color: '#00ffaa',
-    desc: '지원형. 드론으로 시작. XP +15%, 리롤 3회.',
-    hp: 120, speed: 2.6, damageMult: 0.85, magnetRadius: 120,
+    name: '패치봇', icon: '💊', color: '#00ffaa',
+    desc: '생존형. HP 재생 특화, XP +15%, 리롤 3회. 절대 안 죽는 플레이.',
+    hp: 130, speed: 3.0, damageMult: 0.9, magnetRadius: 130,
     startWeapon: 'drone', rerolls: 3, xpBonus: 1.15,
-    activeSkill: { name: '비상 보수', icon: '🔵', cd: 20000, desc: 'HP 10% 회복 + 드론 강화' }
+    activeSkill: { name: '비상 패치', icon: '💊', cd: 15000, desc: 'HP 25% 즉시 회복 + 20초간 HP 재생 +3/s' }
   }
 };
 
@@ -422,14 +422,14 @@ const CURSE_DEFS = [
     id: 'curse_speed',
     debuff: '이동속도 -25%',
     reward: '피해량 영구 +50%',
-    debuffFn: (p) => { p.speed *= 0.75; },
+    debuffFn: (p) => { const red = p.cursePenaltyReduce || 0; p.speed *= (1 - 0.25 * (1 - red)); },
     rewardFn: () => { player.damageMultiplier *= 1.50; addFloatingText(player.x, player.y-50, '🔥 피해 +50%!', '#ff6600', 16); }
   },
   {
     id: 'curse_dmg',
     debuff: '받는 피해 +40%',
     reward: '리롤 +5회, 골드 +30 즉시',
-    debuffFn: (p) => { p._curseDamageMult = (p._curseDamageMult || 1) * 1.40; },
+    debuffFn: (p) => { const red = p.cursePenaltyReduce || 0; p._curseDamageMult = (p._curseDamageMult || 1) * (1 + (0.40 * (1 - red))); },
     rewardFn: () => {
       rerollUses += 5;
       if (player) player.gold += 30;
@@ -584,62 +584,68 @@ const FIELD_ITEM_TYPES = {
 const SAVE_KEY = 'neonSurvivorsData';
 
 const META_UPGRADES = [
-  { id: 'meta_hp',     icon: '❤️', name: '시스템 강화',      desc: ['최대 HP +20',    '+40 (누적)', '+60 (누적)'], maxLevel: 3, costs: [5, 12, 25] },
-  { id: 'meta_speed',  icon: '🏃', name: '오버클럭 드라이브', desc: ['이동속도 +5%',   '+10%', '+20%'],            maxLevel: 3, costs: [5, 12, 25] },
-  { id: 'meta_magnet', icon: '🧲', name: '중력 코어',         desc: ['자석 범위 +10%', '+25%', '+50%'],            maxLevel: 3, costs: [5, 12, 25] },
-  { id: 'meta_damage', icon: '🔥', name: '전투 프로토콜',     desc: ['피해량 +5%',     '+12%', '+25%'],            maxLevel: 3, costs: [8, 18, 35] },
-  { id: 'meta_reroll', icon: '🔄', name: '리롤 확장 칩',      desc: ['시작 리롤 +1',   '+2 (누적)'],              maxLevel: 2, costs: [10, 25] },
-  { id: 'meta_gold',   icon: '💰', name: '골드 스타터',       desc: ['시작 골드 +5',   '+12 (누적)'],             maxLevel: 2, costs: [8, 20] }
+  { id: 'meta_hp',      icon: '❤️', name: '시스템 강화',       desc: ['최대 HP +20',       '+40 (누적)', '+70 (누적)', '+110 (누적)'], maxLevel: 4, costs: [12, 28, 55, 100] },
+  { id: 'meta_speed',   icon: '🏃', name: '오버클럭 드라이브',  desc: ['이동속도 +5%',      '+10%', '+20%'],                           maxLevel: 3, costs: [12, 30, 60]     },
+  { id: 'meta_magnet',  icon: '🧲', name: '중력 코어',          desc: ['자석 범위 +10%',    '+25%', '+50%'],                           maxLevel: 3, costs: [12, 30, 60]     },
+  { id: 'meta_damage',  icon: '🔥', name: '전투 프로토콜',      desc: ['피해량 +5%',        '+12%', '+25%'],                           maxLevel: 3, costs: [20, 50, 100]    },
+  { id: 'meta_reroll',  icon: '🔄', name: '리롤 확장 칩',       desc: ['시작 리롤 +1',      '+2 (누적)', '+3 (누적)'],                  maxLevel: 3, costs: [25, 60, 120]    },
+  { id: 'meta_gold',    icon: '💰', name: '골드 스타터',        desc: ['시작 골드 +5',      '+12 (누적)', '+22 (누적)'],                maxLevel: 3, costs: [20, 50, 100]    },
+  { id: 'meta_xp',      icon: '⭐', name: 'XP 부스터',          desc: ['XP 획득 +8%',       '+18%', '+35%'],                           maxLevel: 3, costs: [15, 35, 75]     },
+  { id: 'meta_shop',    icon: '🏪', name: '해커 마켓',          desc: ['상점 가격 -10%',    '-20% (누적)', '-30% (누적)'],              maxLevel: 3, costs: [18, 40, 80]     },
+  { id: 'meta_crit',    icon: '💥', name: '크리티컬 프로토콜',  desc: ['치명타 확률 +5%',   '+10% (누적)', '+18% (누적)'],              maxLevel: 3, costs: [22, 55, 110]    },
+  { id: 'meta_regen',   icon: '🔋', name: '재생 드라이브',      desc: ['피격 후 3초간 HP+1/s 재생', '재생량 HP+2/s로 증가'],           maxLevel: 2, costs: [30, 70]         },
+  { id: 'meta_weapon',  icon: '🔫', name: '프리로드 모듈',      desc: ['시작 시 주 무기 Lv+1', '시작 무기 Lv+2 (누적)'],              maxLevel: 2, costs: [45, 110]        },
+  { id: 'meta_curse',   icon: '🛡', name: '감염 차단 코어',     desc: ['감염 증상 20% 경감', '감염 증상 40% 경감 (누적)'],             maxLevel: 2, costs: [35, 85]         },
 ];
 
 const ACHIEVEMENTS = [
-  { id: 'ach_first',    icon: '💀', name: '최초 처치',     desc: '바이러스 1마리 처치',      reward: 2  },
-  { id: 'ach_hunter',   icon: '⚔️', name: '바이러스 헌터', desc: '바이러스 100마리 처치',    reward: 5  },
-  { id: 'ach_survivor', icon: '🛡️', name: '생존자',        desc: '스테이지 5 도달',          reward: 5  },
-  { id: 'ach_stage10',  icon: '🏆', name: '디지털 영웅',   desc: '스테이지 10 도달',         reward: 10 },
-  { id: 'ach_evolved',  icon: '✨', name: '진화의 달인',   desc: '무기 진화 1회 달성',       reward: 8  },
-  { id: 'ach_combo',    icon: '🎯', name: '연속 처형',     desc: '콤보 25 이상 달성',        reward: 5  },
-  { id: 'ach_gold',     icon: '💰', name: '황금 수집가',   desc: '골드 50 이상 보유',        reward: 5  },
-  { id: 'ach_endless',  icon: '∞',  name: '무한의 수호자', desc: '무한 모드 진입',           reward: 20 }
+  { id: 'ach_first',    icon: '🦠', name: '첫 격리',         desc: '바이러스 1마리 격리',          reward: 1  },
+  { id: 'ach_hunter',   icon: '⚔️', name: '바이러스 헌터',   desc: '바이러스 100마리 격리',        reward: 3  },
+  { id: 'ach_survivor', icon: '🛡️', name: '방화벽 유지',     desc: '스테이지 5 돌파',              reward: 3  },
+  { id: 'ach_stage10',  icon: '🏆', name: '시스템 수호자',   desc: '스테이지 10 돌파',             reward: 6  },
+  { id: 'ach_evolved',  icon: '✨', name: '시스템 진화',     desc: '백신 모듈 진화 1회',           reward: 5  },
+  { id: 'ach_combo',    icon: '🎯', name: '연속 격리',       desc: '콤보 25 이상 달성',            reward: 3  },
+  { id: 'ach_gold',     icon: '💾', name: '코어 수집가',     desc: '골드 50 이상 보유',            reward: 3  },
+  { id: 'ach_endless',  icon: '∞',  name: '무한 방어 프로토콜', desc: '무한 모드 진입',            reward: 12 }
 ];
 
 const CLOUD_ACHIEVEMENTS = [
-  { id: 'kill_500',    name: '처치 전문가',     icon: '⚔',  desc: '적 500마리 처치',       stat: 'totalKills',      goal: 500   },
-  { id: 'kill_5000',   name: '네온 학살자',     icon: '💀',  desc: '적 5000마리 처치',      stat: 'totalKills',      goal: 5000  },
-  { id: 'kill_50000',  name: '사이버 신',       icon: '🔥',  desc: '적 5만마리 처치',       stat: 'totalKills',      goal: 50000 },
-  { id: 'boss_5',      name: '보스 헌터',       icon: '👑',  desc: '보스 5회 처치',         stat: 'totalBossKills',  goal: 5     },
-  { id: 'boss_20',     name: '보스의 천적',     icon: '💥',  desc: '보스 20회 처치',        stat: 'totalBossKills',  goal: 20    },
-  { id: 'stage_20',    name: '하이퍼 서바이버', icon: '⚡',  desc: '스테이지 20 도달',      stat: 'maxStage',        goal: 20    },
-  { id: 'stage_50',    name: '디지털 레전드',   icon: '🌀',  desc: '스테이지 50 도달',      stat: 'maxStage',        goal: 50    },
-  { id: 'stage_100',   name: '엔드게임',        icon: '🏆',  desc: '스테이지 100 도달',     stat: 'maxStage',        goal: 100   },
-  { id: 'time_600',    name: '10분 생존',       icon: '⏱',  desc: '단일 게임 10분 생존',   stat: 'maxSurviveTime',  goal: 600   },
-  { id: 'time_1800',   name: '30분 생존',       icon: '⌛',  desc: '단일 게임 30분 생존',   stat: 'maxSurviveTime',  goal: 1800  },
-  { id: 'evolve_5',    name: '진화 중독자',     icon: '🔮',  desc: '무기 진화 5회',         stat: 'totalEvolutions', goal: 5     },
-  { id: 'evolve_20',   name: '진화의 신',       icon: '💎',  desc: '무기 진화 20회',        stat: 'totalEvolutions', goal: 20    },
-  { id: 'mp_first',    name: '온라인 데뷔',     icon: '🌐',  desc: '멀티 첫 게임',          stat: 'mpGamesPlayed',   goal: 1     },
-  { id: 'mp_win',      name: '배틀로얄 킹',     icon: '🥊',  desc: '경쟁 모드 1위',         stat: 'mpBattleWins',    goal: 1     },
-  { id: 'mp_revive3',  name: '불사조',          icon: '🔄',  desc: '멀티 부활 3회',         stat: 'mpRevives',       goal: 3     },
-  { id: 'games_10',    name: '열정 게이머',     icon: '🎮',  desc: '10번 게임 플레이',      stat: 'totalGamesPlayed',goal: 10    },
-  { id: 'games_50',    name: '마스터',          icon: '🌟',  desc: '50번 게임 플레이',      stat: 'totalGamesPlayed',goal: 50    },
-  { id: 'boss_50',     name: '보스 킬러',       icon: '🩸',  desc: '보스 50회 처치',        stat: 'totalBossKills',  goal: 50    },
-  { id: 'kills_1000',  name: '버그 박멸자',     icon: '🦠',  desc: '적 1000마리 처치',      stat: 'totalKills',      goal: 1000  },
-  { id: 'combo_30',    name: '콤보 달인',       icon: '🎯',  desc: '최대 콤보 30 달성',     stat: 'maxCombo',        goal: 30    },
-  { id: 'combo_75',    name: '콤보의 신',       icon: '⚡',  desc: '최대 콤보 75 달성',     stat: 'maxCombo',        goal: 75    },
-  { id: 'survive_20m', name: '20분 생존',       icon: '🕐',  desc: '단일 게임 20분 생존',   stat: 'maxSurviveTime',  goal: 1200  },
-  { id: 'mp_battle3',  name: '배틀로얄 고수',   icon: '🏅',  desc: '경쟁 모드 3회 우승',    stat: 'mpBattleWins',    goal: 3     },
+  { id: 'kill_500',    name: '격리 전문가',     icon: '⚔',  desc: '바이러스 500마리 격리',  stat: 'totalKills',      goal: 500   },
+  { id: 'kill_5000',   name: '네온 박멸자',     icon: '💀',  desc: '바이러스 5000마리 격리', stat: 'totalKills',      goal: 5000  },
+  { id: 'kill_50000',  name: '사이버 신',       icon: '🔥',  desc: '바이러스 5만 마리 격리', stat: 'totalKills',      goal: 50000 },
+  { id: 'boss_5',      name: '코어 파괴자',     icon: '👑',  desc: '바이러스 코어 5회 파괴', stat: 'totalBossKills',  goal: 5     },
+  { id: 'boss_20',     name: '코어 킬러',       icon: '💥',  desc: '바이러스 코어 20회 파괴',stat: 'totalBossKills',  goal: 20    },
+  { id: 'stage_20',    name: '하이퍼 방어막',   icon: '⚡',  desc: '스테이지 20 돌파',       stat: 'maxStage',        goal: 20    },
+  { id: 'stage_50',    name: '디지털 레전드',   icon: '🌀',  desc: '스테이지 50 돌파',       stat: 'maxStage',        goal: 50    },
+  { id: 'stage_100',   name: '프로토콜 완료',   icon: '🏆',  desc: '스테이지 100 돌파',      stat: 'maxStage',        goal: 100   },
+  { id: 'time_600',    name: '10분 방어',       icon: '⏱',  desc: '단일 세션 10분 생존',    stat: 'maxSurviveTime',  goal: 600   },
+  { id: 'time_1800',   name: '30분 방어',       icon: '⌛',  desc: '단일 세션 30분 생존',    stat: 'maxSurviveTime',  goal: 1800  },
+  { id: 'evolve_5',    name: '업그레이드 마니아',icon: '🔮', desc: '백신 모듈 진화 5회',     stat: 'totalEvolutions', goal: 5     },
+  { id: 'evolve_20',   name: '진화의 신',       icon: '💎',  desc: '백신 모듈 진화 20회',    stat: 'totalEvolutions', goal: 20    },
+  { id: 'mp_first',    name: '네트워크 데뷔',   icon: '🌐',  desc: '멀티 첫 세션',           stat: 'mpGamesPlayed',   goal: 1     },
+  { id: 'mp_win',      name: '네트워크 지배자', icon: '🥊',  desc: '경쟁 모드 1위',          stat: 'mpBattleWins',    goal: 1     },
+  { id: 'mp_revive3',  name: '불사 프로토콜',   icon: '🔄',  desc: '멀티 부활 3회',          stat: 'mpRevives',       goal: 3     },
+  { id: 'games_10',    name: '방어 루틴 가동',  icon: '🎮',  desc: '10번 세션 플레이',       stat: 'totalGamesPlayed',goal: 10    },
+  { id: 'games_50',    name: '시스템 마스터',   icon: '🌟',  desc: '50번 세션 플레이',       stat: 'totalGamesPlayed',goal: 50    },
+  { id: 'boss_50',     name: '코어 헌터',       icon: '🩸',  desc: '바이러스 코어 50회 파괴',stat: 'totalBossKills',  goal: 50    },
+  { id: 'kills_1000',  name: '바이러스 박멸자', icon: '🦠',  desc: '바이러스 1000마리 격리', stat: 'totalKills',      goal: 1000  },
+  { id: 'combo_30',    name: '연속 격리 달인',  icon: '🎯',  desc: '최대 콤보 30 달성',      stat: 'maxCombo',        goal: 30    },
+  { id: 'combo_75',    name: '격리 체인 신',    icon: '⚡',  desc: '최대 콤보 75 달성',      stat: 'maxCombo',        goal: 75    },
+  { id: 'survive_20m', name: '20분 방어',       icon: '🕐',  desc: '단일 세션 20분 생존',    stat: 'maxSurviveTime',  goal: 1200  },
+  { id: 'mp_battle3',  name: '네트워크 고수',   icon: '🏅',  desc: '경쟁 모드 3회 우승',     stat: 'mpBattleWins',    goal: 3     },
   // ── 히든 업적 ──────────────────────────────────────────
-  { id: 'hidden_dedicated', hidden: true, realName: '이름 없는 영웅',  name: '???', icon: '🌙', desc: '100번 게임 플레이',          stat: 'totalGamesPlayed', goal: 100   },
-  { id: 'hidden_slayer',    hidden: true, realName: '보스의 악몽',     name: '???', icon: '💀', desc: '보스 100회 처치',            stat: 'totalBossKills',   goal: 100   },
-  { id: 'hidden_combo',     hidden: true, realName: '콤보 전설',       name: '???', icon: '🌀', desc: '최대 콤보 100 달성',         stat: 'maxCombo',         goal: 100   },
-  { id: 'hidden_mp_vet',    hidden: true, realName: '베테랑 용병',     name: '???', icon: '🔱', desc: '멀티 10게임 플레이',         stat: 'mpGamesPlayed',    goal: 10    },
-  { id: 'hidden_legend',    hidden: true, realName: '레전드',           name: '???', icon: '👑', desc: '모든 기본 업적 달성',        stat: '__allBasic__',     goal: 8     },
+  { id: 'hidden_dedicated', hidden: true, realName: '이름 없는 방어자', name: '???', icon: '🌙', desc: '100번 세션 플레이',          stat: 'totalGamesPlayed', goal: 100   },
+  { id: 'hidden_slayer',    hidden: true, realName: '코어의 악몽',      name: '???', icon: '💀', desc: '바이러스 코어 100회 파괴',   stat: 'totalBossKills',   goal: 100   },
+  { id: 'hidden_combo',     hidden: true, realName: '격리 전설',        name: '???', icon: '🌀', desc: '최대 콤보 100 달성',         stat: 'maxCombo',         goal: 100   },
+  { id: 'hidden_mp_vet',    hidden: true, realName: '베테랑 방어자',    name: '???', icon: '🔱', desc: '멀티 10세션 플레이',         stat: 'mpGamesPlayed',    goal: 10    },
+  { id: 'hidden_legend',    hidden: true, realName: '안티서지 레전드',  name: '???', icon: '👑', desc: '모든 기본 업적 달성',        stat: '__allBasic__',     goal: 8     },
   // ── 클래스 전용 업적 ──────────────────────────────────────
-  { id: 'cls_hacker',   name: '시스템 침투자',  icon: '💻', desc: '[해커] 스테이지 20 도달',       stat: 'cls_hacker_maxStage',    goal: 20  },
-  { id: 'cls_cyborg',   name: '강철 의지',      icon: '🤖', desc: '[사이보그] 30게임 플레이',      stat: 'cls_cyborg_games',       goal: 30  },
-  { id: 'cls_ghost',    name: '유령 전술가',    icon: '👻', desc: '[고스트] 스테이지 15 도달',     stat: 'cls_ghost_maxStage',     goal: 15  },
-  { id: 'cls_engineer', name: '드론 마스터',    icon: '🔧', desc: '[엔지니어] 드론 킬 300회 누적', stat: 'cls_engineer_droneKills',goal: 300 },
-  { id: 'cls_sniper',   name: '원거리 지배자',  icon: '🎯', desc: '[저격수] 스테이지 25 도달',     stat: 'cls_sniper_maxStage',    goal: 25  },
-  { id: 'cls_support',  name: '전장의 수호자',  icon: '💊', desc: '[서포트] 10게임 플레이',        stat: 'cls_support_games',      goal: 10  },
+  { id: 'cls_hacker',   name: '시스템 침투자',  icon: '💻', desc: '[해커] 스테이지 20 돌파',         stat: 'cls_hacker_maxStage',    goal: 20  },
+  { id: 'cls_cyborg',   name: '강철 방어막',    icon: '🤖', desc: '[사이보그] 30세션 플레이',         stat: 'cls_cyborg_games',       goal: 30  },
+  { id: 'cls_ghost',    name: '페이즈 전술가',  icon: '👻', desc: '[고스트] 스테이지 15 돌파',        stat: 'cls_ghost_maxStage',     goal: 15  },
+  { id: 'cls_engineer', name: '드론 마스터',    icon: '🔧', desc: '[엔지니어] 드론 격리 300회 누적',  stat: 'cls_engineer_droneKills',goal: 300 },
+  { id: 'cls_sniper',   name: '원거리 방어자',  icon: '🎯', desc: '[저격수] 스테이지 25 돌파',        stat: 'cls_sniper_maxStage',    goal: 25  },
+  { id: 'cls_support',  name: '방어 코어',      icon: '💊', desc: '[서포트] 10세션 플레이',           stat: 'cls_support_games',      goal: 10  },
 ];
 
 // ============================================================
@@ -1017,40 +1023,62 @@ function useActiveSkill() {
       playSynthSound([800, 200, 100], 0.25, 'sawtooth', 0.12, true);
       addFloatingText(player.x, player.y - 60, '⚡ EMP 펄스!', '#00f0ff', 16);
       break;
-    case 'cyborg':
+    case 'cyborg': {
       player.skillShieldActive = true;
-      player.activeSkillTimer  = 10000;
+      player.activeSkillTimer  = 8000;
       player._skillOrigDmgReduction = player.damageReduction;
-      player.damageReduction = Math.min(player.damageReduction + 0.50, 0.85);
+      player.damageReduction = Math.min(player.damageReduction + 0.60, 0.90);
+      // 주변 적 밀쳐냄
+      enemies.forEach(e => {
+        const dx = e.x - player.x, dy = e.y - player.y, dist = Math.sqrt(dx*dx+dy*dy);
+        if (dist < 220 && dist > 0) { e.x += (dx/dist)*180; e.y += (dy/dist)*180; }
+      });
+      createExplosionParticles(player.x, player.y, '#b026ff', 20);
       playSynthSound([400, 600], 0.2, 'triangle', 0.1);
-      addFloatingText(player.x, player.y - 60, '🛡 방어막 강화!', '#b026ff', 16);
+      addFloatingText(player.x, player.y - 60, '🛡 방어막 가동!', '#b026ff', 16);
       break;
+    }
     case 'ghost':
       player.skillInvincible   = true;
       player.skillSpeedBoost   = true;
-      player.activeSkillTimer  = 3000;
+      player.activeSkillTimer  = 4000;
       player._skillOrigSpeed   = player.speed;
       player.speed *= 2.0;
       playSynthSound([1000, 2000], 0.15, 'sine', 0.1);
-      addFloatingText(player.x, player.y - 60, '👁 위상 도약!', '#39ff14', 16);
+      addFloatingText(player.x, player.y - 60, '👁 위상 침투!', '#39ff14', 16);
       break;
     case 'engineer': {
-      const heal = Math.floor(player.maxHp * 0.30);
-      player.hp = Math.min(player.hp + heal, player.maxHp);
-      playSynthSound([600, 900, 1200], 0.2, 'triangle', 0.08);
-      addFloatingText(player.x, player.y - 60, `🔋 +${heal} HP 회복!`, '#ffe600', 16);
+      // 드론 폭발: 반경 밀쳐내기 + 폭발 피해 + HP 회복
+      const expDmg = 60 + (player.level || 1) * 8;
+      enemies.forEach(e => {
+        const dx = e.x - player.x, dy = e.y - player.y, dist = Math.sqrt(dx*dx+dy*dy);
+        if (dist < 200 && dist > 0) {
+          e.takeDamage(expDmg, 'drone');
+          e.x += (dx/dist)*200; e.y += (dy/dist)*200;
+        }
+      });
+      if (activeBoss) {
+        const dx = activeBoss.x - player.x, dy = activeBoss.y - player.y, dist = Math.sqrt(dx*dx+dy*dy);
+        if (dist < 200) activeBoss.hp -= expDmg * 0.5;
+      }
+      const healEng = Math.floor(player.maxHp * 0.20);
+      player.hp = Math.min(player.hp + healEng, player.maxHp);
+      createExplosionParticles(player.x, player.y, '#ffe600', 25);
+      playSynthSound([200, 400, 600], 0.25, 'sawtooth', 0.1);
+      addFloatingText(player.x, player.y - 60, `💥 드론 폭발! +${healEng}HP`, '#ffe600', 16);
       break;
     }
     case 'sniper':
       player._sniperShotBoost = 5;
-      addFloatingText(player.x, player.y - 60, '🎯 정밀 조준!', '#ff4466', 16);
+      addFloatingText(player.x, player.y - 60, '🎯 정밀 스캔!', '#ff4466', 16);
       playSynthSound([1200, 800], 0.15, 'sawtooth', 0.1);
       break;
     case 'support': {
-      const healSup = Math.floor(player.maxHp * 0.10);
+      const healSup = Math.floor(player.maxHp * 0.25);
       player.hp = Math.min(player.hp + healSup, player.maxHp);
+      player._patchbotRegenTimer = 20000;
       if (player.weapons.drone) player.weapons.drone._repaired = true;
-      addFloatingText(player.x, player.y - 60, '🔵 비상 보수!', '#00ffaa', 16);
+      addFloatingText(player.x, player.y - 60, `💊 비상 패치! +${healSup}HP`, '#00ffaa', 16);
       playSynthSound([500, 900, 1400], 0.2, 'triangle', 0.08);
       break;
     }
@@ -1131,12 +1159,8 @@ function loadSaveDataSlot(slot) {
 // 메뉴 BGM 시작
 // ============================================================
 function tryStartMenuBgm() {
-  if (menuBgmStarted || gameState !== STATE_MENU) return;
-  menuBgmStarted = true;
-  initAudio();
-  bgmTrackId = Math.floor(Math.random() * 3);
-  bgmTrackCheckTimer = 0;
-  startBGM();
+  // 메인화면 BGM은 현재 비활성화 (별도 메뉴 음악 추가 예정)
+  return;
 }
 
 function startBGM() {
@@ -1267,6 +1291,7 @@ class Player {
       dx = touchDX; dy = touchDY;
     } else if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
 
+    if (dx !== 0 || dy !== 0) this._moveAngle = Math.atan2(dy, dx);
     let spd = this.speed * (this.surgeTimer > 0 ? 2.0 : 1.0) * (this._poolSpeedMult ?? 1.0);
     this.x += dx * spd * (dt / 16.66);
     this.y += dy * spd * (dt / 16.66);
@@ -1317,6 +1342,26 @@ class Player {
       }
     } else {
       this.regenTimer = 0;
+    }
+
+    // 패치봇 Q스킬 재생 버프
+    if ((this._patchbotRegenTimer || 0) > 0) {
+      this._patchbotRegenTimer -= dt;
+      this._patchbotRegenTickTimer = (this._patchbotRegenTickTimer || 0) + dt;
+      if (this._patchbotRegenTickTimer >= 1000) {
+        this._patchbotRegenTickTimer -= 1000;
+        this.hp = Math.min(this.hp + 3, this.maxHp);
+      }
+    }
+
+    // 메타: 피격 후 재생 드라이브
+    if ((this.regenAfterHit || 0) > 0 && (this._regenAfterHitTimer || 0) > 0) {
+      this._regenAfterHitTimer -= dt;
+      this._regenAfterHitTickTimer = (this._regenAfterHitTickTimer || 0) + dt;
+      if (this._regenAfterHitTickTimer >= 1000) {
+        this._regenAfterHitTickTimer -= 1000;
+        this.hp = Math.min(this.hp + this.regenAfterHit, this.maxHp);
+      }
     }
 
     // 수리 드론 이벤트: 매초 +5 HP
@@ -1420,14 +1465,60 @@ class Player {
       ctx.stroke();
     }
 
-    // 내부 다이아몬드 코어
+    // 클래스별 내부 형태
     ctx.shadowBlur=18; ctx.shadowColor='#ffffff'; ctx.fillStyle='#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(bx,      by-r*0.52);
-    ctx.lineTo(bx+r*0.38, by);
-    ctx.lineTo(bx,      by+r*0.52);
-    ctx.lineTo(bx-r*0.38, by);
-    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=2.5;
+    const _s = r * 0.5;
+    const _cls = this.classId || 'hacker';
+    if (_cls === 'cyborg') {
+      // 방화벽: 육각형
+      ctx.beginPath();
+      for (let _i=0;_i<6;_i++){
+        const _a = _i/6*Math.PI*2 - Math.PI/6;
+        const _hx = bx+Math.cos(_a)*_s, _hy = by+Math.sin(_a)*_s;
+        _i===0 ? ctx.moveTo(_hx,_hy) : ctx.lineTo(_hx,_hy);
+      }
+      ctx.closePath(); ctx.fill();
+    } else if (_cls === 'ghost') {
+      // 루트킷: 앞방향 화살표 삼각형 (이동 방향 추적)
+      const _ma = this._moveAngle || 0;
+      ctx.beginPath();
+      ctx.moveTo(bx+Math.cos(_ma)*_s*1.1, by+Math.sin(_ma)*_s*1.1);
+      ctx.lineTo(bx+Math.cos(_ma+2.4)*_s*0.85, by+Math.sin(_ma+2.4)*_s*0.85);
+      ctx.lineTo(bx+Math.cos(_ma-2.4)*_s*0.85, by+Math.sin(_ma-2.4)*_s*0.85);
+      ctx.closePath(); ctx.fill();
+    } else if (_cls === 'engineer') {
+      // 드론.exe: 회전 사각형
+      const _sqR = (Date.now()*0.0012) % (Math.PI*2);
+      ctx.beginPath();
+      for (let _i=0;_i<4;_i++){
+        const _a = _sqR + _i*Math.PI/2 + Math.PI/4;
+        const _qx = bx+Math.cos(_a)*_s, _qy = by+Math.sin(_a)*_s;
+        _i===0 ? ctx.moveTo(_qx,_qy) : ctx.lineTo(_qx,_qy);
+      }
+      ctx.closePath(); ctx.fill();
+    } else if (_cls === 'sniper') {
+      // 스캐너: 크로스헤어
+      const _g = _s * 0.3;
+      ctx.beginPath(); ctx.moveTo(bx-_s*1.05,by); ctx.lineTo(bx-_g,by); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx+_g,by); ctx.lineTo(bx+_s*1.05,by); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx,by-_s*1.05); ctx.lineTo(bx,by-_g); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx,by+_g); ctx.lineTo(bx,by+_s*1.05); ctx.stroke();
+      ctx.beginPath(); ctx.arc(bx,by,_g*0.9,0,Math.PI*2); ctx.stroke();
+    } else if (_cls === 'support') {
+      // 패치봇: 의료 십자
+      const _arm=_s*0.45, _th=_s*0.28;
+      ctx.fillRect(bx-_th/2, by-_arm, _th, _arm*2);
+      ctx.fillRect(bx-_arm, by-_th/2, _arm*2, _th);
+    } else {
+      // 해커(default): 다이아몬드
+      ctx.beginPath();
+      ctx.moveTo(bx,      by-r*0.52);
+      ctx.lineTo(bx+r*0.38, by);
+      ctx.lineTo(bx,      by+r*0.52);
+      ctx.lineTo(bx-r*0.38, by);
+      ctx.closePath(); ctx.fill();
+    }
 
     // 중심 도트
     ctx.fillStyle=this.color; ctx.shadowBlur=12;
@@ -1447,6 +1538,7 @@ class Player {
     const cls = CLASS_DEFS[this.classId];
     if (cls) mult *= cls.xpBonus;
     mult *= this.passiveXpMult;
+    mult *= (this.xpMultiplier || 1);
     if (mpMode && mpAuraActive) mult *= 1.05; // 오라 XP 보너스
     this.xp += amount * mult;
     while (this.xp >= this.nextLevelXp) {
@@ -1502,6 +1594,7 @@ class Player {
     if (this.damageReduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - this.damageReduction)));
     this.hp -= dmg;
     if (this.passives.thorns > 0) this.thornsTrigger = true;
+    if ((this.regenAfterHit || 0) > 0) { this._regenAfterHitTimer = 3000; }
     playHitSound();
     createDamageOverlayParticles(this.x, this.y);
     triggerScreenShake(5, 250);
@@ -2625,9 +2718,11 @@ class Enemy {
   }
 
   takeDamage(amount, sourceKey) {
-    // 크리티컬 코어 패시브
-    if (player && player.passives.critical > 0 && sourceKey !== 'thorns' && sourceKey !== 'boss_proj') {
-      const chance = player.passives.critical === 2 ? 0.25 : 0.15;
+    // 크리티컬 코어 패시브 + 메타 크리티컬 보너스
+    const _hasCrit = player && (player.passives.critical > 0 || (player.critBonus || 0) > 0);
+    if (_hasCrit && sourceKey !== 'thorns' && sourceKey !== 'boss_proj') {
+      const baseChance = player.passives.critical === 2 ? 0.25 : (player.passives.critical === 1 ? 0.15 : 0);
+      const chance = Math.min(0.70, baseChance + (player.critBonus || 0));
       const mult   = player.passives.critical === 2 ? 3.0  : 2.5;
       if (Math.random() < chance) {
         amount *= mult;
@@ -2878,7 +2973,7 @@ class Boss {
     this.shieldActive = false;
     this.shieldTimer  = 0;
 
-    let bossIdx = Math.floor(currentStage / 10) - 1;
+    let bossIdx = Math.max(0, Math.floor(currentStage / 10) - 1);
     this.isFinalBoss = (currentStage === 100);
 
     // 반경: 스테이지 높을수록 조금씩 성장
@@ -3992,18 +4087,25 @@ function loadDifficulty() {
 
 function applyMetaUpgrades() {
   const l = saveData.metaLevels;
-  const hpBonus = [0, 20, 40, 60][l.meta_hp || 0];
+  const hpBonus = [0, 20, 40, 70, 110][l.meta_hp || 0];
   player.maxHp += hpBonus;
   player.hp    += hpBonus;
   player.speed            *= [1, 1.05, 1.10, 1.20][l.meta_speed  || 0];
   player.magnetRadius     *= [1, 1.10, 1.25, 1.50][l.meta_magnet || 0];
   player.damageMultiplier *= [1, 1.05, 1.12, 1.25][l.meta_damage || 0];
-  rerollUses  += [0, 1, 2][l.meta_reroll || 0];
-  player.gold += [0, 5, 12][l.meta_gold  || 0];
+  rerollUses  += [0, 1, 2, 3][l.meta_reroll || 0];
+  player.gold += [0, 5, 12, 22][l.meta_gold  || 0];
+  player.xpMultiplier = (player.xpMultiplier || 1) * [1, 1.08, 1.18, 1.35][l.meta_xp || 0];
+  player.shopDiscount = [0, 0.10, 0.20, 0.30][l.meta_shop || 0];
+  player.critBonus    = (player.critBonus || 0) + [0, 0.05, 0.10, 0.18][l.meta_crit || 0];
+  player.regenAfterHit = [0, 1, 2][l.meta_regen || 0];
+  // 프리로드: 시작 무기 레벨은 startGame()에서 별도 처리
+  player.preloadWeaponBonus = [0, 1, 2][l.meta_weapon || 0];
+  player.cursePenaltyReduce = [0, 0.20, 0.40][l.meta_curse || 0];
 }
 
 function earnDataCores() {
-  const earned = Math.max(1, Math.floor(killCount / 8) + Math.floor(currentStage / 2));
+  const earned = Math.max(1, Math.floor(killCount / 25) + Math.floor(currentStage / 6));
   saveData.dataCores += earned;
   saveSaveData();
   return earned;
@@ -4751,6 +4853,13 @@ function useActiveSkillTouch(e) {
 }
 
 function startGame() {
+  // 모바일 자동 전체화면
+  if (_isTouchDevice() && !document.fullscreenElement && !document.webkitFullscreenElement) {
+    const _el = document.documentElement;
+    const _req = _el.requestFullscreen || _el.webkitRequestFullscreen || _el.mozRequestFullScreen;
+    if (_req) _req.call(_el, { navigationUI: 'hide' }).catch(() => {});
+  }
+
   // HUD 복원 (게임오버에서 hidden 처리한 것 되돌리기)
   const _sHudEl = document.getElementById('hud');
   if (_sHudEl) _sHudEl.style.visibility = '';
@@ -4803,6 +4912,12 @@ function startGame() {
 
   player = new Player(MAP_WIDTH / 2, MAP_HEIGHT / 2);
   applyMetaUpgrades();
+  if (player.preloadWeaponBonus > 0) {
+    const cls = CLASS_DEFS[selectedClass] || CLASS_DEFS.hacker;
+    const sw = cls.startWeapon || 'flare';
+    const newLvl = Math.min(4, 1 + player.preloadWeaponBonus);
+    if (player.weapons[sw]) { player.weapons[sw].level = newLvl; weaponStats[sw].level = newLvl; }
+  }
   resizeCanvas();
   camera.x = player.x - camera.width  / 2;
   camera.y = player.y - camera.height / 2;
@@ -5463,7 +5578,7 @@ function updateHUD() {
     if (activeSynergies.size > 0) {
       [...activeSynergies].forEach(id => { const s = SYNERGY_DEFS.find(d => d.id === id); if (s) parts.push(`${s.icon}${s.name}`); });
     }
-    if (player._curseDamageMult > 1) parts.push('💀저주');
+    if (player._curseDamageMult > 1) parts.push('🦠감염');
     if (player.skillShieldActive)    parts.push('🛡강화');
     if (player.skillInvincible)      parts.push('👁위상');
     buildHud.style.display = parts.length > 0 ? 'flex' : 'none';
@@ -5726,8 +5841,8 @@ function showCurseModal() {
   const card  = document.getElementById('curse-offer-card');
   if (!modal || !card) { gameState = STATE_STAGE_BONUS; showStageBonusModal(); return; }
   card.innerHTML = `
-    <div class="curse-debuff">💀 저주: ${curse.debuff}</div>
-    <div class="curse-reward">✨ 보상: ${curse.reward}</div>
+    <div class="curse-debuff">🦠 감염: ${curse.debuff}</div>
+    <div class="curse-reward">⚡ 추출: ${curse.reward}</div>
   `;
   document.getElementById('curse-accept-btn').onclick = () => applyCurseChoice(curse, true);
   document.getElementById('curse-decline-btn').onclick = () => applyCurseChoice(curse, false);
@@ -5743,9 +5858,9 @@ function showNearDeathCurseModal() {
   const card  = document.getElementById('curse-offer-card');
   if (!modal || !card) { gameState = STATE_PLAYING; ensureGameLoopRunning(); return; }
   card.innerHTML = `
-    <div style="color:#ff8800;font-size:0.75rem;margin-bottom:6px">⚠ 사망 직전 긴급 계약</div>
-    <div class="curse-debuff">💀 저주: ${curse.debuff}</div>
-    <div class="curse-reward">✨ 보상: ${curse.reward}</div>
+    <div style="color:#ff8800;font-size:0.75rem;margin-bottom:6px">⚠ 위기 감염 협약 — 생존 우선</div>
+    <div class="curse-debuff">🦠 감염: ${curse.debuff}</div>
+    <div class="curse-reward">⚡ 추출: ${curse.reward}</div>
   `;
   document.getElementById('curse-accept-btn').onclick = () => applyNearDeathCurseChoice(curse, true);
   document.getElementById('curse-decline-btn').onclick = () => applyNearDeathCurseChoice(curse, false);
@@ -5758,11 +5873,11 @@ function applyNearDeathCurseChoice(curse, accepted) {
   if (accepted && player) {
     curse.debuffFn(player);
     curse.rewardFn();
-    addFloatingText(player.x, player.y - 40, '⚠ 저주 수락!', '#ff4466', 15);
+    addFloatingText(player.x, player.y - 40, '🦠 감염 감수!', '#ff4466', 15);
     playSynthSound([150, 80, 200], 0.2, 'sawtooth', 0.1);
     triggerScreenShake(8, 400);
   } else {
-    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, '✋ 저주 거절', '#94a3b8', 13);
+    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, '🛡 격리 완료', '#94a3b8', 13);
   }
   // 근사망 저주는 스테이지 보너스 없이 바로 게임 복귀
   gameState = STATE_PLAYING;
@@ -5775,11 +5890,11 @@ function applyCurseChoice(curse, accepted) {
   if (accepted && player) {
     curse.debuffFn(player);
     curse.rewardFn();
-    addFloatingText(player.x, player.y - 40, '⚠ 저주 수락!', '#ff4466', 15);
+    addFloatingText(player.x, player.y - 40, '🦠 감염 감수!', '#ff4466', 15);
     playSynthSound([150, 80, 200], 0.2, 'sawtooth', 0.1);
     triggerScreenShake(8, 400);
   } else {
-    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, '✋ 저주 거절', '#94a3b8', 13);
+    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, '🛡 격리 완료', '#94a3b8', 13);
   }
   gameState = STATE_STAGE_BONUS;
   showStageBonusModal();
@@ -5931,22 +6046,29 @@ function triggerShopModal() {
   setTimeout(() => updateShopFocus([...document.querySelectorAll('#shop-items-list .shop-item-card')]), 50);
 }
 
+function getItemCost(item) {
+  const discount = player?.shopDiscount || 0;
+  return Math.max(1, Math.floor(item.cost * (1 - discount)));
+}
+
 function renderShopItems(items) {
   const list     = document.getElementById('shop-items-list');
   const goldDisp = document.getElementById('shop-gold-display');
   if (goldDisp) goldDisp.textContent = `보유 골드: 💰 ${player.gold}G`;
   list.innerHTML = '';
   items.forEach(item => {
-    const canAfford = player.gold >= item.cost;
+    const cost = getItemCost(item);
+    const canAfford = player.gold >= cost;
     const btn = document.createElement('button');
     btn.className = `shop-item-card${canAfford ? '' : ' shop-cant-afford'}`;
+    const discountTag = (player?.shopDiscount > 0) ? ` <span style="color:#39ff14;font-size:0.7em">(-${Math.round((player.shopDiscount)*100)}%)</span>` : '';
     btn.innerHTML = `
       <div class="shop-item-icon">${item.icon}</div>
       <div class="shop-item-details">
         <div class="shop-item-name">${item.name}</div>
         <div class="shop-item-desc">${item.desc}</div>
       </div>
-      <div class="shop-item-cost ${canAfford ? 'can-afford' : 'cant-afford'}">💰 ${item.cost}G</div>
+      <div class="shop-item-cost ${canAfford ? 'can-afford' : 'cant-afford'}">💰 ${cost}G${discountTag}</div>
     `;
     if (canAfford) {
       btn.addEventListener('click', () => {
@@ -5959,8 +6081,9 @@ function renderShopItems(items) {
 }
 
 function applyShopItem(item) {
-  if (player.gold < item.cost) return;
-  player.gold -= item.cost;
+  const cost = getItemCost(item);
+  if (player.gold < cost) return;
+  player.gold -= cost;
   switch (item.id) {
     case 'shop_hp': {
       const heal = Math.floor(player.maxHp * 0.5);
@@ -6597,8 +6720,12 @@ function settingsToggleBgmTrack() {
 }
 
 function closeSettingsModal() {
-  const modal = document.getElementById('settings-modal');
-  if (modal) modal.classList.remove('active');
+  if (gameState === STATE_PAUSED) {
+    resumeGame();
+  } else {
+    const modal = document.getElementById('settings-modal');
+    if (modal) modal.classList.remove('active');
+  }
 }
 
 function settingsToggleMute() {
@@ -6949,7 +7076,7 @@ function mpTriggerSabotage() {
   const curseIdx = sabotageType === 'curse' ? Math.floor(Math.random() * CURSE_DEFS.length) : -1;
   mpBroadcast({ type: 'sabotage', sabotageType, curseIdx });
   mpSabotageTimer = MP_SABOTAGE_CD;
-  const label = sabotageType === 'curse' ? '💀 저주 발송!' : '👿 보스 강화 발동!';
+  const label = sabotageType === 'curse' ? '🦠 바이러스 주입!' : '👿 보스 강화 발동!';
   addFloatingText(player.x, player.y - 60, label, '#ff4466', 14);
 }
 
@@ -6959,7 +7086,7 @@ function _mpApplySabotage(sabotageType, curseIdx) {
     const curse = CURSE_DEFS[curseIdx ?? 0];
     if (curse) {
       curse.debuffFn(player);
-      addFloatingText(player.x, player.y - 60, `⚠ 저주: ${curse.debuff}!`, '#ff4466', 14);
+      addFloatingText(player.x, player.y - 60, `🦠 감염: ${curse.debuff}!`, '#ff4466', 14);
     }
   } else if (sabotageType === 'boss_buff') {
     if (activeBoss) {

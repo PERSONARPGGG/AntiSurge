@@ -60,8 +60,6 @@
 
         <!-- 왼쪽: 게임 시작 흐름 -->
         <div class="menu-left">
-          <div class="menu-objective">★ 목표: 스테이지 100 돌파 후 무한 생존!</div>
-
           <div class="difficulty-row">
             <button class="diff-btn" data-diff="easy"   onclick="setDifficulty('easy')">EASY</button>
             <button class="diff-btn diff-active" data-diff="normal" onclick="setDifficulty('normal')">NORMAL</button>
@@ -84,11 +82,11 @@
             <span class="ctrl-item"><kbd>M</kbd> BGM</span>
           </div>
           <div class="menu-controls mobile-only">
-            <span class="ctrl-item">✋ 드래그: 이동</span>
+            <span class="ctrl-item">✋ 드래그 이동</span>
             <span class="ctrl-sep">·</span>
-            <span class="ctrl-item">⚡ 우하단: 스킬</span>
+            <span class="ctrl-item">⚡ 스킬</span>
             <span class="ctrl-sep">·</span>
-            <span class="ctrl-item">⚙ 상단: 일시정지</span>
+            <span class="ctrl-item">⚙ 정지</span>
           </div>
         </div>
 
@@ -107,6 +105,11 @@
 
           <!-- 액션 그리드 -->
           <div class="menu-action-grid">
+            <button class="menu-action-btn" onclick="openInviteModal()">
+              <span class="mab-icon">🎮</span>
+              <span class="mab-label">멀티플레이</span>
+              <span class="mab-badge mab-beta">BETA</span>
+            </button>
             <button class="menu-action-btn" onclick="startDailyRun()">
               <span class="mab-icon">📅</span>
               <span class="mab-label">일일 도전</span>
@@ -120,11 +123,6 @@
             <button class="menu-action-btn" onclick="openAchievementModal()">
               <span class="mab-icon">🏆</span>
               <span class="mab-label">업적</span>
-            </button>
-            <button class="menu-action-btn" onclick="openInviteModal()">
-              <span class="mab-icon">🎮</span>
-              <span class="mab-label">멀티플레이</span>
-              <span class="mab-badge mab-beta">BETA</span>
             </button>
             <button class="menu-action-btn menu-action-settings" onclick="openSettingsModal()">
               <span class="mab-icon">⚙</span>
@@ -146,15 +144,16 @@
   <!-- 클래스 선택 화면 -->
   <div id="class-select-screen" class="screen">
     <div class="class-select-content">
-      <h2 class="neon-title-sm">백신 유형 선택</h2>
+      <h2 class="neon-title-sm">백신 선택</h2>
       <p class="modal-desc">전투 스타일을 선택하세요. 카드를 클릭하면 상세 정보를 확인할 수 있습니다.</p>
       <div class="class-card-grid">
         <button class="class-card" data-class="hacker" style="--cls-color:#00f0ff">
           <div class="cls-header">
             <span class="cls-icon">💻</span>
             <span class="cls-name">해커</span>
+            <span class="cls-type-chip">올라운더</span>
           </div>
-          <div class="cls-type">올라운더</div>
+          <div class="cls-preview">빠른 레벨업 · EMP로 적 제어</div>
           <ul class="cls-stats">
             <li>HP 100 / 속도 보통</li>
             <li>시작 무기: 네온 플레어</li>
@@ -165,77 +164,82 @@
         </button>
         <button class="class-card" data-class="cyborg" style="--cls-color:#b026ff">
           <div class="cls-header">
-            <span class="cls-icon">🤖</span>
-            <span class="cls-name">사이보그</span>
+            <span class="cls-icon">🔥</span>
+            <span class="cls-name">방화벽</span>
+            <span class="cls-type-chip">방어형</span>
           </div>
-          <div class="cls-type">방어형</div>
+          <div class="cls-preview">HP 200 · 방어막으로 피해 차단</div>
           <ul class="cls-stats">
-            <li>HP 160 / 속도 느림</li>
+            <li>HP 200 / 속도 보통</li>
             <li>시작 무기: 사이버 오비터</li>
             <li>피해량 -10%</li>
-            <li>실드 지속 +3초</li>
-            <li class="cls-skill">[Q] 오버드라이브 (12초)</li>
+            <li>Q스킬 시 주변 적 밀쳐냄</li>
+            <li class="cls-skill">[Q] 방어막 가동 (15초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="ghost" style="--cls-color:#39ff14">
           <div class="cls-header">
-            <span class="cls-icon">👻</span>
-            <span class="cls-name">고스트</span>
+            <span class="cls-icon">🔓</span>
+            <span class="cls-name">루트킷</span>
+            <span class="cls-type-chip">기동형</span>
           </div>
-          <div class="cls-type">공격형</div>
+          <div class="cls-preview">속도 최고 · 4초 무적 대시로 누빔</div>
           <ul class="cls-stats">
-            <li>HP 70 / 속도 매우 빠름</li>
+            <li>HP 65 / 속도 극빠름</li>
             <li>시작 무기: 네온 플레어</li>
-            <li>피해량 +25%</li>
-            <li>이동속도 +40%</li>
-            <li class="cls-skill">[Q] 페이즈 시프트 (15초)</li>
+            <li>피해량 +5%</li>
+            <li>이동속도 +56%</li>
+            <li class="cls-skill">[Q] 위상 침투 (10초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="engineer" style="--cls-color:#ffe600">
           <div class="cls-header">
-            <span class="cls-icon">🔧</span>
-            <span class="cls-name">엔지니어</span>
+            <span class="cls-icon">🤖</span>
+            <span class="cls-name">드론.exe</span>
+            <span class="cls-type-chip">자동화형</span>
           </div>
-          <div class="cls-type">지원형</div>
+          <div class="cls-preview">드론 자동 격리 · Q로 근접 적 폭발</div>
           <ul class="cls-stats">
-            <li>HP 110 / 속도 보통</li>
-            <li>시작 무기: 일렉트로 존</li>
+            <li>HP 115 / 속도 보통</li>
+            <li>시작 무기: 데이터 드론</li>
             <li>자석 범위 2배</li>
-            <li>드론 킬 보너스 XP</li>
-            <li class="cls-skill">[Q] 긴급 수리 (18초)</li>
+            <li>Q스킬 반경 폭발 + HP 회복</li>
+            <li class="cls-skill">[Q] 드론 폭발 (14초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="sniper" style="--cls-color:#ff4466">
           <div class="cls-header">
             <span class="cls-icon">🎯</span>
-            <span class="cls-name">스나이퍼</span>
+            <span class="cls-name">스캐너</span>
+            <span class="cls-type-chip">원거리형</span>
           </div>
-          <div class="cls-type">저격형</div>
+          <div class="cls-preview">피해량 최고 · 원거리에서 코어 저격</div>
           <ul class="cls-stats">
             <li>HP 80 / 속도 보통</li>
             <li>시작 무기: 사이버 미사일</li>
             <li>피해량 +60%</li>
             <li>치명타 확률 +15%</li>
-            <li class="cls-skill">[Q] 정밀 조준 (10초)</li>
+            <li class="cls-skill">[Q] 정밀 스캔 (8초)</li>
           </ul>
         </button>
         <button class="class-card" data-class="support" style="--cls-color:#00ffaa">
           <div class="cls-header">
-            <span class="cls-icon">🔵</span>
-            <span class="cls-name">서포터</span>
+            <span class="cls-icon">💊</span>
+            <span class="cls-name">패치봇</span>
+            <span class="cls-type-chip">생존형</span>
           </div>
-          <div class="cls-type">지원형</div>
+          <div class="cls-preview">HP 재생 특화 · 절대 안 죽는 플레이</div>
           <ul class="cls-stats">
-            <li>HP 120 / 속도 느림</li>
+            <li>HP 130 / 속도 보통</li>
             <li>시작 무기: 데이터 드론</li>
             <li>XP 획득 +15%</li>
-            <li>회복 효율 +20%</li>
-            <li class="cls-skill">[Q] 비상 보수 (20초)</li>
+            <li>Q스킬 후 20초간 HP 재생</li>
+            <li class="cls-skill">[Q] 비상 패치 (15초)</li>
           </ul>
         </button>
       </div>
       <div class="class-confirm-footer">
-        <span id="class-selected-hint" class="class-selected-hint">백신 유형을 선택하세요</span>
+        <span id="class-selected-hint" class="class-selected-hint">백신 선택</span>
         <div class="class-confirm-btns">
           <button class="neon-btn font-sm neon-btn-purple" onclick="goBackToMenu()">← 뒤로</button>
           <button id="class-confirm-btn" class="neon-btn font-sm" onclick="confirmClassStart()" disabled>▶ 배포 시작</button>
@@ -407,17 +411,17 @@
 
   </div>
 
-  <!-- 보스 처치 후 저주/축복 선택 모달 -->
+  <!-- 바이러스 코어 감염 협약 모달 -->
   <div id="curse-modal" class="modal">
     <div class="modal-content glass-panel curse-panel">
-      <h2 class="neon-title-sm" style="color:#ff4466">⚠ 저주 계약</h2>
-      <p class="modal-desc">보스의 코어를 흡수했습니다. 저주를 감수하고 강력한 보상을 얻으시겠습니까?</p>
+      <h2 class="neon-title-sm" style="color:#ff4466">🦠 감염 협약</h2>
+      <p class="modal-desc">바이러스 코어를 분석했습니다. 감염 위험을 감수하고 강화 데이터를 추출하시겠습니까?</p>
       <div id="curse-offer-card" class="curse-offer-card"></div>
       <div class="curse-actions">
-        <button id="curse-accept-btn" class="neon-btn font-sm neon-btn-red">💀 저주 수락</button>
-        <button id="curse-decline-btn" class="neon-btn font-sm">✋ 거절</button>
+        <button id="curse-accept-btn" class="neon-btn font-sm neon-btn-red">🦠 감염 감수</button>
+        <button id="curse-decline-btn" class="neon-btn font-sm">🛡 격리</button>
       </div>
-      <div class="curse-key-hint"><kbd>Y</kbd> 수락 &nbsp;·&nbsp; <kbd>N</kbd> / <kbd>ESC</kbd> 거절</div>
+      <div class="curse-key-hint"><kbd>Y</kbd> 감수 &nbsp;·&nbsp; <kbd>N</kbd> / <kbd>ESC</kbd> 격리</div>
     </div>
   </div>
 

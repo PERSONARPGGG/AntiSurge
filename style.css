@@ -64,10 +64,11 @@ body {
     radial-gradient(ellipse at 85% 15%, rgba(0,240,255,0.14) 0%, transparent 45%),
     radial-gradient(ellipse at 50% 50%, rgba(57,255,20,0.04) 0%, transparent 60%),
     radial-gradient(ellipse at 30% 40%, #0d0c2a 0%, #000007 100%);
-  justify-content: center;
   align-items: center;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding-top: max(env(safe-area-inset-top), 1rem);
+  padding-bottom: max(env(safe-area-inset-bottom), 1rem);
   padding: 1rem;
   position: relative;
 }
@@ -138,6 +139,7 @@ body {
   width: 100%;
   max-width: 860px;
   padding: 2rem 2.5rem;
+  margin: auto;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
@@ -1373,12 +1375,14 @@ body {
 /* ===== 클래스 선택 화면 ===== */
 #class-select-screen {
   overflow-y: auto;
-  justify-content: center;
   align-items: center;
   background: radial-gradient(ellipse at 50% 50%, #0a0a1a 0%, #000000 100%);
+  padding-top: max(env(safe-area-inset-top), 1rem);
+  padding-bottom: max(env(safe-area-inset-bottom), 1rem);
 }
 .class-select-content {
   text-align: center;
+  margin: auto;
   max-width: 860px;
   margin: 0 auto;
   padding: 2rem 1rem;
@@ -1399,8 +1403,8 @@ body {
 .class-card {
   background: rgba(10,10,20,0.75);
   border: 2px solid var(--cls-color, #00f0ff);
-  border-radius: 12px;
-  padding: 1rem 1rem 0.9rem;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem 0.7rem;
   cursor: pointer;
   text-align: left;
   transition: background 0.2s, box-shadow 0.2s, transform 0.15s, border-color 0.2s;
@@ -1433,13 +1437,33 @@ body {
   border-color: var(--cls-color, #00f0ff);
   box-shadow: 0 0 8px var(--cls-color, #00f0ff);
 }
-.cls-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
-.cls-icon   { font-size: 1.5rem; flex-shrink: 0; }
-.cls-name   { font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700; color: var(--cls-color, #00f0ff); text-shadow: 0 0 6px var(--cls-color, #00f0ff); }
-.cls-type   { font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.45rem; letter-spacing: 0.08em; text-transform: uppercase; }
-.cls-stats  { list-style: none; padding: 0; margin: 0; font-size: 0.79rem; color: #cbd5e1; line-height: 1.65; }
+.cls-header { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.2rem; flex-wrap: wrap; }
+.cls-icon   { font-size: 1.25rem; flex-shrink: 0; }
+.cls-name   { font-family: 'Orbitron', monospace; font-size: 0.85rem; font-weight: 700; color: var(--cls-color, #00f0ff); text-shadow: 0 0 6px var(--cls-color, #00f0ff); }
+.cls-type-chip {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--cls-color, #00f0ff);
+  color: var(--cls-color, #00f0ff);
+  background: rgba(0,0,0,0.3);
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.cls-preview {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-bottom: 0;
+  line-height: 1.3;
+}
+.cls-stats  { list-style: none; padding: 0; margin: 0.45rem 0 0; font-size: 0.78rem; color: #cbd5e1; line-height: 1.6; }
 .cls-stats li::before { content: '▸ '; color: var(--cls-color, #00f0ff); }
-.cls-stats li.cls-skill { color: var(--cls-color, #00f0ff); opacity: 0.85; margin-top: 0.3rem; font-size: 0.75rem; }
+.cls-stats li.cls-skill { color: var(--cls-color, #00f0ff); opacity: 0.85; margin-top: 0.25rem; font-size: 0.73rem; }
 
 .class-confirm-footer {
   display: flex;
@@ -1969,7 +1993,9 @@ body {
   .menu-title-eyebrow { font-size: 0.52rem; }
   .version-badge { font-size: 0.5rem; }
   .menu-body { grid-template-columns: 1fr; gap: 0.9rem; }
+  .menu-action-grid { grid-template-columns: 1fr; }
   .menu-action-settings { grid-column: span 1; }
+  .menu-action-btn { min-height: 48px; }
   .mrp-stats span { font-size: 0.7rem; }
   .neon-btn { padding: 0.55rem 1rem; font-size: 0.82rem; }
 
@@ -1977,6 +2003,7 @@ body {
   .neon-title-sm { font-size: 0.88rem; }
   .modal-desc { font-size: 0.7rem; margin-bottom: 0.5rem; }
   .card-container {
+    display: flex;
     flex-direction: column;
     gap: 0.3rem;
     max-height: 62vh;
@@ -1999,6 +2026,7 @@ body {
     flex-shrink: 0;
     border-radius: 7px;
   }
+  .card-container > * { height: auto; }
   .card-details { flex: 1; min-width: 0; }
   .card-title-row {
     flex-wrap: nowrap;
@@ -2052,10 +2080,45 @@ body {
   .result-actions { flex-direction: column; gap: 0.45rem; }
   .result-actions .neon-btn { width: 100%; justify-content: center; text-align: center; }
 
-  /* ── 저주 계약 모달 ── */
+  /* ── 상점 → 1열 리스트 ── */
+  .shop-items-list { grid-template-columns: 1fr; }
+  .shop-item-card { padding: 0.65rem 0.85rem; gap: 0.75rem; }
+  .shop-item-icon { font-size: 1.4rem; }
+  .shop-item-name { font-size: 0.75rem; }
+  .shop-item-desc { font-size: 0.72rem; }
+  .shop-item-cost { font-size: 0.8rem; }
+
+  /* ── 모달: 공간 있으면 센터, 넘치면 위에서 스크롤 ── */
+  .modal {
+    align-items: flex-start;   /* cross-axis 잠금 → overflow-y 스크롤 활성 */
+    overflow-y: auto;
+    padding: max(env(safe-area-inset-top), 0.5rem) 0 max(env(safe-area-inset-bottom), 0.5rem);
+    box-sizing: border-box;
+  }
+  .glass-panel {
+    padding: 1rem 0.9rem;
+    margin: auto;              /* 공간 있으면 수직+수평 center, 없으면 0으로 collapse */
+    max-height: none;
+    flex-shrink: 0;
+  }
+  .levelup-panel { width: 94vw; }
+  .card-container { max-height: 56vh; }
+
+  /* ── 게임오버 화면 ── */
+  .neon-title-lg { font-size: 1.85rem; margin-bottom: 0.2rem; }
+  .result-subtitle { font-size: 0.76rem; margin-bottom: 0.6rem; letter-spacing: 0.4px; }
+  .result-panel { width: 94vw; }
+  .result-stats { margin-bottom: 0.6rem; }
+  .name-input { width: 100%; font-size: 0.85rem; padding: 0.5rem 0.8rem; }
+  .result-actions { flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }
+  .result-actions .neon-btn { width: 100%; justify-content: center; text-align: center; min-height: 48px; }
+
+  /* ── 감염 협약 모달 ── */
   .curse-panel { padding: 1rem; }
   .curse-offer-card { font-size: 0.76rem; }
   .curse-key-hint { font-size: 0.58rem; }
+  .curse-actions { flex-direction: column; gap: 0.5rem; }
+  .curse-actions .neon-btn { width: 100%; justify-content: center; }
 
   /* ── 설정 모달 ── */
   .settings-list { gap: 0.4rem; }
@@ -2102,11 +2165,11 @@ body {
   pointer-events: none;
   z-index: 150;
 }
-/* 스킬 버튼 — 우하단 */
+/* 스킬 버튼 — 좌하단 (미래 버튼 추가 고려: 위로 스택) */
 .mobile-skill-btn {
   position: absolute;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(80px, calc(60px + env(safe-area-inset-bottom)));
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(90px, calc(70px + env(safe-area-inset-bottom)));
   width: 72px;
   height: 72px;
   border-radius: 50%;
@@ -2187,10 +2250,14 @@ body {
   .menu-action-btn { min-height: 56px; }
   .mute-btn { min-width: 44px; min-height: 44px; }
 
-  /* 클래스 선택 카드 — 더 큰 터치 영역 */
-  .class-card { padding: 0.9rem 0.7rem; min-height: 120px; }
-  .cls-stats { display: none; } /* 작은 화면엔 스탯 숨기고 탭으로 확인 */
-  .class-card.class-selected .cls-stats { display: block; } /* 선택 시 표시 */
+  /* 클래스 선택 카드 — 컴팩트 터치 영역 */
+  .class-card { padding: 0.6rem 0.75rem; min-height: 0; }
+  .cls-icon { font-size: 1.1rem; }
+  .cls-name { font-size: 0.82rem; }
+  .cls-preview { font-size: 0.68rem; color: #64748b; }
+  .cls-stats { display: none; }
+  .class-card.class-selected .cls-stats { display: block; }
+  .class-card.class-selected .cls-preview { display: none; }
 
   /* 저주 / 레벨업 / 보너스 모달 버튼 크게 */
   .curse-actions .neon-btn, .curse-decline-btn, .curse-accept-btn { min-height: 52px; font-size: 0.92rem; }
