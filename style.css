@@ -1974,6 +1974,26 @@ body {
 }
 
 /* 패시브 카드 스타일 */
+/* 클래스 전용 패시브 카드 — 황금 테두리로 희귀성 표시 */
+.upgrade-card.class-passive-new {
+  border-color: rgba(255, 190, 0, 0.6);
+  background: rgba(25, 15, 0, 0.90);
+  box-shadow: 0 0 10px rgba(255, 190, 0, 0.2) inset;
+}
+.upgrade-card.class-passive-new:hover {
+  border-color: #ffbe00;
+  box-shadow: 0 0 26px rgba(255, 190, 0, 0.5);
+}
+.upgrade-card.class-passive-upgrade {
+  border-color: rgba(255, 150, 0, 0.75);
+  background: rgba(30, 12, 0, 0.90);
+  box-shadow: 0 0 14px rgba(255, 150, 0, 0.25) inset;
+}
+.upgrade-card.class-passive-upgrade:hover {
+  border-color: #ff9600;
+  box-shadow: 0 0 30px rgba(255, 150, 0, 0.55);
+}
+
 .upgrade-card.new-passive {
   border-color: rgba(176, 38, 255, 0.5);
   background: rgba(20, 5, 30, 0.85);

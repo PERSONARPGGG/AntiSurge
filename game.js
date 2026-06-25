@@ -873,6 +873,34 @@ const PASSIVE_DEFS = {
   barrier:   { name: '전기 방벽',   icon: '🛡', desc: ['5초마다 반경 150 내 적 1.5초 스턴',    '3초마다 발동, 스턴 2.5초로 강화'] }
 };
 
+// ── 클래스 전용 패시브 트리 ──────────────────────────────────
+const CLASS_PASSIVE_DEFS = {
+  hacker: [
+    { key: 'hk_skill', name: '해킹 가속',   icon: '⏩', desc: ['Q 스킬 쿨다운 -25%',       'Q 쿨다운 -45%'] },
+    { key: 'hk_xp',    name: '데이터 수집', icon: '💽', desc: ['XP 획득 +20% 추가',         'XP 획득 +40% 추가'] },
+  ],
+  cyborg: [
+    { key: 'fw_armor', name: '강화 방호',   icon: '🧱', desc: ['받는 피해 -12% 추가',        '받는 피해 -22% 추가'] },
+    { key: 'fw_regen', name: '자가 수복',   icon: '🔋', desc: ['HP 2/초 무조건 재생',         'HP 4/초 재생 + 보스 전 2배'] },
+  ],
+  ghost: [
+    { key: 'rk_evade', name: '위상 회피',   icon: '👻', desc: ['피격 8% 확률 무효화',         '피격 18% 확률 무효화'] },
+    { key: 'rk_speed', name: '고속 침투',   icon: '💨', desc: ['이동속도 +0.5',               '이동속도 +1.2'] },
+  ],
+  engineer: [
+    { key: 'dr_dmg',   name: '드론 과부하', icon: '⚡', desc: ['드론 피해 +30%',              '드론 피해 +60%'] },
+    { key: 'dr_count', name: '추가 배치',   icon: '🛸', desc: ['드론 +1기 추가 배치',          '드론 +2기 추가 배치'] },
+  ],
+  sniper: [
+    { key: 'sc_crit',  name: '치명 조준',   icon: '🎯', desc: ['치명타 확률 +15%',             '치명타 확률 +28%'] },
+    { key: 'sc_magnet',name: '광역 탐지',   icon: '🔭', desc: ['XP 자석 범위 +60%',            'XP 자석 +120%, 보스 즉시 표시'] },
+  ],
+  support: [
+    { key: 'pb_maxhp', name: '핵심 강화',   icon: '💪', desc: ['최대 HP +40 & 즉시 회복',      '추가 HP +40, 레벨업 시 HP 20% 회복'] },
+    { key: 'pb_triage',name: '응급 처치',   icon: '🏥', desc: ['피격 후 5초간 HP +4/초 재생',  '피격 후 5초간 HP +8/초 재생'] },
+  ],
+};
+
 // 상점 아이템 풀
 const SHOP_ITEMS = [
   { id: 'shop_hp',     icon: '💊', name: '긴급 수리 키트',  desc: 'HP를 최대치의 50% 즉시 회복',     cost: 8 },
@@ -1217,7 +1245,7 @@ function useActiveSkill() {
   if (gameState !== STATE_PLAYING && gameState !== STATE_STAGE_CLEAR) return;
   const cls = CLASS_DEFS[player.classId];
   if (!cls?.activeSkill) return;
-  player.activeSkillCd = cls.activeSkill.cd;
+  player.activeSkillCd = cls.activeSkill.cd * (player._skillCdMult || 1.0);
   initAudio();
   switch (player.classId) {
     case 'hacker':
@@ -1445,6 +1473,7 @@ class Player {
 
     // 패시브 아이템
     this.passives        = { regen: 0, shield: 0, nanobots: 0, overclock: 0, resonance: 0, thorns: 0, critical: 0, explosive: 0, barrier: 0 };
+    this.classPassives   = {}; // 클래스 전용 패시브 레벨 추적
     // 무기 융합
     this.fusions         = {};
     this.regenTimer      = 0;
@@ -1574,6 +1603,30 @@ class Player {
         this._regenAfterHitTickTimer -= 1000;
         this.hp = Math.min(this.hp + this.regenAfterHit, this.maxHp);
       }
+    }
+
+    // 클래스 패시브: 사이보그 자가 수복
+    if ((this.classPassives.fw_regen || 0) > 0 && this.hp < this.maxHp) {
+      this._fwRegenTick = (this._fwRegenTick || 0) + dt;
+      if (this._fwRegenTick >= 1000) {
+        this._fwRegenTick -= 1000;
+        const regenAmt = ((this.classPassives.fw_regen >= 2) ? 4 : 2) * ((activeBoss && this.classPassives.fw_regen >= 2) ? 2 : 1);
+        this.hp = Math.min(this.hp + regenAmt, this.maxHp);
+      }
+    }
+
+    // 클래스 패시브: 패치봇 응급 처치 (피격 후 재생)
+    if ((this.classPassives.pb_triage || 0) > 0 && (this._triageTimer || 0) > 0) {
+      this._triageTimer -= dt;
+      this._triageTick  = (this._triageTick || 0) + dt;
+      if (this._triageTick >= 1000) {
+        this._triageTick -= 1000;
+        const r = this.classPassives.pb_triage >= 2 ? 8 : 4;
+        this.hp = Math.min(this.hp + r, this.maxHp);
+        addFloatingText(this.x, this.y - 30, `+${r}`, '#39ff14', 10);
+      }
+    } else {
+      this._triageTick = 0;
     }
 
     // 수리 드론 이벤트: 매초 +5 HP
@@ -1798,6 +1851,14 @@ class Player {
       addFloatingText(this.x, this.y - this.radius, 'BLOCKED', '#00f0ff', 12);
       return;
     }
+    // 루트킷 위상 회피: 피격 자체 무효
+    if ((this.classPassives.rk_evade || 0) > 0) {
+      const evadeChance = this.classPassives.rk_evade >= 2 ? 0.18 : 0.08;
+      if (Math.random() < evadeChance) {
+        addFloatingText(this.x, this.y - this.radius, 'EVADE', '#b026ff', 13);
+        return;
+      }
+    }
     let dmg = amount;
     // 코어 과부하 이벤트: 받는 피해 1.5배
     if (activeFieldEvent?.id === 'core_overload') dmg *= 1.5;
@@ -1805,7 +1866,8 @@ class Player {
     if (this._curseDamageMult) dmg *= this._curseDamageMult;
     if (this.damageReduction > 0) dmg = Math.max(1, Math.floor(dmg * (1 - this.damageReduction)));
     this.hp -= dmg;
-    mTrack._noDmgStreak = 0; // 피격 시 무피격 스트릭 초기화
+    mTrack._noDmgStreak = 0;
+    if ((this.classPassives.pb_triage || 0) > 0) this._triageTimer = 5000;
     if (this.passives.thorns > 0) this.thornsTrigger = true;
     if ((this.regenAfterHit || 0) > 0) { this._regenAfterHitTimer = 3000; }
     playHitSound();
@@ -2127,9 +2189,9 @@ class BoomerangWeapon extends BaseWeapon {
 
 // 6. 데이터 드론
 class DroneWeapon extends BaseWeapon {
-  constructor(owner) { super(owner); this.angleOffset = 0; this.droneTimers = [0, 0, 0]; }
+  constructor(owner) { super(owner); this.angleOffset = 0; this.droneTimers = [0, 0, 0, 0, 0]; }
   update(dt) {
-    const count  = [1, 1, 2, 2, 3][this.level - 1] ?? 1;
+    const count  = ([1, 1, 2, 2, 3][this.level - 1] ?? 1) + (this.owner.classPassives?.dr_count || 0);
     const fireCD = [2000, 1500, 1500, 1100, 900][this.level - 1] ?? 2000;
     const radius = 115;
     this.angleOffset += 0.014 * (dt / 16.66);
@@ -2149,7 +2211,8 @@ class DroneWeapon extends BaseWeapon {
         if (nearest && projectiles.length < MAX_PROJECTILES) {
           const a     = Math.atan2(nearest.y - droneY, nearest.x - droneX);
           const dmgB  = [12, 16, 20, 30, 45][this.level - 1] ?? 12;
-          const dmg   = dmgB * this.owner.damageMultiplier;
+          const droneMult = 1 + (this.owner.classPassives?.dr_dmg || 0) * 0.30;
+          const dmg   = dmgB * this.owner.damageMultiplier * droneMult;
           const shots = this.level === 5 ? 3 : 1;
           playSynthSound([700, 1100], 0.08, 'square', 0.05);
           // hellfire_drone 융합: 총알 대신 유도 미사일 발사
@@ -5981,6 +6044,17 @@ function generateUpgradeChoices() {
     }
   }
 
+  // 클래스 전용 패시브 풀
+  const classDefs = CLASS_PASSIVE_DEFS[player.classId] || [];
+  for (const cp of classDefs) {
+    const lvl = player.classPassives[cp.key] || 0;
+    if (lvl < 2) {
+      pool.push({ type:'class_passive', key: cp.key, name: cp.name, icon: cp.icon,
+        desc: cp.desc[lvl], isUpgrade: lvl > 0, nextLevel: lvl + 1,
+        classId: player.classId });
+    }
+  }
+
   // 무기 융합 카드 — 두 무기 모두 Lv5이고 미적용 시 최우선 삽입
   const fusionCards = [];
   for (const fus of WEAPON_FUSIONS) {
@@ -6039,23 +6113,27 @@ function renderUpgradeCards(choices) {
 
     // 기본 스타일 클래스
     let baseClass = 'new-weapon';
-    if      (choice.type === 'fusion')                      baseClass = 'weapon-fusion';
-    else if (choice.type === 'stat')                        baseClass = 'stat-boost';
-    else if (choice.type === 'passive' && choice.isUpgrade) baseClass = 'passive-upgrade';
-    else if (choice.type === 'passive')                     baseClass = 'new-passive';
-    else if (choice.isUpgrade)                              baseClass = 'weapon-upgrade';
-    else if (choice.type === 'legendary')                   baseClass = 'new-weapon';
+    if      (choice.type === 'fusion')                            baseClass = 'weapon-fusion';
+    else if (choice.type === 'stat')                              baseClass = 'stat-boost';
+    else if (choice.type === 'class_passive' && choice.isUpgrade) baseClass = 'class-passive-upgrade';
+    else if (choice.type === 'class_passive')                     baseClass = 'class-passive-new';
+    else if (choice.type === 'passive' && choice.isUpgrade)       baseClass = 'passive-upgrade';
+    else if (choice.type === 'passive')                           baseClass = 'new-passive';
+    else if (choice.isUpgrade)                                    baseClass = 'weapon-upgrade';
+    else if (choice.type === 'legendary')                         baseClass = 'new-weapon';
 
     card.className = `upgrade-card ${baseClass} rarity-${choice.rarity || 'common'}`;
 
     let tagText  = '신규 무기';
-    if      (choice.type === 'fusion')                       tagText = '🔮 무기 융합';
-    else if (choice.type === 'revival')                      tagText = '💀 에픽 부활';
-    else if (choice.type === 'stat')                         tagText = '시스템 강화';
-    else if (choice.type === 'passive' && !choice.isUpgrade) tagText = '패시브 신규';
-    else if (choice.type === 'passive' && choice.isUpgrade)  tagText = `패시브 Lv${choice.nextLevel}`;
-    else if (choice.isUpgrade)                               tagText = `업그레이드 Lv.${choice.nextLevel}`;
-    else if (choice.type === 'legendary')                    tagText = '⭐ 전설';
+    if      (choice.type === 'fusion')                                tagText = '🔮 무기 융합';
+    else if (choice.type === 'revival')                               tagText = '💀 에픽 부활';
+    else if (choice.type === 'class_passive' && !choice.isUpgrade)    tagText = '⭐ 클래스 전용';
+    else if (choice.type === 'class_passive' && choice.isUpgrade)     tagText = `⭐ 클래스 Lv${choice.nextLevel}`;
+    else if (choice.type === 'stat')                                   tagText = '시스템 강화';
+    else if (choice.type === 'passive' && !choice.isUpgrade)          tagText = '패시브 신규';
+    else if (choice.type === 'passive' && choice.isUpgrade)           tagText = `패시브 Lv${choice.nextLevel}`;
+    else if (choice.isUpgrade)                                        tagText = `업그레이드 Lv.${choice.nextLevel}`;
+    else if (choice.type === 'legendary')                             tagText = '⭐ 전설';
 
     let descText = choice.desc;
     if (choice.rarityMult > 1.0 && choice.type === 'stat') {
@@ -6322,6 +6400,59 @@ function applyUpgrade(choice) {
     applyPassiveEffect(choice.key, choice.nextLevel);
     playSynthSound([500, 900, 1200], 0.12, 'triangle', 0.05);
     checkSynergies();
+  } else if (choice.type === 'class_passive') {
+    player.classPassives[choice.key] = choice.nextLevel;
+    applyClassPassiveEffect(choice.key, choice.nextLevel);
+    playSynthSound([400, 800, 1400], 0.15, 'triangle', 0.06);
+  }
+}
+
+function applyClassPassiveEffect(key, level) {
+  switch (key) {
+    case 'hk_skill':
+      player._skillCdMult = level >= 2 ? 0.55 : 0.75;
+      addFloatingText(player.x, player.y - 40, `⏩ 해킹 가속 Lv${level}!`, '#00f0ff', 14);
+      break;
+    case 'hk_xp':
+      player.passiveXpMult = (player.passiveXpMult || 1.0) + 0.20;
+      addFloatingText(player.x, player.y - 40, `💽 데이터 수집 Lv${level}!`, '#00f0ff', 14);
+      break;
+    case 'fw_armor':
+      player.damageReduction = Math.min(0.75, (player.damageReduction || 0) + (level === 1 ? 0.12 : 0.10));
+      addFloatingText(player.x, player.y - 40, `🧱 강화 방호 Lv${level}!`, '#b026ff', 14);
+      break;
+    case 'fw_regen':
+      addFloatingText(player.x, player.y - 40, `🔋 자가 수복 Lv${level}!`, '#b026ff', 14);
+      break;
+    case 'rk_evade':
+      addFloatingText(player.x, player.y - 40, `👻 위상 회피 Lv${level}!`, '#39ff14', 14);
+      break;
+    case 'rk_speed':
+      player.speed += level === 1 ? 0.5 : 0.7;
+      addFloatingText(player.x, player.y - 40, `💨 고속 침투 Lv${level}!`, '#39ff14', 14);
+      break;
+    case 'dr_dmg':
+      addFloatingText(player.x, player.y - 40, `⚡ 드론 과부하 Lv${level}!`, '#ffe600', 14);
+      break;
+    case 'dr_count':
+      addFloatingText(player.x, player.y - 40, `🛸 추가 배치 Lv${level}!`, '#ffe600', 14);
+      break;
+    case 'sc_crit':
+      player.critBonus = (player.critBonus || 0) + (level === 1 ? 0.15 : 0.13);
+      addFloatingText(player.x, player.y - 40, `🎯 치명 조준 Lv${level}!`, '#ff4466', 14);
+      break;
+    case 'sc_magnet':
+      player.magnetRadius += 60;
+      addFloatingText(player.x, player.y - 40, `🔭 광역 탐지 Lv${level}!`, '#ff4466', 14);
+      break;
+    case 'pb_maxhp':
+      player.maxHp += 40;
+      player.hp     = Math.min(player.hp + 40, player.maxHp);
+      addFloatingText(player.x, player.y - 40, `💪 핵심 강화 Lv${level}!`, '#39ff14', 14);
+      break;
+    case 'pb_triage':
+      addFloatingText(player.x, player.y - 40, `🏥 응급 처치 Lv${level}!`, '#39ff14', 14);
+      break;
   }
 }
 
