@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AntiSurge — 코드 아키텍처</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --cyan:   #00f0ff;
+  --purple: #b026ff;
+  --green:  #39ff14;
+  --yellow: #ffe600;
+  --pink:   #ff4466;
+  --bg:     #03050f;
+  --card:   #0a0f1e;
+  --border: rgba(0,240,255,0.18);
+  --text:   #cbd5e1;
+  --muted:  #475569;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; line-height: 1.7; }
+
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(3,5,15,0.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border); padding: 12px 32px;
+  display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+}
+.nav-logo { font-family: 'Orbitron', monospace; font-size: .8rem; color: var(--cyan); letter-spacing: 2px; text-decoration: none; }
+.nav-links { display: flex; gap: 16px; margin-left: auto; flex-wrap: wrap; }
+.nav-links a { font-size: .75rem; color: var(--muted); text-decoration: none; transition: color .2s; }
+.nav-links a:hover { color: var(--cyan); }
+
+.hero { padding: 64px 32px 40px; max-width: 1100px; margin: 0 auto; border-bottom: 1px solid var(--border); }
+.hero-badge { display: inline-block; font-family: 'Orbitron', monospace; font-size: .6rem; letter-spacing: 3px; background: rgba(176,38,255,.1); border: 1px solid var(--purple); color: var(--purple); padding: 4px 12px; border-radius: 4px; margin-bottom: 16px; }
+.hero h1 { font-family: 'Orbitron', monospace; font-size: 2.2rem; font-weight: 900; color: #fff; }
+.hero h1 span { color: var(--purple); }
+.hero p { margin-top: 12px; color: var(--muted); max-width: 680px; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 48px 32px; }
+section { margin-bottom: 64px; }
+section h2 { font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 700; color: var(--purple); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+section h2 .dot { color: var(--cyan); }
+
+pre {
+  background: #060a15; border: 1px solid var(--border); border-radius: 8px;
+  padding: 20px; overflow-x: auto; font-family: 'Courier New', monospace;
+  font-size: .8rem; line-height: 1.7; color: #a8b2d8;
+}
+pre .kw  { color: var(--purple); }
+pre .fn  { color: var(--cyan); }
+pre .cm  { color: var(--muted); }
+pre .str { color: var(--green); }
+pre .num { color: var(--yellow); }
+pre .arrow { color: var(--yellow); }
+code { font-family: 'Courier New', monospace; color: var(--cyan); font-size: .85em; }
+
+/* ── 상태 머신 ── */
+.state-diagram {
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  padding: 32px; background: #060a15; border: 1px solid var(--border); border-radius: 12px;
+}
+.state-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.state-node {
+  font-family: 'Orbitron', monospace; font-size: .65rem; letter-spacing: 1px;
+  padding: 8px 14px; border-radius: 6px; white-space: nowrap;
+}
+.state-main   { background: rgba(0,240,255,.12); border: 1.5px solid var(--cyan);   color: var(--cyan); }
+.state-sub    { background: rgba(176,38,255,.1); border: 1.5px solid var(--purple); color: var(--purple); }
+.state-danger { background: rgba(255,68,102,.1); border: 1.5px solid var(--pink);   color: var(--pink); }
+.state-center { background: rgba(57,255,20,.1);  border: 1.5px solid var(--green);  color: var(--green); }
+.arr { color: var(--yellow); font-size: .9rem; font-weight: 700; }
+.arr-bi { color: var(--muted); }
+.sub-states {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 16px; border: 1px dashed rgba(176,38,255,.3); border-radius: 8px;
+  margin: 8px 0;
+}
+.sub-label { font-size: .62rem; color: var(--muted); font-family: 'Orbitron', monospace; letter-spacing: 1px; margin-bottom: 4px; }
+
+/* ── 루프 트리 ── */
+.loop-tree {
+  background: #060a15; border: 1px solid var(--border); border-radius: 8px;
+  padding: 24px 28px; font-family: 'Courier New', monospace; font-size: .82rem; line-height: 2;
+}
+.lt-root  { color: var(--yellow); font-weight: 700; }
+.lt-fn    { color: var(--cyan); }
+.lt-sub   { color: var(--purple); }
+.lt-leaf  { color: #a8b2d8; }
+.lt-file  { color: var(--muted); font-size: .72rem; margin-left: 6px; }
+
+/* ── 모듈 플로우 ── */
+.module-flow {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 20px; background: #060a15; border: 1px solid var(--border); border-radius: 8px;
+}
+.mf-item {
+  font-family: 'Orbitron', monospace; font-size: .6rem; letter-spacing: 1px;
+  padding: 5px 10px; border-radius: 4px; background: var(--card); border: 1px solid var(--border);
+  color: var(--cyan); white-space: nowrap;
+}
+.mf-arrow { color: var(--muted); font-size: .75rem; }
+.mf-item:hover { border-color: var(--cyan); }
+
+/* ── 변수 그리드 ── */
+.var-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.var-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px;
+}
+.var-card h4 { font-family: 'Orbitron', monospace; font-size: .62rem; color: var(--yellow); margin-bottom: 10px; letter-spacing: 1px; }
+.var-list { list-style: none; }
+.var-list li { font-size: .78rem; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.var-list li:last-child { border-bottom: none; }
+.var-list code { color: var(--cyan); }
+.var-list .vtype { color: var(--purple); font-size: .7rem; margin-left: 6px; }
+
+/* ── 함수 테이블 ── */
+.fn-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.fn-table th { font-family: 'Orbitron', monospace; font-size: .6rem; color: var(--purple); text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.fn-table td { padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: middle; }
+.fn-table tr:hover td { background: rgba(176,38,255,.04); }
+.fn-table code { color: var(--cyan); white-space: nowrap; }
+.fn-table .file-tag {
+  display: inline-block; font-family: 'Orbitron', monospace; font-size: .58rem;
+  padding: 2px 7px; border-radius: 3px; background: rgba(176,38,255,.1);
+  color: var(--purple); border: 1px solid rgba(176,38,255,.3); white-space: nowrap;
+}
+.fn-table .desc { color: var(--muted); font-size: .75rem; }
+
+/* ── 버그 방지 패턴 ── */
+.bug-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+.bug-card {
+  background: var(--card); border: 1px solid rgba(255,68,102,.2); border-radius: 8px; padding: 18px;
+}
+.bug-card h4 { font-family: 'Orbitron', monospace; font-size: .65rem; color: var(--pink); margin-bottom: 10px; letter-spacing: 1px; }
+.bug-card .bad  { color: var(--pink);  font-family: monospace; font-size: .78rem; background: rgba(255,68,102,.08); padding: 2px 6px; border-radius: 3px; display: block; margin: 3px 0; }
+.bug-card .good { color: var(--green); font-family: monospace; font-size: .78rem; background: rgba(57,255,20,.08);  padding: 2px 6px; border-radius: 3px; display: block; margin: 3px 0; }
+.bug-card p { font-size: .78rem; color: var(--muted); margin-top: 8px; }
+
+footer { border-top: 1px solid var(--border); padding: 24px 32px; text-align: center; font-size: .72rem; color: var(--muted); }
+footer a { color: var(--cyan); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">◀ ANTISURGE DOCS</a>
+  <div class="nav-links">
+    <a href="index.html">허브</a>
+    <a href="handover.html">인수인계</a>
+    <a href="design.html">기획서</a>
+    <a href="tech-stack.html">기술 스택</a>
+    <a href="architecture.html" style="color:var(--purple)">아키텍처</a>
+    <a href="evaluation.html">평가 리포트</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">CODE ARCHITECTURE</div>
+  <h1>코드 <span>아키텍처</span></h1>
+  <p>AntiSurge의 상태 머신, 게임 루프, 모듈 의존성, 전역 변수, 핵심 함수 레퍼런스 및 버그 방지 패턴 정리.</p>
+</div>
+
+<div class="container">
+
+  <!-- 1. 상태 머신 -->
+  <section>
+    <h2><span class="dot">01.</span> 상태 머신</h2>
+    <div class="state-diagram">
+      <div class="state-row">
+        <div class="state-node state-main">STATE_MENU</div>
+        <div class="arr">→</div>
+        <div class="state-node state-center">STATE_PLAYING</div>
+      </div>
+      <div class="arr" style="margin: 8px 0;">↕</div>
+      <div class="sub-states">
+        <div class="sub-label">▸ PLAYING 에서 전환 가능</div>
+        <div class="state-row" style="gap: 10px;">
+          <div class="state-node state-sub">STATE_LEVEL_UP</div>
+          <div class="arr-bi">⇄</div>
+          <div class="state-node state-center">STATE_PLAYING</div>
+        </div>
+        <div class="state-row" style="gap: 10px; margin-top: 6px;">
+          <div class="state-node state-sub">STATE_STAGE_CLEAR</div>
+          <div class="arr">→</div>
+          <div class="state-node state-sub">STATE_STAGE_BONUS</div>
+        </div>
+        <div class="state-row" style="gap: 10px; margin-top: 6px;">
+          <div class="state-node state-sub">STATE_SHOP</div>
+          <span style="color:var(--muted); font-size:.75rem; margin: 0 4px;">|</span>
+          <div class="state-node state-sub">STATE_CURSE</div>
+          <span style="color:var(--muted); font-size:.75rem; margin: 0 4px;">|</span>
+          <div class="state-node state-sub">STATE_PAUSED</div>
+        </div>
+      </div>
+      <div class="arr" style="margin: 8px 0;">↓</div>
+      <div class="state-node state-danger">STATE_GAME_OVER</div>
+      <p style="font-size:.7rem; color:var(--muted); margin-top:12px;">* GAME_OVER에서 → MENU(재도전) 또는 NG+ 시작 가능</p>
+    </div>
+    <div style="margin-top: 16px;">
+      <pre><span class="cm">// gameState 전환 예시 (flow.js / stage.js)</span>
+<span class="fn">gameState</span> = STATE_LEVEL_UP;      <span class="cm">// 레벨업 모달 열기</span>
+<span class="fn">ensureGameLoopRunning</span>();        <span class="cm">// ← 상태 변경 후 항상 호출</span>
+
+<span class="fn">gameState</span> = STATE_PLAYING;       <span class="cm">// 모달 닫고 게임 재개</span>
+<span class="fn">ensureGameLoopRunning</span>();</pre>
+    </div>
+  </section>
+
+  <!-- 2. 핵심 게임 루프 -->
+  <section>
+    <h2><span class="dot">02.</span> 핵심 게임 루프</h2>
+    <div class="loop-tree">
+      <div><span class="lt-root">requestAnimationFrame</span> <span class="lt-file">— 브라우저 vsync</span></div>
+      <div style="padding-left:20px;"><span class="lt-arrow" style="color:var(--yellow);">└─</span> <span class="lt-fn">gameLoop(time)</span> <span class="lt-file">loop.js</span></div>
+      <div style="padding-left:40px;"><span style="color:var(--muted)">├─</span> <span class="lt-sub">update(dt)</span> <span class="lt-file">loop.js</span></div>
+      <div style="padding-left:60px; color:#a8b2d8; font-size:.75rem;">
+        ├─ Player.update(dt) — 이동, 무기 발사, 패시브 처리<br>
+        ├─ 각 WeaponClass.update(dt) — 무기별 발사 로직<br>
+        ├─ 적 이동 / 보스 AI 업데이트<br>
+        ├─ 투사체 이동 / 충돌 전처리<br>
+        ├─ checkCollisions() — 충돌 판정<br>
+        ├─ updateComboSystem(dt) — 콤보 타이머<br>
+        ├─ updateMissions(dt) — 미션 진행도<br>
+        └─ updateHUD() — HUD 수치 갱신
+      </div>
+      <div style="padding-left:40px; margin-top: 4px;"><span style="color:var(--muted)">└─</span> <span class="lt-sub">draw(dt)</span> <span class="lt-file">loop.js</span></div>
+      <div style="padding-left:60px; color:#a8b2d8; font-size:.75rem;">
+        ├─ ctx.save() / translate(-camera.x, -camera.y)<br>
+        ├─ drawBackground(ctx, w, h, dt)<br>
+        ├─ 파티클 / 젬 / 지뢰 / 블랙홀 렌더<br>
+        ├─ 투사체 / 레이저 빔 렌더<br>
+        ├─ 적 / 보스 렌더<br>
+        ├─ Player 렌더<br>
+        ├─ FloatingText 렌더<br>
+        ├─ ctx.restore()<br>
+        ├─ drawMinimap(ctx)<br>
+        └─ 스크린 셰이크 적용
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 모듈 의존성 -->
+  <section>
+    <h2><span class="dot">03.</span> 모듈 의존성 흐름</h2>
+    <p style="font-size:.8rem; color:var(--muted); margin-bottom: 14px;">로딩 순서 = 의존성 순서. 앞 파일이 정의한 전역이 뒤 파일에서 사용됨.</p>
+    <div class="module-flow">
+      <div class="mf-item">config</div><div class="mf-arrow">→</div>
+      <div class="mf-item">audio</div><div class="mf-arrow">→</div>
+      <div class="mf-item">player</div><div class="mf-arrow">→</div>
+      <div class="mf-item">weapons</div><div class="mf-arrow">→</div>
+      <div class="mf-item">projectiles</div><div class="mf-arrow">→</div>
+      <div class="mf-item">enemies</div><div class="mf-arrow">→</div>
+      <div class="mf-item">entities</div><div class="mf-arrow">→</div>
+      <div class="mf-item">stage</div><div class="mf-arrow">→</div>
+      <div class="mf-item">flow</div><div class="mf-arrow">→</div>
+      <div class="mf-item">loop</div><div class="mf-arrow">→</div>
+      <div class="mf-item">upgrades</div><div class="mf-arrow">→</div>
+      <div class="mf-item">endgame</div><div class="mf-arrow">→</div>
+      <div class="mf-item">extras</div><div class="mf-arrow">→</div>
+      <div class="mf-item">input</div><div class="mf-arrow">→</div>
+      <div class="mf-item" style="border-color:var(--green); color:var(--green);">multiplayer ★</div>
+    </div>
+    <p style="font-size:.75rem; color:var(--muted); margin-top:10px;">★ multiplayer.js 마지막 — 초기화 코드 포함 (saveData 로드, touchControls 초기화 등)</p>
+  </section>
+
+  <!-- 4. 전역 핵심 변수 -->
+  <section>
+    <h2><span class="dot">04.</span> 전역 핵심 변수</h2>
+    <div class="var-grid">
+      <div class="var-card">
+        <h4>🎮 게임 상태</h4>
+        <ul class="var-list">
+          <li><code>gameState</code><span class="vtype">string</span> — 현재 화면 상태</li>
+          <li><code>player</code><span class="vtype">Player|null</span> — 플레이어 인스턴스</li>
+          <li><code>activeBoss</code><span class="vtype">Boss|null</span> — 현재 보스</li>
+          <li><code>currentStage</code><span class="vtype">number</span> — 현재 스테이지</li>
+          <li><code>gameTime</code><span class="vtype">ms</span> — 누적 게임 시간</li>
+          <li><code>gameLoopId</code><span class="vtype">number|null</span> — rAF ID</li>
+        </ul>
+      </div>
+      <div class="var-card">
+        <h4>📦 엔티티 배열</h4>
+        <ul class="var-list">
+          <li><code>enemies[]</code><span class="vtype">Enemy[]</span></li>
+          <li><code>projectiles[]</code><span class="vtype">Projectile[]</span></li>
+          <li><code>bossProjectiles[]</code><span class="vtype">BossProjectile[]</span></li>
+          <li><code>gems[]</code><span class="vtype">Gem[]</span></li>
+          <li><code>particles[]</code><span class="vtype">Particle[]</span></li>
+          <li><code>mines[]</code> / <code>blackHoles[]</code></li>
+          <li><code>fieldItems[]</code> / <code>goldCoins[]</code></li>
+        </ul>
+      </div>
+      <div class="var-card">
+        <h4>⚠️ 버그 방지 플래그</h4>
+        <ul class="var-list">
+          <li><code>pendingLevelUps</code><span class="vtype">number</span> — 대기 레벨업 수</li>
+          <li><code>levelUpInProgress</code><span class="vtype">boolean</span></li>
+          <li><code>pendingBossCurse</code><span class="vtype">boolean</span> — 중복 저주 방지</li>
+          <li><code>isStageClearAnim</code><span class="vtype">boolean</span></li>
+          <li><code>pendingNearDeathCurse</code><span class="vtype">boolean</span></li>
+        </ul>
+      </div>
+      <div class="var-card">
+        <h4>💾 저장 / 메타</h4>
+        <ul class="var-list">
+          <li><code>saveData</code><span class="vtype">object</span> — localStorage 데이터</li>
+          <li><code>ascensionLevel</code><span class="vtype">number</span> — NG+ 레벨</li>
+          <li><code>gameDifficulty</code><span class="vtype">'easy'|'normal'|'hard'</span></li>
+          <li><code>currentSaveSlot</code><span class="vtype">0|1|2</span></li>
+        </ul>
+      </div>
+      <div class="var-card">
+        <h4>🎯 미션 / 콤보</h4>
+        <ul class="var-list">
+          <li><code>runMissions[]</code><span class="vtype">Mission[]</span> — 현재 런 미션 3개</li>
+          <li><code>mTrack{}</code><span class="vtype">object</span> — 미션 추적 카운터</li>
+          <li><code>comboCount</code><span class="vtype">number</span></li>
+          <li><code>maxCombo</code><span class="vtype">number</span></li>
+        </ul>
+      </div>
+      <div class="var-card">
+        <h4>🖼 렌더 / 카메라</h4>
+        <ul class="var-list">
+          <li><code>canvas</code><span class="vtype">HTMLCanvasElement</span></li>
+          <li><code>ctx</code><span class="vtype">CanvasRenderingContext2D</span></li>
+          <li><code>camera</code><span class="vtype">{x,y,width,height}</span></li>
+          <li><code>screenShake</code><span class="vtype">{x,y,intensity,duration}</span></li>
+          <li><code>floatingTexts[]</code><span class="vtype">FloatingText[]</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 함수 레퍼런스 -->
+  <section>
+    <h2><span class="dot">05.</span> 핵심 함수 레퍼런스</h2>
+    <table class="fn-table">
+      <thead>
+        <tr><th>함수</th><th>위치</th><th>역할</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>startGame()</code></td><td><span class="file-tag">flow.js</span></td><td class="desc">플레이어/배열/타이머 초기화, 미션 초기화, 게임 루프 시작</td></tr>
+        <tr><td><code>ensureGameLoopRunning()</code></td><td><span class="file-tag">loop.js</span></td><td class="desc">gameLoopId가 null이면 rAF 재등록 — 상태 전환 후 항상 호출</td></tr>
+        <tr><td><code>gameLoop(time)</code></td><td><span class="file-tag">loop.js</span></td><td class="desc">dt 계산 → update(dt) → draw(dt) → 다음 rAF 등록</td></tr>
+        <tr><td><code>update(dt)</code></td><td><span class="file-tag">loop.js</span></td><td class="desc">모든 게임 로직 업데이트 (이동, 스폰, 충돌, HUD)</td></tr>
+        <tr><td><code>draw(dt)</code></td><td><span class="file-tag">loop.js</span></td><td class="desc">캔버스 전체 렌더링 (배경 → 엔티티 → UI)</td></tr>
+        <tr><td><code>checkCollisions()</code></td><td><span class="file-tag">stage.js</span></td><td class="desc">투사체↔적, 플레이어↔적, 젬 흡수 충돌 처리</td></tr>
+        <tr><td><code>spawnEnemyPack()</code></td><td><span class="file-tag">stage.js</span></td><td class="desc">스테이지/난이도 기반 적 그룹 스폰</td></tr>
+        <tr><td><code>triggerStageClear()</code></td><td><span class="file-tag">stage.js</span></td><td class="desc">스테이지 클리어 연출 + 상태 전환</td></tr>
+        <tr><td><code>advanceToNextStage()</code></td><td><span class="file-tag">stage.js</span></td><td class="desc">currentStage++, 존 전환 체크, 스테이지 100 인터셉트</td></tr>
+        <tr><td><code>triggerFinalVictory()</code></td><td><span class="file-tag">endgame.js</span></td><td class="desc">스테이지 100 클리어 — 폭발 연출 3.5초 → showVictoryScreen()</td></tr>
+        <tr><td><code>endGame(isVictory)</code></td><td><span class="file-tag">endgame.js</span></td><td class="desc">게임 종료 처리, 결과 집계, 저장, 결과 화면 표시</td></tr>
+        <tr><td><code>generateUpgradeChoices()</code></td><td><span class="file-tag">upgrades.js</span></td><td class="desc">무기/스탯/패시브/클래스패시브/융합 카드 풀 생성</td></tr>
+        <tr><td><code>applyUpgrade(choice)</code></td><td><span class="file-tag">upgrades.js</span></td><td class="desc">선택한 카드 효과 적용 (무기/스탯/패시브/클래스패시브/융합)</td></tr>
+        <tr><td><code>useActiveSkill()</code></td><td><span class="file-tag">audio.js</span></td><td class="desc">Q키 스킬 발동 — classId로 분기, 쿨다운 설정</td></tr>
+        <tr><td><code>showScreen(state)</code></td><td><span class="file-tag">flow.js</span></td><td class="desc">화면 전환 — 모달 show/hide, gameState 설정</td></tr>
+        <tr><td><code>saveSaveData()</code></td><td><span class="file-tag">stage.js</span></td><td class="desc">saveData → localStorage 직렬화 저장</td></tr>
+        <tr><td><code>loadSaveData()</code></td><td><span class="file-tag">stage.js</span></td><td class="desc">localStorage → saveData 역직렬화 + 레거시 마이그레이션</td></tr>
+        <tr><td><code>initMissions()</code></td><td><span class="file-tag">audio.js</span></td><td class="desc">런 시작 시 MISSION_POOL에서 3개 랜덤 선택</td></tr>
+        <tr><td><code>checkZoneTransition()</code></td><td><span class="file-tag">flow.js (내부)</span></td><td class="desc">스테이지 변화 시 구역 전환 감지 → 오버레이 + HUD 배지 갱신</td></tr>
+        <tr><td><code>triggerScreenShake(i, d)</code></td><td><span class="file-tag">stage.js</span></td><td class="desc">강도/지속시간으로 화면 흔들림 효과</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 6. 버그 방지 패턴 -->
+  <section>
+    <h2><span class="dot">06.</span> 버그 방지 패턴</h2>
+    <div class="bug-grid">
+
+      <div class="bug-card">
+        <h4>❌ 전역 배열 재할당 금지</h4>
+        <span class="bad">enemies = [];  // ← 기존 참조 파괴!</span>
+        <span class="good">enemies.length = 0;  // ✓ 참조 유지</span>
+        <p>validate.js [2] 검사. 루프 중 배열 교체 시 이미 이터레이션 중인 코드가 빈 배열을 참조해 크래시.</p>
+      </div>
+
+      <div class="bug-card">
+        <h4>❌ 인덱스 루프 중 사망 유발 금지</h4>
+        <span class="bad">enemies[i].takeDamage(...)  // ← 루프 중 stage-clear 유발</span>
+        <span class="good">// 루프 밖에서 처리하거나 플래그 사용</span>
+        <p>validate.js [1] 검사. takeDamage → die → triggerStageClear → enemies.length=0 → 루프 크래시.</p>
+      </div>
+
+      <div class="bug-card">
+        <h4>❌ for..of 루프 중 splice 금지</h4>
+        <span class="bad">for (const e of enemies) { enemies.splice(...) }</span>
+        <span class="good">for (const e of [...enemies]) { ... }  // ✓ 스냅샷</span>
+        <p>validate.js [3] 검사. 이터레이터 무효화로 인한 스킵/크래시 방지.</p>
+      </div>
+
+      <div class="bug-card">
+        <h4>⚠️ activeBoss null 체크 필수</h4>
+        <span class="bad">activeBoss.hp -= dmg;  // ← null 크래시</span>
+        <span class="good">if (activeBoss) activeBoss.hp -= dmg;</span>
+        <p>validate.js [7] 검사. 보스 처치 후 activeBoss = null이 되므로 접근 전 반드시 체크.</p>
+      </div>
+
+      <div class="bug-card">
+        <h4>⚠️ 상태 변경 후 루프 재시작</h4>
+        <span class="bad">gameState = STATE_PLAYING;  // 루프가 멈춘 채 방치</span>
+        <span class="good">gameState = STATE_PLAYING;<br>ensureGameLoopRunning();  // ✓</span>
+        <p>validate.js [6] 검사. LEVEL_UP/SHOP 등에서 복귀 시 루프가 자동으로 재시작되지 않을 수 있음.</p>
+      </div>
+
+      <div class="bug-card">
+        <h4>⚠️ pendingBossCurse 플래그</h4>
+        <span class="bad">// 보스 처치 시 즉시 저주 모달 → 중복 트리거</span>
+        <span class="good">pendingBossCurse = true;  // stage clear 후 처리</span>
+        <p>보스 처치와 스테이지 클리어가 동시 발생 시 저주 모달 중복 방지. isFinalBoss면 저주 스킵.</p>
+      </div>
+
+      <div class="bug-card">
+        <h4>⚠️ setTimeout 내 player null 체크</h4>
+        <span class="bad">setTimeout(() => { player.hp += 5; }, 3000);</span>
+        <span class="good">setTimeout(() => { if (player) player.hp += 5; }, 3000);</span>
+        <p>validate.js [10] 검사. 딜레이 중 게임 종료 시 player = null이 될 수 있음.</p>
+      </div>
+
+      <div class="bug-card">
+        <h4>⚠️ mines/blackHoles 경계 체크</h4>
+        <span class="bad">for (let i = mines.length-1; i >= 0; i--) { ... }</span>
+        <span class="good">// 루프 내: if (i >= mines.length) continue;</span>
+        <p>validate.js [11] 검사. 루프 중 배열 축소 시 인덱스 범위 초과 방지.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 7. 좌표계 -->
+  <section>
+    <h2><span class="dot">07.</span> 좌표계</h2>
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 16px;">
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:18px;">
+        <h4 style="font-family:'Orbitron',monospace; font-size:.65rem; color:var(--cyan); margin-bottom:10px;">월드 좌표</h4>
+        <p style="font-size:.8rem; color:var(--muted);">맵 크기: <code>2500 × 2500</code> px<br>모든 엔티티(플레이어, 적, 투사체)는 월드 좌표 사용.<br>렌더 시 <code>ctx.translate(-camera.x, -camera.y)</code> 적용.</p>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:18px;">
+        <h4 style="font-family:'Orbitron',monospace; font-size:.65rem; color:var(--yellow); margin-bottom:10px;">카메라</h4>
+        <p style="font-size:.8rem; color:var(--muted);"><code>camera.x/y</code> = 플레이어 중심 뷰포트 오프셋.<br>렌더 후 <code>ctx.restore()</code>로 화면 좌표 복귀.<br>미니맵, HUD, 조이스틱은 항상 <strong>화면 좌표</strong> 사용.</p>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:18px;">
+        <h4 style="font-family:'Orbitron',monospace; font-size:.65rem; color:var(--purple); margin-bottom:10px;">dist() 유틸</h4>
+        <pre style="font-size:.72rem; padding:10px;">dist(x1,y1, x2,y2)
+<span class="cm">// Math.hypot(dx, dy)</span>
+<span class="cm">// src/input.js에 정의</span></pre>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p>AntiSurge β v0.09 — 코드 아키텍처 | <a href="index.html">문서 허브</a> | <a href="tech-stack.html">기술 스택</a> | <a href="https://antisurge-c0463.web.app" target="_blank">게임 플레이</a></p>
+</footer>
+
+</body>
+</html>

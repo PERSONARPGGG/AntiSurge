@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AntiSurge — 인수인계 문서</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --cyan:   #00f0ff;
+  --purple: #b026ff;
+  --green:  #39ff14;
+  --yellow: #ffe600;
+  --pink:   #ff4466;
+  --bg:     #03050f;
+  --card:   #0a0f1e;
+  --card2:  #0d1428;
+  --border: rgba(0,240,255,0.18);
+  --text:   #cbd5e1;
+  --muted:  #475569;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; line-height: 1.7; }
+
+/* ── 레이아웃 ── */
+.layout { display: flex; min-height: 100vh; }
+
+/* 사이드바 */
+nav {
+  width: 230px;
+  min-width: 230px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  padding: 30px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.nav-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--cyan);
+  padding: 0 20px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  letter-spacing: 2px;
+}
+.nav-logo span { color: #fff; }
+nav a {
+  display: block;
+  padding: 9px 20px;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+  transition: color .15s, background .15s;
+  border-left: 2px solid transparent;
+}
+nav a:hover, nav a.active {
+  color: var(--cyan);
+  background: rgba(0,240,255,0.06);
+  border-left-color: var(--cyan);
+}
+.nav-section {
+  padding: 12px 20px 4px;
+  font-size: 0.62rem;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-family: 'Orbitron', monospace;
+}
+.nav-back {
+  display: block;
+  padding: 9px 20px;
+  text-decoration: none;
+  color: var(--purple);
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+}
+.nav-back:hover { color: #d466ff; }
+
+/* 메인 */
+main { flex: 1; padding: 48px 56px; max-width: 900px; }
+
+/* 섹션 */
+.doc-section { margin-bottom: 56px; }
+h2 {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+h2 .icon { font-size: 1.3rem; }
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, var(--cyan), transparent);
+  margin: 12px 0 24px;
+  opacity: 0.4;
+}
+
+h3 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--cyan);
+  margin: 20px 0 10px;
+  letter-spacing: 0.5px;
+}
+
+p { font-size: 0.85rem; margin-bottom: 12px; color: var(--text); }
+
+/* ── 카드 ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+/* ── 테이블 ── */
+table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+th, td {
+  padding: 9px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+th {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  background: rgba(0,240,255,0.04);
+}
+tr:last-child td { border-bottom: none; }
+td code { color: var(--cyan); font-size: 0.78rem; background: rgba(0,240,255,0.08); padding: 1px 6px; border-radius: 3px; }
+
+/* ── 리스트 ── */
+ul, ol { padding-left: 20px; font-size: 0.83rem; }
+li { margin-bottom: 6px; }
+li code { color: var(--cyan); background: rgba(0,240,255,0.08); padding: 1px 6px; border-radius: 3px; font-size: 0.8rem; }
+
+/* ── 배지 ── */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.done    { background: rgba(57,255,20,0.12); color: var(--green);  border: 1px solid rgba(57,255,20,0.3); }
+.wip     { background: rgba(255,230,0,0.1);  color: var(--yellow); border: 1px solid rgba(255,230,0,0.3); }
+.planned { background: rgba(176,38,255,0.1); color: var(--purple); border: 1px solid rgba(176,38,255,0.3); }
+.warn    { background: rgba(255,68,102,0.1); color: var(--pink);   border: 1px solid rgba(255,68,102,0.3); }
+
+/* ── 코드 블록 ── */
+pre {
+  background: #060b17;
+  border: 1px solid rgba(0,240,255,0.12);
+  border-radius: 8px;
+  padding: 16px 20px;
+  font-size: 0.78rem;
+  overflow-x: auto;
+  margin: 12px 0 18px;
+  color: #a8c0d6;
+  line-height: 1.6;
+}
+pre .c  { color: var(--muted); }
+pre .k  { color: var(--cyan); }
+pre .s  { color: var(--green); }
+pre .v  { color: var(--yellow); }
+
+/* ── 경고 박스 ── */
+.alert {
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 12px 0;
+  font-size: 0.82rem;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.alert-warn { background: rgba(255,230,0,0.06); border: 1px solid rgba(255,230,0,0.25); }
+.alert-danger { background: rgba(255,68,102,0.06); border: 1px solid rgba(255,68,102,0.25); }
+.alert-info { background: rgba(0,240,255,0.06); border: 1px solid rgba(0,240,255,0.2); }
+.alert-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.alert-warn .alert-body { color: var(--yellow); }
+.alert-danger .alert-body { color: var(--pink); }
+.alert-info .alert-body { color: var(--cyan); }
+
+/* ── 체크리스트 ── */
+.checklist { list-style: none; padding-left: 0; }
+.checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,240,255,0.06);
+  font-size: 0.82rem;
+}
+.checklist li:last-child { border-bottom: none; }
+.check-num {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0,240,255,0.1);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-size: 0.65rem;
+  font-family: 'Orbitron', monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.check-content strong { color: #fff; display: block; margin-bottom: 2px; }
+.check-content span { color: var(--muted); font-size: 0.78rem; }
+
+/* ── 상태 머신 ── */
+.state-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0;
+}
+.state-node {
+  background: rgba(0,240,255,0.08);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 1px;
+}
+.state-arrow { color: var(--muted); font-size: 1rem; }
+
+/* 반응형 */
+@media (max-width: 768px) {
+  nav { display: none; }
+  main { padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- 사이드바 -->
+<nav>
+  <div class="nav-logo">ANTI<span>SURGE</span></div>
+  <a href="index.html" class="nav-back">← 문서 허브</a>
+  <div class="nav-section">인수인계</div>
+  <a href="#overview">📌 프로젝트 개요</a>
+  <a href="#completed">✅ 완료된 기능</a>
+  <a href="#pending">⏳ 미완성 항목</a>
+  <div class="nav-section">개발 환경</div>
+  <a href="#setup">🛠 환경 설정</a>
+  <a href="#workflow">🔄 개발 워크플로</a>
+  <a href="#modules">📦 모듈 구조</a>
+  <div class="nav-section">레퍼런스</div>
+  <a href="#state-machine">🔀 상태 머신</a>
+  <a href="#bugcheck">🛡 버그 방지</a>
+  <a href="#classes">🧩 클래스 정의</a>
+</nav>
+
+<!-- 본문 -->
+<main>
+
+  <!-- 제목 -->
+  <div style="margin-bottom:40px;">
+    <div style="font-family:'Orbitron',monospace;font-size:0.72rem;color:var(--muted);letter-spacing:3px;margin-bottom:8px;">HANDOVER DOCUMENT</div>
+    <h1 style="font-family:'Orbitron',monospace;font-size:1.8rem;font-weight:900;color:#fff;">
+      <span style="color:var(--cyan);">ANTI</span>SURGE
+      <span style="font-size:0.45em;color:var(--yellow);background:rgba(255,230,0,0.1);border:1px solid var(--yellow);padding:3px 10px;border-radius:4px;vertical-align:middle;margin-left:10px;">β v0.09</span>
+    </h1>
+    <p style="margin-top:10px;color:var(--muted);">
+      최종 업데이트: 2026-06-25 &nbsp;|&nbsp;
+      <a href="https://antisurge-c0463.web.app" style="color:var(--cyan);">antisurge-c0463.web.app</a> &nbsp;|&nbsp;
+      <a href="https://github.com/PERSONARPGGG/AntiSurge" style="color:var(--purple);">GitHub</a>
+    </p>
+  </div>
+
+  <!-- 1. 프로젝트 개요 -->
+  <div class="doc-section" id="overview">
+    <h2><span class="icon">📌</span> 프로젝트 개요</h2>
+    <div class="section-divider"></div>
+    <div class="card">
+      <table>
+        <tr><td><strong>장르</strong></td><td>뱀파이어 서바이벌 스타일 서바이벌 슈터</td></tr>
+        <tr><td><strong>테마</strong></td><td>사이버펑크 네온 — 해커 vs 바이러스 세계관</td></tr>
+        <tr><td><strong>플랫폼</strong></td><td>웹 브라우저 (PC + 모바일 반응형)</td></tr>
+        <tr><td><strong>목표</strong></td><td>스테이지 100 클리어 → NG+ 무한 반복</td></tr>
+        <tr><td><strong>현재 버전</strong></td><td>β v0.09 (Firebase Hosting 배포 중)</td></tr>
+        <tr><td><strong>배포 URL</strong></td><td><code>https://antisurge-c0463.web.app</code></td></tr>
+        <tr><td><strong>레포</strong></td><td><code>github.com/PERSONARPGGG/AntiSurge</code></td></tr>
+        <tr><td><strong>브랜치</strong></td><td><code>master</code> (배포 전용)</td></tr>
+      </table>
+    </div>
+    <p>단일 HTML+CSS+JS 스택으로 시작했으나 현재 <strong>src/ 15개 모듈</strong>로 분리되어 관리됩니다. 빌드 도구 없이 <code>&lt;script&gt;</code> 태그 순서로 로드되며, 전역 스코프를 공유합니다.</p>
+  </div>
+
+  <!-- 2. 완료된 기능 -->
+  <div class="doc-section" id="completed">
+    <h2><span class="icon">✅</span> 완료된 기능</h2>
+    <div class="section-divider"></div>
+
+    <table>
+      <thead>
+        <tr><th>Priority</th><th>기능</th><th>핵심 구현</th><th>파일</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>P01</td>
+          <td><strong>무기 융합 시스템</strong></td>
+          <td>Lv5 무기 2개 → 🔮 카드 등장, 5종 정의</td>
+          <td><code>config.js</code>, <code>upgrades.js</code></td>
+        </tr>
+        <tr>
+          <td>P02</td>
+          <td><strong>콘텐츠 잠금 해제</strong></td>
+          <td>engineer/sniper/support 조건 잠금, 자물쇠 UI</td>
+          <td><code>config.js</code>, <code>flow.js</code></td>
+        </tr>
+        <tr>
+          <td>P04</td>
+          <td><strong>맵 존 다양성</strong></td>
+          <td>5구역 색상 팔레트, 전환 오버레이 애니메이션</td>
+          <td><code>config.js</code>, <code>stage.js</code></td>
+        </tr>
+        <tr>
+          <td>P05</td>
+          <td><strong>미션 시스템</strong></td>
+          <td>런 단위 3개 랜덤, 9종 풀, 우측 패널, 보상 4종</td>
+          <td><code>config.js</code>, <code>stage.js</code>, <code>loop.js</code></td>
+        </tr>
+        <tr>
+          <td>P06</td>
+          <td><strong>Stage 100 엔딩 + NG+</strong></td>
+          <td>PROTOCOL COMPLETE 연출, ascensionLevel, 적 HP ×25%/lv</td>
+          <td><code>endgame.js</code>, <code>stage.js</code></td>
+        </tr>
+        <tr>
+          <td>P07</td>
+          <td><strong>클래스별 패시브 트리</strong></td>
+          <td>6클래스 × 2 전용 패시브 (Lv1/2), 황금 카드</td>
+          <td><code>config.js</code>, <code>player.js</code>, <code>upgrades.js</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>보스 밸런스 강화 (별도 작업)</h3>
+    <ul>
+      <li>기본 HP: 450 → <strong>750 (base)</strong>, 스케일 배수 0.65 → 0.95/boss</li>
+      <li>페이즈 2 전환: HP 50% → <strong>55%</strong>, 페이즈 3 조건 bossIdx ≥ 2 → <strong>≥ 1</strong></li>
+      <li>오비탈 샷: bossIdx ≥ 3부터 → <strong>≥ 1부터</strong></li>
+      <li>최종 보스 HP 배수: 2.0× → <strong>3.5×</strong></li>
+    </ul>
+  </div>
+
+  <!-- 3. 미완성 항목 -->
+  <div class="doc-section" id="pending">
+    <h2><span class="icon">⏳</span> 미완성 / 다음 작업</h2>
+    <div class="section-divider"></div>
+
+    <table>
+      <thead>
+        <tr><th>항목</th><th>현황</th><th>우선도</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>보스 패턴 개별화</strong></td>
+          <td>현재 berserker/summoner/orbital 3가지 공유. 보스별 고유 패턴 없음</td>
+          <td><span class="badge warn">높음</span></td>
+        </tr>
+        <tr>
+          <td><strong>적 종류 추가</strong></td>
+          <td>현재 4종 (기본/빠름/탱크/엘리트). 경쟁작 100+종 대비 매우 적음</td>
+          <td><span class="badge warn">높음</span></td>
+        </tr>
+        <tr>
+          <td><strong>튜토리얼 / 온보딩</strong></td>
+          <td>첫 5분 아무 설명 없이 저주 계약 등 복잡 요소 등장</td>
+          <td><span class="badge wip">중간</span></td>
+        </tr>
+        <tr>
+          <td><strong>SFX 강화</strong></td>
+          <td>신스 BGM은 창의적이나 타격/킬 피드백 사운드 얕음</td>
+          <td><span class="badge wip">중간</span></td>
+        </tr>
+        <tr>
+          <td><strong>비주얼 업그레이드</strong></td>
+          <td>도형 기반 그래픽, 캐릭터 스프라이트 없음</td>
+          <td><span class="badge planned">낮음</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">💡</div>
+      <div class="alert-body">보스 패턴은 사용자가 직접 설계에 참여할 예정. 구현 전 패턴 명세서 작성 먼저 진행 권장.</div>
+    </div>
+  </div>
+
+  <!-- 4. 환경 설정 -->
+  <div class="doc-section" id="setup">
+    <h2><span class="icon">🛠</span> 환경 설정</h2>
+    <div class="section-divider"></div>
+
+    <h3>필요 도구</h3>
+    <ul>
+      <li>Node.js (validate.js, split-modules.js 실행용)</li>
+      <li>Firebase CLI (<code>npm install -g firebase-tools</code>)</li>
+      <li>Git + <code>.githooks/pre-commit</code> 자동 검증 훅</li>
+    </ul>
+
+    <h3>Git Hooks 설정</h3>
+    <pre><code><span class="c"># 저장소 클론 후 1회만 실행</span>
+git config core.hooksPath .githooks</code></pre>
+
+    <h3>Firebase 배포 (hosting only)</h3>
+    <pre><code><span class="k">firebase</span> deploy --only hosting --token <span class="s">"YOUR_TOKEN"</span></code></pre>
+
+    <div class="alert alert-warn">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-body">Firebase 토큰과 GitHub 토큰은 절대 코드에 포함하지 말 것. .env나 별도 파일로 관리.</div>
+    </div>
+
+    <h3>로컬 테스트</h3>
+    <p>파일을 직접 <code>file://</code>로 열면 됩니다 (ES module이 아닌 일반 script 태그 사용). 또는:</p>
+    <pre><code><span class="k">npx</span> serve .  <span class="c"># 로컬 HTTP 서버 (선택사항)</span></code></pre>
+  </div>
+
+  <!-- 5. 개발 워크플로 -->
+  <div class="doc-section" id="workflow">
+    <h2><span class="icon">🔄</span> 개발 워크플로</h2>
+    <div class="section-divider"></div>
+
+    <h3>표준 사이클</h3>
+    <ol>
+      <li>해당 <code>src/*.js</code> 파일 수정</li>
+      <li>브라우저에서 테스트</li>
+      <li><code>node validate.js</code> 실행 (또는 커밋 시 자동 실행)</li>
+      <li><code>git add src/[수정파일]</code> → <code>git commit</code> (훅이 자동 검증)</li>
+      <li>Firebase 배포</li>
+    </ol>
+
+    <h3>모듈 경계 조정 시</h3>
+    <pre><code><span class="c"># split-modules.js 의 라인 범위 수정 후:</span>
+<span class="k">node</span> split-modules.js
+<span class="k">node</span> validate.js</code></pre>
+    <div class="alert alert-warn">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-body"><code>split-modules.js</code>는 <code>game.js.bak</code>을 원본으로 읽어 src/ 파일들을 <strong>덮어씁니다</strong>. 개별 수정한 src/*.js가 있으면 먼저 백업.</div>
+    </div>
+
+    <h3>validate.js 검사 항목 (18개)</h3>
+    <ul>
+      <li>인덱스 루프 내 직접 사망 호출 (takeDamage / die)</li>
+      <li>전역 배열 재할당 (<code>= []</code> 패턴)</li>
+      <li>for..of 루프 중 원본 배열 splice</li>
+      <li>무기 update() level&gt;0 가드</li>
+      <li>STATE 전환 유효성</li>
+      <li>핵심 모달 닫기 후 게임루프 재시작</li>
+      <li>activeBoss null 체크</li>
+      <li>HTML ID 참조 무결성</li>
+      <li>각 src/*.js 문법 (node --check)</li>
+      <li>setTimeout 내 player null 체크</li>
+      <li>mines/blackHoles 루프 경계 체크</li>
+      <li>파일 크기</li>
+      <li>TODO/FIXME 주석</li>
+    </ul>
+  </div>
+
+  <!-- 6. 모듈 구조 -->
+  <div class="doc-section" id="modules">
+    <h2><span class="icon">📦</span> 모듈 구조</h2>
+    <div class="section-divider"></div>
+
+    <div class="alert alert-info">
+      <div class="alert-icon">ℹ️</div>
+      <div class="alert-body">모든 모듈은 전역 스코프를 공유합니다. <code>index.html</code>의 script 태그 순서가 로딩 순서 = 의존성 순서입니다.</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>파일</th><th>줄수</th><th>주요 내용</th><th>수정 빈도</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>config.js</code></td><td>938</td><td>CLASS_DEFS, UPGRADES, PASSIVE_DEFS, BG_THEMES, MISSION_POOL, CURSE_DEFS, 모든 상태 선언</td><td>★★★ 높음</td></tr>
+        <tr><td><code>audio.js</code></td><td>507</td><td>Web Audio API, BGM 시퀀서 4트랙, 효과음 함수</td><td>★☆☆ 낮음</td></tr>
+        <tr><td><code>player.js</code></td><td>480</td><td>Player 클래스, 이동/충돌/패시브 업데이트</td><td>★★☆ 중간</td></tr>
+        <tr><td><code>weapons.js</code></td><td>753</td><td>BaseWeapon + 11종 무기 클래스</td><td>★★★ 높음</td></tr>
+        <tr><td><code>projectiles.js</code></td><td>174</td><td>Projectile, MissileProjectile, 레이저, 보스 위험물</td><td>★☆☆ 낮음</td></tr>
+        <tr><td><code>enemies.js</code></td><td>885</td><td>Enemy, Boss (3페이즈, 5패턴), BossProjectile</td><td>★★★ 높음</td></tr>
+        <tr><td><code>entities.js</code></td><td>260</td><td>FieldItem, Gem, GoldCoin, Particle, FloatingText</td><td>★☆☆ 낮음</td></tr>
+        <tr><td><code>stage.js</code></td><td>939</td><td>스테이지 진행, 콤보, 세이브, 스폰, 충돌, 배경 렌더</td><td>★★★ 높음</td></tr>
+        <tr><td><code>flow.js</code></td><td>427</td><td>startGame, showScreen, 클래스 선택, 난이도</td><td>★★☆ 중간</td></tr>
+        <tr><td><code>loop.js</code></td><td>616</td><td>gameLoop, update(dt), draw(dt), HUD, 미니맵</td><td>★★☆ 중간</td></tr>
+        <tr><td><code>upgrades.js</code></td><td>669</td><td>레벨업 풀, 상점, 저주 선택, 시너지, applyUpgrade</td><td>★★★ 높음</td></tr>
+        <tr><td><code>endgame.js</code></td><td>357</td><td>endGame, 빅토리 연출, NG+ 처리, 전체화면, 공유</td><td>★☆☆ 낮음</td></tr>
+        <tr><td><code>extras.js</code></td><td>212</td><td>개발자 패널, 랜덤 필드 이벤트</td><td>★☆☆ 낮음</td></tr>
+        <tr><td><code>input.js</code></td><td>176</td><td>터치 조이스틱, dist 유틸, 설정 모달</td><td>★☆☆ 낮음</td></tr>
+        <tr><td><code>multiplayer.js</code></td><td>758</td><td>Firebase/BroadcastChannel MP, 리더보드, 초기화</td><td>★☆☆ 낮음</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 7. 상태 머신 -->
+  <div class="doc-section" id="state-machine">
+    <h2><span class="icon">🔀</span> 게임 상태 머신</h2>
+    <div class="section-divider"></div>
+
+    <div class="state-flow">
+      <span class="state-node">STATE_MENU</span>
+      <span class="state-arrow">→</span>
+      <span class="state-node" style="border-color:var(--green);color:var(--green)">STATE_PLAYING</span>
+    </div>
+    <p style="margin-top:8px;font-size:0.8rem;color:var(--muted);">STATE_PLAYING ↔ 아래 상태들과 상호 전환:</p>
+    <div class="state-flow" style="margin-top:8px;">
+      <span class="state-node" style="border-color:var(--purple);color:var(--purple)">STATE_LEVEL_UP</span>
+      <span class="state-node" style="border-color:var(--yellow);color:var(--yellow)">STATE_STAGE_CLEAR</span>
+      <span class="state-node" style="border-color:var(--yellow);color:var(--yellow)">STATE_STAGE_BONUS</span>
+      <span class="state-node" style="border-color:var(--cyan);color:var(--cyan)">STATE_SHOP</span>
+      <span class="state-node" style="border-color:var(--pink);color:var(--pink)">STATE_CURSE</span>
+      <span class="state-node">STATE_PAUSED</span>
+    </div>
+    <div class="state-flow" style="margin-top:8px;">
+      <span class="state-node" style="border-color:var(--green);color:var(--green)">STATE_PLAYING</span>
+      <span class="state-arrow">→</span>
+      <span class="state-node" style="border-color:var(--pink);color:var(--pink)">STATE_GAME_OVER</span>
+    </div>
+
+    <div class="alert alert-danger" style="margin-top:16px;">
+      <div class="alert-icon">🚨</div>
+      <div class="alert-body">상태 전환 후 <strong>반드시</strong> <code>ensureGameLoopRunning()</code> 호출. 미호출 시 게임 루프가 멈춥니다.</div>
+    </div>
+  </div>
+
+  <!-- 8. 버그 방지 체크리스트 -->
+  <div class="doc-section" id="bugcheck">
+    <h2><span class="icon">🛡</span> 버그 방지 체크리스트</h2>
+    <div class="section-divider"></div>
+    <p>과거 발생한 버그 패턴. 코드 수정 시 반드시 확인.</p>
+
+    <ul class="checklist">
+      <li>
+        <div class="check-num">1</div>
+        <div class="check-content">
+          <strong>상태 전환 후 루프 재시작</strong>
+          <span>모달 닫기 / 상태 복원 후 <code>ensureGameLoopRunning()</code> 호출 필수</span>
+        </div>
+      </li>
+      <li>
+        <div class="check-num">2</div>
+        <div class="check-content">
+          <strong>pendingLevelUps 카운터</strong>
+          <span>레벨업 모달 표시 중 추가 레벨업 → <code>pendingLevelUps++</code> 후 큐 처리</span>
+        </div>
+      </li>
+      <li>
+        <div class="check-num">3</div>
+        <div class="check-content">
+          <strong>전역 배열 초기화</strong>
+          <span><code>enemies = []</code> 금지 → <code>enemies.length = 0</code> 사용</span>
+        </div>
+      </li>
+      <li>
+        <div class="check-num">4</div>
+        <div class="check-content">
+          <strong>루프 중 스테이지 클리어 유발</strong>
+          <span>enemies 루프 중 <code>triggerStageClear()</code> 유발 코드 → <code>.length = 0</code> + 경계 체크</span>
+        </div>
+      </li>
+      <li>
+        <div class="check-num">5</div>
+        <div class="check-content">
+          <strong>isStageClearAnim 플래그</strong>
+          <span>클리어 연출 중 상태 전환 → <code>isStageClearAnim</code> 체크 후 결정</span>
+        </div>
+      </li>
+      <li>
+        <div class="check-num">6</div>
+        <div class="check-content">
+          <strong>pendingBossCurse 중복 방지</strong>
+          <span>보스 처치 시 저주 1회만 → <code>pendingBossCurse</code> 플래그 확인</span>
+        </div>
+      </li>
+      <li>
+        <div class="check-num">7</div>
+        <div class="check-content">
+          <strong>보스 스테이지 전환 순서</strong>
+          <span>보스 스폰 직전 <code>gameState = STATE_PLAYING</code> 먼저 설정 후 스폰</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 9. 클래스 정의 요약 -->
+  <div class="doc-section" id="classes">
+    <h2><span class="icon">🧩</span> 클래스 / 무기 정의 위치</h2>
+    <div class="section-divider"></div>
+
+    <h3>플레이어 클래스 (src/config.js — CLASS_DEFS)</h3>
+    <table>
+      <thead><tr><th>ID</th><th>이름</th><th>Q 스킬</th><th>잠금 조건</th></tr></thead>
+      <tbody>
+        <tr><td><code>hacker</code></td><td>해커</td><td>EMP 충격파</td><td>없음 (기본 해금)</td></tr>
+        <tr><td><code>cyborg</code></td><td>사이보그</td><td>방호 과부하</td><td>없음 (기본 해금)</td></tr>
+        <tr><td><code>ghost</code></td><td>루트킷</td><td>위상 도약</td><td>없음 (기본 해금)</td></tr>
+        <tr><td><code>engineer</code></td><td>드론.exe</td><td>터렛 배치</td><td>스테이지 5 이상 도달</td></tr>
+        <tr><td><code>sniper</code></td><td>스나이퍼</td><td>정밀 사격</td><td>바이러스 300마리 격리</td></tr>
+        <tr><td><code>support</code></td><td>패치봇</td><td>수리 드론</td><td>바이러스 코어 3회 파괴</td></tr>
+      </tbody>
+    </table>
+
+    <h3>무기 종류 (src/config.js — UPGRADES.weapons, src/weapons.js)</h3>
+    <table>
+      <thead><tr><th>무기</th><th>클래스</th><th>진화명 (Lv5)</th></tr></thead>
+      <tbody>
+        <tr><td>네온 플레어</td><td>FlareWeapon</td><td>플라즈마 스톰</td></tr>
+        <tr><td>사이버 오비터</td><td>OrbiterWeapon</td><td>퀀텀 링</td></tr>
+        <tr><td>일렉트로 존</td><td>ZoneWeapon</td><td>사이버 노바</td></tr>
+        <tr><td>레이저 스트라이크</td><td>LaserWeapon</td><td>데스 레이</td></tr>
+        <tr><td>사이버 부메랑</td><td>BoomerangWeapon</td><td>차크람 블레이드</td></tr>
+        <tr><td>데이터 드론</td><td>DroneWeapon</td><td>스텔스 드론</td></tr>
+        <tr><td>사이버 미사일</td><td>MissileWeapon</td><td>스마트 미사일</td></tr>
+        <tr><td>링 블래스터</td><td>RingWeapon</td><td>소닉 링</td></tr>
+        <tr><td>체인 라이트닝</td><td>ChainWeapon</td><td>테슬라 코일</td></tr>
+        <tr><td>지뢰 필드</td><td>MineWeapon</td><td>나노 클러스터</td></tr>
+        <tr><td>블랙홀 캐논</td><td>BlackHoleWeapon</td><td>이벤트 호라이즌</td></tr>
+      </tbody>
+    </table>
+
+    <h3>클래스별 전용 패시브 (src/config.js — CLASS_PASSIVE_DEFS)</h3>
+    <table>
+      <thead><tr><th>클래스</th><th>패시브 1</th><th>패시브 2</th></tr></thead>
+      <tbody>
+        <tr><td>해커</td><td>해킹 가속 (Q쿨 -25%/-45%)</td><td>데이터 수집 (XP+20%/+40%)</td></tr>
+        <tr><td>사이보그</td><td>강화 방호 (피해-12%/-22%)</td><td>자가 수복 (재생 2/4 HP/초)</td></tr>
+        <tr><td>루트킷</td><td>위상 회피 (8%/18% 무효)</td><td>고속 침투 (이동+0.5/+1.2)</td></tr>
+        <tr><td>드론.exe</td><td>드론 과부하 (피해+30%/+60%)</td><td>추가 배치 (드론+1/+2기)</td></tr>
+        <tr><td>스나이퍼</td><td>치명 조준 (크리+15%/+28%)</td><td>광역 탐지 (자석+60%/+120%)</td></tr>
+        <tr><td>패치봇</td><td>핵심 강화 (최대HP+40/+80)</td><td>응급 처치 (피격 후 재생 4/8)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+</div>
+
+<script>
+// 스크롤 시 사이드바 링크 활성화
+const sections = document.querySelectorAll('.doc-section[id]');
+const navLinks = document.querySelectorAll('nav a[href^="#"]');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

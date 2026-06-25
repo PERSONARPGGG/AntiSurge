@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AntiSurge — 게임 기획서</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --cyan:   #00f0ff;
+  --purple: #b026ff;
+  --green:  #39ff14;
+  --yellow: #ffe600;
+  --pink:   #ff4466;
+  --orange: #ff8800;
+  --bg:     #03050f;
+  --card:   #0a0f1e;
+  --border: rgba(0,240,255,0.18);
+  --text:   #cbd5e1;
+  --muted:  #475569;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+  background: linear-gradient(135deg, #050a18 0%, #0a0520 50%, #050a18 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 40px 24px 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 60% at 50% 0%, rgba(176,38,255,.12) 0%, transparent 70%);
+}
+.doc-badge {
+  display: inline-block;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  color: var(--purple);
+  border: 1px solid rgba(176,38,255,.4);
+  padding: 3px 12px;
+  border-radius: 2px;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+h1 {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: 3px;
+  position: relative;
+}
+h1 .anti { color: var(--cyan); text-shadow: 0 0 20px var(--cyan); }
+h1 .surge { color: var(--purple); text-shadow: 0 0 20px var(--purple); }
+.header-sub {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 2px;
+  font-family: 'Orbitron', monospace;
+}
+nav {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+nav a {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  color: var(--cyan);
+  text-decoration: none;
+  border: 1px solid rgba(0,240,255,.25);
+  padding: 5px 12px;
+  border-radius: 3px;
+  transition: all .2s;
+}
+nav a:hover { background: rgba(0,240,255,.1); border-color: var(--cyan); }
+
+/* ── LAYOUT ── */
+main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
+
+/* ── SECTIONS ── */
+.section { margin-bottom: 52px; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.section-icon { font-size: 1.4rem; }
+.section-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+.section-title.cyan   { color: var(--cyan);   text-shadow: 0 0 12px rgba(0,240,255,.4); }
+.section-title.purple { color: var(--purple);  text-shadow: 0 0 12px rgba(176,38,255,.4); }
+.section-title.green  { color: var(--green);   text-shadow: 0 0 12px rgba(57,255,20,.4); }
+.section-title.yellow { color: var(--yellow);  text-shadow: 0 0 12px rgba(255,230,0,.4); }
+.section-title.pink   { color: var(--pink);    text-shadow: 0 0 12px rgba(255,68,102,.4); }
+.section-title.orange { color: var(--orange);  text-shadow: 0 0 12px rgba(255,136,0,.4); }
+
+/* ── CARDS ── */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+  transition: border-color .2s;
+}
+.card:hover { border-color: rgba(0,240,255,.35); }
+.card.cyan-card   { border-color: rgba(0,240,255,.25); }
+.card.purple-card { border-color: rgba(176,38,255,.25); }
+.card.green-card  { border-color: rgba(57,255,20,.25); }
+.card.yellow-card { border-color: rgba(255,230,0,.25); }
+.card.pink-card   { border-color: rgba(255,68,102,.25); }
+.card.orange-card { border-color: rgba(255,136,0,.25); }
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.card-icon-lg { font-size: 1.6rem; }
+.card-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.tag {
+  display: inline-block;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin: 2px 3px 2px 0;
+  font-weight: 700;
+}
+.tag-cyan   { background: rgba(0,240,255,.15);   color: var(--cyan);   border: 1px solid rgba(0,240,255,.3); }
+.tag-purple { background: rgba(176,38,255,.15);  color: var(--purple); border: 1px solid rgba(176,38,255,.3); }
+.tag-green  { background: rgba(57,255,20,.15);   color: var(--green);  border: 1px solid rgba(57,255,20,.3); }
+.tag-yellow { background: rgba(255,230,0,.15);   color: var(--yellow); border: 1px solid rgba(255,230,0,.3); }
+.tag-pink   { background: rgba(255,68,102,.15);  color: var(--pink);   border: 1px solid rgba(255,68,102,.3); }
+.tag-orange { background: rgba(255,136,0,.15);   color: var(--orange); border: 1px solid rgba(255,136,0,.3); }
+.tag-lock   { background: rgba(71,85,105,.2);    color: var(--muted);  border: 1px solid rgba(71,85,105,.3); }
+
+.card p { font-size: 0.82rem; color: var(--text); margin-bottom: 6px; }
+.passive-list { margin-top: 8px; }
+.passive-item { font-size: 0.78rem; color: #94a3b8; padding: 3px 0; }
+.passive-item::before { content: '▸ '; color: var(--yellow); }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; background: var(--card); }
+th {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  color: var(--cyan);
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,240,255,.05);
+}
+td {
+  padding: 10px 16px;
+  font-size: 0.82rem;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(0,240,255,.03); }
+.evo-name { color: var(--yellow); font-weight: 600; }
+.fusion-name { color: #b026ff; font-weight: 600; }
+.formula { color: var(--cyan); font-family: monospace; font-size: 0.8rem; }
+
+/* ── ZONE TIMELINE ── */
+.zone-timeline { display: flex; gap: 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+.zone-block {
+  flex: 1;
+  padding: 16px 10px;
+  text-align: center;
+  position: relative;
+}
+.zone-block:not(:last-child)::after {
+  content: '▶';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.zone-block .zone-name { font-family: 'Orbitron', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 1px; }
+.zone-block .zone-range { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+
+/* ── BOSS PHASE ── */
+.phase-bar {
+  display: flex;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin: 16px 0;
+  position: relative;
+}
+.phase-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+.ph1 { flex: 45; background: rgba(0,240,255,.12); color: var(--cyan); }
+.ph2 { flex: 30; background: rgba(255,136,0,.12); color: var(--orange); border-left: 1px solid rgba(255,136,0,.4); }
+.ph3 { flex: 25; background: rgba(255,68,102,.12); color: var(--pink); border-left: 1px solid rgba(255,68,102,.4); }
+
+/* ── MISSION GRID ── */
+.mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.mission-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.mission-card .m-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+.mission-card .m-name { font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
+.mission-card .m-desc { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+.mission-card .m-reward { font-size: 0.7rem; margin-top: 5px; }
+
+/* ── STAT BOX ── */
+.stat-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.stat-box {
+  flex: 1;
+  min-width: 150px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  text-align: center;
+}
+.stat-val { font-family: 'Orbitron', monospace; font-size: 1.4rem; font-weight: 900; }
+.stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+
+/* ── INFO BOX ── */
+.info-box {
+  background: rgba(0,240,255,.05);
+  border: 1px solid rgba(0,240,255,.2);
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-size: 0.82rem;
+  margin: 14px 0;
+}
+.info-box.yellow { background: rgba(255,230,0,.05); border-color: rgba(255,230,0,.2); }
+.info-box.purple { background: rgba(176,38,255,.05); border-color: rgba(176,38,255,.2); }
+.info-box ul { padding-left: 18px; }
+.info-box li { margin-bottom: 4px; }
+
+/* ── FOOTER ── */
+footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 1px;
+}
+footer a { color: var(--cyan); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="doc-badge">GAME DESIGN DOCUMENT</div>
+  <h1><span class="anti">ANTI</span><span class="surge">SURGE</span></h1>
+  <div class="header-sub">β v0.09 · 게임 기획서 · 2026</div>
+  <nav>
+    <a href="index.html">← 문서 허브</a>
+    <a href="#concept">컨셉</a>
+    <a href="#classes">클래스</a>
+    <a href="#weapons">무기</a>
+    <a href="#stages">스테이지</a>
+    <a href="#systems">시스템</a>
+    <a href="#balance">밸런스</a>
+    <a href="handover.html">인수인계</a>
+    <a href="tech-stack.html">기술 스택</a>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ── 1. 게임 컨셉 ── -->
+  <section class="section" id="concept">
+    <div class="section-header">
+      <span class="section-icon">🎮</span>
+      <h2 class="section-title cyan">GAME CONCEPT</h2>
+    </div>
+
+    <div class="card-grid" style="margin-bottom:20px">
+      <div class="card cyan-card">
+        <div class="card-head">
+          <span class="card-icon-lg">🕹</span>
+          <div>
+            <div class="card-title" style="color:var(--cyan)">장르</div>
+          </div>
+        </div>
+        <p>뱀파이어 서바이벌 스타일 <strong>로그라이크 슈터</strong>. 끊임없이 밀려오는 바이러스 웨이브를 막으며 생존하고 성장한다.</p>
+      </div>
+      <div class="card purple-card">
+        <div class="card-head">
+          <span class="card-icon-lg">🌆</span>
+          <div>
+            <div class="card-title" style="color:var(--purple)">세계관</div>
+          </div>
+        </div>
+        <p>사이버펑크 도시에 바이러스 대격변 발생. 플레이어는 <strong>해커 출신 특수요원</strong>으로서 바이러스 코어를 격리·파괴한다.</p>
+      </div>
+      <div class="card green-card">
+        <div class="card-head">
+          <span class="card-icon-lg">🎯</span>
+          <div>
+            <div class="card-title" style="color:var(--green)">핵심 루프</div>
+          </div>
+        </div>
+        <p>킬 → 경험치 → 레벨업 카드 선택 → 무기/패시브 강화 → 보스 처치 → 저주 선택 → 반복. <strong>스테이지 100</strong>이 최종 목표.</p>
+      </div>
+      <div class="card yellow-card">
+        <div class="card-head">
+          <span class="card-icon-lg">👥</span>
+          <div>
+            <div class="card-title" style="color:var(--yellow)">플레이어 타깃</div>
+          </div>
+        </div>
+        <p>캐주얼~미드코어 게이머. 짧은 런(10~30분)으로 반복 플레이 가능. PC/모바일 양쪽 지원.</p>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong style="color:var(--cyan)">핵심 차별점</strong>
+      <ul style="margin-top:8px">
+        <li>6종 클래스 × Q 액티브 스킬 — 클래스마다 플레이스타일 완전히 다름</li>
+        <li>클래스 전용 패시브 트리 — 클래스 정체성을 강화하는 전용 업그레이드</li>
+        <li>무기 융합 시스템 — Lv5 무기 2개 조합 → 전설급 융합 무기</li>
+        <li>저주 계약 — 리스크&리워드 의사결정으로 긴장감 유지</li>
+        <li>실시간 협동 멀티플레이 (같은 기기 / Firebase 크로스 디바이스)</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── 2. 클래스 시스템 ── -->
+  <section class="section" id="classes">
+    <div class="section-header">
+      <span class="section-icon">⚔</span>
+      <h2 class="section-title purple">CLASS SYSTEM</h2>
+    </div>
+
+    <div class="card-grid">
+
+      <!-- 해커 -->
+      <div class="card cyan-card">
+        <div class="card-head">
+          <span class="card-icon-lg">💻</span>
+          <div>
+            <div class="card-title" style="color:var(--cyan)">해커 HACKER</div>
+            <span class="tag tag-cyan">기본 해금</span>
+          </div>
+        </div>
+        <p><strong style="color:var(--cyan)">Q 스킬:</strong> EMP 전격망 — 반경 280 내 적 스턴 + 피해</p>
+        <div class="passive-list">
+          <div class="passive-item">해킹 가속: Q 쿨다운 -25% / -45%</div>
+          <div class="passive-item">데이터 수집: XP 획득 +20% / +40%</div>
+        </div>
+      </div>
+
+      <!-- 사이보그 -->
+      <div class="card purple-card">
+        <div class="card-head">
+          <span class="card-icon-lg">🤖</span>
+          <div>
+            <div class="card-title" style="color:var(--purple)">사이보그 CYBORG</div>
+            <span class="tag tag-cyan">기본 해금</span>
+          </div>
+        </div>
+        <p><strong style="color:var(--purple)">Q 스킬:</strong> 방화벽 실드 — 60% 피해 감소 방어막 4초</p>
+        <div class="passive-list">
+          <div class="passive-item">강화 방호: 피해 감소 +12% / +22%</div>
+          <div class="passive-item">자가 수복: HP 2 / 4 per 초 무조건 재생</div>
+        </div>
+      </div>
+
+      <!-- 루트킷 -->
+      <div class="card green-card">
+        <div class="card-head">
+          <span class="card-icon-lg">👻</span>
+          <div>
+            <div class="card-title" style="color:var(--green)">루트킷 GHOST</div>
+            <span class="tag tag-cyan">기본 해금</span>
+          </div>
+        </div>
+        <p><strong style="color:var(--green)">Q 스킬:</strong> 위상 이동 — 마우스 방향 600 순간이동 + 무적</p>
+        <div class="passive-list">
+          <div class="passive-item">위상 회피: 피격 8% / 18% 확률 완전 무효</div>
+          <div class="passive-item">고속 침투: 이동속도 +0.5 / +1.2</div>
+        </div>
+      </div>
+
+      <!-- 엔지니어 -->
+      <div class="card yellow-card">
+        <div class="card-head">
+          <span class="card-icon-lg">🛸</span>
+          <div>
+            <div class="card-title" style="color:var(--yellow)">엔지니어 ENGINEER</div>
+            <span class="tag tag-lock">🔒 스테이지 5 이상 도달</span>
+          </div>
+        </div>
+        <p><strong style="color:var(--yellow)">Q 스킬:</strong> 드론 긴급 배치 — 즉시 드론 3기 추가 배치</p>
+        <div class="passive-list">
+          <div class="passive-item">드론 과부하: 드론 피해 +30% / +60%</div>
+          <div class="passive-item">추가 배치: 드론 +1기 / +2기 상시 추가</div>
+        </div>
+      </div>
+
+      <!-- 스나이퍼 -->
+      <div class="card pink-card">
+        <div class="card-head">
+          <span class="card-icon-lg">🎯</span>
+          <div>
+            <div class="card-title" style="color:var(--pink)">스나이퍼 SNIPER</div>
+            <span class="tag tag-lock">🔒 바이러스 300마리 격리</span>
+          </div>
+        </div>
+        <p><strong style="color:var(--pink)">Q 스킬:</strong> 전술 미사일 — 화면 전체 대형 미사일 3발</p>
+        <div class="passive-list">
+          <div class="passive-item">치명 조준: 크리티컬 확률 +15% / +28%</div>
+          <div class="passive-item">광역 탐지: XP 자석 범위 +60% / +120%</div>
+        </div>
+      </div>
+
+      <!-- 패치봇 -->
+      <div class="card orange-card">
+        <div class="card-head">
+          <span class="card-icon-lg">🏥</span>
+          <div>
+            <div class="card-title" style="color:var(--orange)">패치봇 SUPPORT</div>
+            <span class="tag tag-lock">🔒 바이러스 코어 3회 파괴</span>
+          </div>
+        </div>
+        <p><strong style="color:var(--orange)">Q 스킬:</strong> 긴급 수복 — 15초간 HP +5/초 자동 재생</p>
+        <div class="passive-list">
+          <div class="passive-item">핵심 강화: 최대 HP +40 / +80 (즉시 회복)</div>
+          <div class="passive-item">응급 처치: 피격 후 5초간 HP +4 / +8 per 초</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 3. 무기 시스템 ── -->
+  <section class="section" id="weapons">
+    <div class="section-header">
+      <span class="section-icon">🔫</span>
+      <h2 class="section-title green">WEAPON SYSTEM</h2>
+    </div>
+
+    <div class="info-box" style="margin-bottom:20px">
+      모든 무기는 <strong>Lv 1→5</strong>로 성장. Lv5 달성 시 레벨업 풀에 <strong style="color:var(--yellow)">진화(Evolution)</strong> 카드 등장. 두 무기 모두 Lv5이면 <strong style="color:var(--purple)">융합(Fusion)</strong> 카드 등장.
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:24px">
+      <table>
+        <thead>
+          <tr>
+            <th>무기</th>
+            <th>설명</th>
+            <th>진화형</th>
+            <th>진화 효과</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>⚡ 네온 플레어</td><td>방사형 빛 투사체</td><td class="evo-name">사이버 노바</td><td>회전 + 폭발 확장</td></tr>
+          <tr><td>🔵 사이버 오비터</td><td>궤도 회전 탄환</td><td class="evo-name">양자 오비터</td><td>이중 궤도 + 관통</td></tr>
+          <tr><td>⚡ 일렉트로 존</td><td>주변 전기장 지속</td><td class="evo-name">이온 폭풍</td><td>범위 확장 + 감속</td></tr>
+          <tr><td>🔴 레이저 스트라이크</td><td>직선 관통 레이저</td><td class="evo-name">레이저 캐논</td><td>다중 빔 + 범위↑</td></tr>
+          <tr><td>🪃 사이버 부메랑</td><td>왕복 투사체</td><td class="evo-name">나노 블레이드</td><td>분열 + 고속</td></tr>
+          <tr><td>🛸 데이터 드론</td><td>자동 추적 드론</td><td class="evo-name">전투 드론</td><td>드론 수↑ + 미사일</td></tr>
+          <tr><td>🚀 사이버 미사일</td><td>유도 미사일</td><td class="evo-name">호밍 미사일</td><td>추적 강화 + 폭발↑</td></tr>
+          <tr><td>💍 링 블레이드</td><td>확장 링 발사</td><td class="evo-name">퀀텀 링</td><td>다중 링 + 속도↑</td></tr>
+          <tr><td>⚡ 체인 번개</td><td>적 간 연쇄 번개</td><td class="evo-name">아크 체인</td><td>연쇄 수↑ + 스턴</td></tr>
+          <tr><td>💣 사이버 지뢰</td><td>지면 설치 폭발</td><td class="evo-name">블랙홀 지뢰</td><td>폭발 시 블랙홀 생성</td></tr>
+          <tr><td>🌀 블랙홀</td><td>중력 끌어당기기</td><td class="evo-name">싱귤래리티</td><td>범위↑ + 흡수 피해</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-header" style="margin-top:32px">
+      <span class="section-icon">🔮</span>
+      <h3 class="section-title purple" style="font-size:0.85rem">WEAPON FUSION — 5종</h3>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>융합 무기</th><th>재료 공식</th><th>효과</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fusion-name">🔮 퀀텀 스톰</td>
+            <td class="formula">네온 플레어 Lv5 + 사이버 오비터 Lv5</td>
+            <td>궤도 폭발 탄환 — 범위+피해 대폭 증가</td>
+          </tr>
+          <tr>
+            <td class="fusion-name">🔮 바이러스 코어</td>
+            <td class="formula">일렉트로 존 Lv5 + 데이터 드론 Lv5</td>
+            <td>드론이 주변에 전기장 드롭</td>
+          </tr>
+          <tr>
+            <td class="fusion-name">🔮 지옥불 드론</td>
+            <td class="formula">사이버 미사일 Lv5 + 데이터 드론 Lv5</td>
+            <td>드론이 유도 미사일 발사</td>
+          </tr>
+          <tr>
+            <td class="fusion-name">🔮 체인 노바</td>
+            <td class="formula">링 블레이드 Lv5 + 체인 번개 Lv5</td>
+            <td>링 충돌 시 연쇄 번개 방출</td>
+          </tr>
+          <tr>
+            <td class="fusion-name">🔮 보이드 마인</td>
+            <td class="formula">사이버 지뢰 Lv5 + 블랙홀 Lv5</td>
+            <td>폭발 후 블랙홀 지속 생성</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 4. 스테이지 구조 ── -->
+  <section class="section" id="stages">
+    <div class="section-header">
+      <span class="section-icon">📡</span>
+      <h2 class="section-title yellow">STAGE STRUCTURE</h2>
+    </div>
+
+    <h3 style="font-size:0.8rem;color:var(--muted);letter-spacing:2px;margin-bottom:12px;font-family:'Orbitron',monospace">5 ZONE PROGRESSION</h3>
+    <div class="zone-timeline" style="margin-bottom:24px">
+      <div class="zone-block" style="background:rgba(0,240,255,.07)">
+        <div class="zone-name" style="color:var(--cyan)">🌆 슬럼 지구</div>
+        <div class="zone-range">S 01 – 24</div>
+      </div>
+      <div class="zone-block" style="background:rgba(176,38,255,.07)">
+        <div class="zone-name" style="color:var(--purple)">🖥 서버 팜</div>
+        <div class="zone-range">S 25 – 49</div>
+      </div>
+      <div class="zone-block" style="background:rgba(255,68,102,.07)">
+        <div class="zone-name" style="color:var(--pink)">☣ 바이러스 코어</div>
+        <div class="zone-range">S 50 – 74</div>
+      </div>
+      <div class="zone-block" style="background:rgba(57,255,20,.07)">
+        <div class="zone-name" style="color:var(--green)">💀 붕괴 지대</div>
+        <div class="zone-range">S 75 – 99</div>
+      </div>
+      <div class="zone-block" style="background:rgba(255,230,0,.07)">
+        <div class="zone-name" style="color:var(--yellow)">∞ 엔드리스</div>
+        <div class="zone-range">S 100+</div>
+      </div>
+    </div>
+
+    <h3 style="font-size:0.8rem;color:var(--muted);letter-spacing:2px;margin-bottom:12px;font-family:'Orbitron',monospace">STAGE RULES</h3>
+    <div class="table-wrap" style="margin-bottom:24px">
+      <table>
+        <thead><tr><th>조건</th><th>이벤트</th><th>보상/결과</th></tr></thead>
+        <tbody>
+          <tr><td>킬 목표 달성</td><td>스테이지 클리어</td><td>스테이지 보너스 선택 (스탯 중 1개)</td></tr>
+          <tr><td>매 5스테이지</td><td>미니보스 등장</td><td>HP×0.55 체력, 레벨업 카드 제공</td></tr>
+          <tr><td>매 10스테이지</td><td>일반 보스 등장</td><td>처치 후 저주 선택 또는 상점</td></tr>
+          <tr><td>스테이지 100</td><td>FINAL PROTOCOL (HP×3.5)</td><td>클리어 → PROTOCOL COMPLETE 엔딩</td></tr>
+          <tr><td>스테이지 101+</td><td>엔드리스 모드 (선택)</td><td>NG+ 시작 가능, 무한 웨이브</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:0.8rem;color:var(--muted);letter-spacing:2px;margin-bottom:12px;font-family:'Orbitron',monospace">BOSS PHASE SYSTEM</h3>
+    <div class="phase-bar">
+      <div class="phase-seg ph1">PHASE 1 — 100%~55%</div>
+      <div class="phase-seg ph2">PHASE 2 — 55%~25%</div>
+      <div class="phase-seg ph3">PHASE 3 — 25%~0%</div>
+    </div>
+    <div class="info-box purple" style="margin-top:0">
+      <ul>
+        <li>페이즈 1→2 (55%): 이동속도 ×1.6, 패턴 쿨다운 가속</li>
+        <li>페이즈 2→3 (25%, bossIdx≥1): 이동속도 ×1.35, 모든 공격 최고 밀도</li>
+        <li>보스 패턴: 돌격(charge) / 미니언 소환 / 구체 사출(orb) / 유도탄(homing) / 방어막(shield)</li>
+        <li>보스 이름 10종: VIRUS ALPHA → MALWARE CORE → … → FINAL PROTOCOL</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── 5. 특수 시스템 ── -->
+  <section class="section" id="systems">
+    <div class="section-header">
+      <span class="section-icon">⚙</span>
+      <h2 class="section-title pink">SPECIAL SYSTEMS</h2>
+    </div>
+
+    <!-- 저주 -->
+    <h3 style="font-family:'Orbitron',monospace;font-size:0.8rem;color:var(--pink);letter-spacing:2px;margin-bottom:12px">저주 시스템 CURSE CONTRACT</h3>
+    <div class="info-box" style="margin-bottom:24px">
+      <ul>
+        <li>보스 처치 후 저주 계약 제시 (수락 / 거절 선택)</li>
+        <li>수락: 강력한 디버프 대신 즉시 강력한 보상 지급</li>
+        <li>거절: 보상 없이 통과 (안전하지만 손해)</li>
+        <li>HP 30% 이하 근사망 시 추가 저주 자동 트리거</li>
+        <li>보스 사망 시 isFinalBoss 체크 → 최종 보스는 저주 생략</li>
+      </ul>
+    </div>
+
+    <!-- 미션 -->
+    <h3 style="font-family:'Orbitron',monospace;font-size:0.8rem;color:var(--cyan);letter-spacing:2px;margin-bottom:12px">미션 시스템 MISSION SYSTEM</h3>
+    <div class="mission-grid" style="margin-bottom:24px">
+      <div class="mission-card"><div class="m-icon">⚔</div><div><div class="m-name">격리 작전</div><div class="m-desc">바이러스 50마리 처치</div><div class="m-reward"><span class="tag tag-yellow">골드 +40</span></div></div></div>
+      <div class="mission-card"><div class="m-icon">🔫</div><div><div class="m-name">대규모 격리</div><div class="m-desc">바이러스 100마리 처치</div><div class="m-reward"><span class="tag tag-purple">코어 +6</span></div></div></div>
+      <div class="mission-card"><div class="m-icon">⚡</div><div><div class="m-name">무력화 처치</div><div class="m-desc">스턴 중 적 8마리 처치</div><div class="m-reward"><span class="tag tag-green">HP 회복 +30</span></div></div></div>
+      <div class="mission-card"><div class="m-icon">🔥</div><div><div class="m-name">연속 처치</div><div class="m-desc">콤보 20 달성</div><div class="m-reward"><span class="tag tag-cyan">XP 보너스</span></div></div></div>
+      <div class="mission-card"><div class="m-icon">👁</div><div><div class="m-name">완전 회피</div><div class="m-desc">피격 없이 20초 생존</div><div class="m-reward"><span class="tag tag-green">HP 회복 +40</span></div></div></div>
+      <div class="mission-card"><div class="m-icon">❤</div><div><div class="m-name">고체력 유지</div><div class="m-desc">HP 60% 이상 90초 유지</div><div class="m-reward"><span class="tag tag-yellow">골드 +35</span></div></div></div>
+      <div class="mission-card"><div class="m-icon">⏱</div><div><div class="m-name">신속 격리</div><div class="m-desc">보스를 60초 내에 처치</div><div class="m-reward"><span class="tag tag-yellow">골드 +60</span></div></div></div>
+      <div class="mission-card"><div class="m-icon">📡</div><div><div class="m-name">심층 침투</div><div class="m-desc">스테이지 10 도달</div><div class="m-reward"><span class="tag tag-purple">코어 +5</span></div></div></div>
+      <div class="mission-card"><div class="m-icon">💀</div><div><div class="m-name">코어 파괴</div><div class="m-desc">이번 런 보스 2개 처치</div><div class="m-reward"><span class="tag tag-purple">코어 +8</span></div></div></div>
+    </div>
+
+    <!-- NG+ -->
+    <h3 style="font-family:'Orbitron',monospace;font-size:0.8rem;color:var(--yellow);letter-spacing:2px;margin-bottom:12px">NG+ 시스템 NEW GAME PLUS</h3>
+    <div class="info-box yellow">
+      <ul>
+        <li>스테이지 100 클리어 → <strong style="color:var(--yellow)">PROTOCOL COMPLETE</strong> 엔딩</li>
+        <li>ascensionLevel +1 저장 → 메인 메뉴에 NG+N 배지 표시</li>
+        <li>NG+ 패널티: 모든 적 HP ×25% per 승천 레벨 (getAscensionScale)</li>
+        <li>클리어 보너스: 데이터코어 30 + (클리어 횟수 × 5) 지급</li>
+        <li>클래스 잠금 해제 조건은 NG+에서도 동일하게 적용</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── 6. 밸런스 원칙 ── -->
+  <section class="section" id="balance">
+    <div class="section-header">
+      <span class="section-icon">⚖</span>
+      <h2 class="section-title orange">BALANCE PRINCIPLES</h2>
+    </div>
+
+    <div class="stat-row" style="margin-bottom:24px">
+      <div class="stat-box">
+        <div class="stat-val" style="color:var(--cyan)">750</div>
+        <div class="stat-label">보스 기본 HP</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:var(--orange)">×0.95</div>
+        <div class="stat-label">보스 인덱스당 스케일</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:var(--pink)">×3.5</div>
+        <div class="stat-label">파이널 보스 HP 배율</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:var(--green)">15%</div>
+        <div class="stat-label">기본 크리티컬 확률</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:var(--yellow)">×2.5</div>
+        <div class="stat-label">크리티컬 피해 배율</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>구간</th><th>느낌</th><th>주요 도전</th><th>스케일링</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-green">S 1–10</span></td><td>쉬운 진입</td><td>무기 선택 시작, 기본 패시브 셋업</td><td>낮은 적 HP, 느린 스폰</td></tr>
+          <tr><td><span class="tag tag-cyan">S 11–25</span></td><td>성장기</td><td>첫 미니보스, 저주 첫 선택</td><td>스폰 밀도↑, 엘리트 등장</td></tr>
+          <tr><td><span class="tag tag-purple">S 26–50</span></td><td>도전</td><td>무기 진화 타이밍 중요, 서버팜 전환</td><td>보스 HP ×3~5, 패턴 2페이즈 확실</td></tr>
+          <tr><td><span class="tag tag-pink">S 51–75</span></td><td>극한</td><td>콤보 유지, 저주 전략 필요</td><td>보스 HP ×7~9, 3페이즈 필수</td></tr>
+          <tr><td><span class="tag tag-yellow">S 76–100</span></td><td>엔드게임</td><td>빌드 완성 필요, 저주 리스크 관리</td><td>최고 밀도, FINAL PROTOCOL</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-box" style="margin-top:20px">
+      <strong style="color:var(--cyan)">난이도 설정 (DIFFICULTY_SETTINGS)</strong>
+      <ul style="margin-top:8px">
+        <li><strong style="color:var(--green)">Easy:</strong> 적 HP 70%, 속도 85%, XP ×1.2 — 캐주얼 플레이어용</li>
+        <li><strong style="color:var(--cyan)">Normal:</strong> 기본 밸런스 — 설계 기준점</li>
+        <li><strong style="color:var(--pink)">Hard:</strong> 적 HP 140%, 속도 115%, XP ×0.85 — 도전 플레이</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>AntiSurge β v0.09 — 게임 기획서 · <a href="https://antisurge-c0463.web.app" target="_blank">게임 플레이</a> · <a href="index.html">문서 허브</a></p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AntiSurge — 문서 허브</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --cyan:   #00f0ff;
+  --purple: #b026ff;
+  --green:  #39ff14;
+  --yellow: #ffe600;
+  --pink:   #ff4466;
+  --teal:   #00ffaa;
+  --bg:     #03050f;
+  --card:   #0a0f1e;
+  --border: rgba(0,240,255,0.18);
+  --text:   #cbd5e1;
+  --muted:  #475569;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+/* ── 헤더 ── */
+header {
+  position: relative;
+  text-align: center;
+  padding: 60px 20px 40px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(0,240,255,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: 4px;
+}
+.logo .anti { color: var(--cyan); text-shadow: 0 0 20px var(--cyan); }
+.logo .surge { color: #fff; }
+.logo .beta {
+  font-size: 0.35em;
+  color: var(--yellow);
+  background: rgba(255,230,0,0.12);
+  border: 1px solid var(--yellow);
+  padding: 2px 8px;
+  border-radius: 4px;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+.tagline {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.status-bar {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: 1px solid;
+}
+.chip-green  { border-color: var(--green);  color: var(--green);  background: rgba(57,255,20,0.08); }
+.chip-cyan   { border-color: var(--cyan);   color: var(--cyan);   background: rgba(0,240,255,0.08); }
+.chip-yellow { border-color: var(--yellow); color: var(--yellow); background: rgba(255,230,0,0.08); }
+.chip-purple { border-color: var(--purple); color: var(--purple); background: rgba(176,38,255,0.08); }
+
+/* ── 레이아웃 ── */
+.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+section { margin-top: 48px; }
+.section-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── 문서 카드 그리드 ── */
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+.doc-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .2s, box-shadow .2s, transform .15s;
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+.doc-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent, var(--cyan));
+  opacity: 0;
+  transition: opacity .2s;
+}
+.doc-card:hover { border-color: var(--accent, var(--cyan)); box-shadow: 0 0 24px rgba(0,240,255,0.12); transform: translateY(-2px); }
+.doc-card:hover::before { opacity: 1; }
+.card-icon { font-size: 2rem; margin-bottom: 12px; }
+.card-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+.card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+.card-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-top: 12px;
+  border: 1px solid;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 1px;
+}
+
+.doc-card[data-color="cyan"]   { --accent: var(--cyan); }
+.doc-card[data-color="purple"] { --accent: var(--purple); }
+.doc-card[data-color="green"]  { --accent: var(--green); }
+.doc-card[data-color="yellow"] { --accent: var(--yellow); }
+.doc-card[data-color="pink"]   { --accent: var(--pink); }
+
+/* ── 프로젝트 상태 패널 ── */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  text-align: center;
+}
+.stat-num {
+  font-family: 'Orbitron', monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--cyan);
+  text-shadow: 0 0 12px var(--cyan);
+}
+.stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+/* ── 빠른 링크 ── */
+.quick-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid;
+  transition: background .2s, box-shadow .2s;
+}
+.btn-cyan   { border-color: var(--cyan);   color: var(--cyan);   }
+.btn-cyan:hover   { background: rgba(0,240,255,0.1); box-shadow: 0 0 16px rgba(0,240,255,0.25); }
+.btn-purple { border-color: var(--purple); color: var(--purple); }
+.btn-purple:hover { background: rgba(176,38,255,0.1); box-shadow: 0 0 16px rgba(176,38,255,0.25); }
+.btn-green  { border-color: var(--green);  color: var(--green);  }
+.btn-green:hover  { background: rgba(57,255,20,0.1); box-shadow: 0 0 16px rgba(57,255,20,0.25); }
+
+/* ── 진행도 테이블 ── */
+.progress-table { width: 100%; border-collapse: collapse; }
+.progress-table th, .progress-table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+.progress-table th {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.progress-table tr:last-child td { border-bottom: none; }
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.badge-done    { background: rgba(57,255,20,0.15);  color: var(--green);  border: 1px solid rgba(57,255,20,0.3); }
+.badge-wip     { background: rgba(255,230,0,0.12);  color: var(--yellow); border: 1px solid rgba(255,230,0,0.3); }
+.badge-planned { background: rgba(176,38,255,0.1);  color: var(--purple); border: 1px solid rgba(176,38,255,0.3); }
+
+/* ── 모듈 맵 ── */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.module-chip {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.78rem;
+}
+.module-chip code {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  color: var(--cyan);
+  display: block;
+  margin-bottom: 3px;
+}
+.module-chip span { color: var(--muted); font-size: 0.72rem; }
+
+footer {
+  text-align: center;
+  margin-top: 60px;
+  padding: 20px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  border-top: 1px solid var(--border);
+  letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo">
+      <span class="anti">ANTI</span><span class="surge">SURGE</span>
+      <span class="beta">β v0.09</span>
+    </div>
+    <div class="tagline">Developer Documentation Hub</div>
+    <div class="status-bar">
+      <span class="status-chip chip-green">🟢 배포 중</span>
+      <span class="status-chip chip-cyan">🧩 src/ 15개 모듈</span>
+      <span class="status-chip chip-yellow">⚠️ 보스 패턴 미완성</span>
+      <span class="status-chip chip-purple">✨ NG+ 구현 완료</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- 빠른 링크 -->
+  <section>
+    <div class="section-title">빠른 링크</div>
+    <div class="quick-links">
+      <a href="https://antisurge-c0463.web.app" target="_blank" class="quick-btn btn-cyan">🎮 게임 플레이</a>
+      <a href="https://github.com/PERSONARPGGG/AntiSurge" target="_blank" class="quick-btn btn-purple">🐙 GitHub 레포</a>
+      <a href="handover.html" class="quick-btn btn-green">📋 인수인계 문서</a>
+      <a href="design.html" class="quick-btn btn-cyan">🎨 기획서</a>
+      <a href="techstack.html" class="quick-btn btn-purple">⚙️ 기술 스택</a>
+      <a href="evaluation.html" class="quick-btn btn-green">📊 평가 리포트</a>
+    </div>
+  </section>
+
+  <!-- 프로젝트 현황 -->
+  <section>
+    <div class="section-title">프로젝트 현황</div>
+    <div class="status-grid">
+      <div class="stat-card"><div class="stat-num">8,151</div><div class="stat-label">총 코드 라인 (src/ 합계)</div></div>
+      <div class="stat-card"><div class="stat-num">15</div><div class="stat-label">JS 모듈 파일</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--purple);text-shadow:0 0 12px var(--purple)">6</div><div class="stat-label">플레이어 클래스</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--green);text-shadow:0 0 12px var(--green)">11</div><div class="stat-label">무기 종류</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--yellow);text-shadow:0 0 12px var(--yellow)">100</div><div class="stat-label">스테이지 (엔딩)</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--pink);text-shadow:0 0 12px var(--pink)">18</div><div class="stat-label">자동 검증 항목</div></div>
+    </div>
+  </section>
+
+  <!-- 문서 목록 -->
+  <section>
+    <div class="section-title">문서 목록</div>
+    <div class="doc-grid">
+
+      <a href="handover.html" class="doc-card" data-color="cyan">
+        <div class="card-icon">📋</div>
+        <div class="card-title">인수인계 문서</div>
+        <div class="card-desc">현황, 완료 기능, 미완성 항목, 개발 환경 설정, 워크플로, 버그 방지 체크리스트</div>
+        <div class="card-tag" style="border-color:var(--cyan);color:var(--cyan)">HANDOVER</div>
+      </a>
+
+      <a href="design.html" class="doc-card" data-color="purple">
+        <div class="card-icon">🎨</div>
+        <div class="card-title">게임 기획서</div>
+        <div class="card-desc">게임 컨셉, 클래스/무기/시스템 설계, 밸런스 방향, 로드맵, 미래 콘텐츠 계획</div>
+        <div class="card-tag" style="border-color:var(--purple);color:var(--purple)">DESIGN</div>
+      </a>
+
+      <a href="techstack.html" class="doc-card" data-color="green">
+        <div class="card-icon">⚙️</div>
+        <div class="card-title">기술 스택</div>
+        <div class="card-desc">사용 기술, 아키텍처, 모듈 구조, 배포 파이프라인, 성능 최적화 전략</div>
+        <div class="card-tag" style="border-color:var(--green);color:var(--green)">TECH</div>
+      </a>
+
+      <a href="evaluation.html" class="doc-card" data-color="yellow">
+        <div class="card-icon">📊</div>
+        <div class="card-title">평가 리포트</div>
+        <div class="card-desc">β v0.09 종합 평가 (6.8/10), 강점/약점 분석, 개선 우선순위 ROI 분석</div>
+        <div class="card-tag" style="border-color:var(--yellow);color:var(--yellow)">REVIEW</div>
+      </a>
+
+      <a href="architecture.html" class="doc-card" data-color="pink">
+        <div class="card-icon">🏗</div>
+        <div class="card-title">코드 아키텍처</div>
+        <div class="card-desc">15개 모듈 구조, 전역 상태 흐름, 로딩 의존성 순서, 주요 함수 맵 상세 설명</div>
+        <div class="card-tag" style="border-color:var(--pink);color:var(--pink)">ARCH</div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- 개발 진행도 -->
+  <section>
+    <div class="section-title">개발 진행도</div>
+    <div class="stat-card" style="padding:0;overflow:hidden;">
+      <table class="progress-table">
+        <thead>
+          <tr>
+            <th>우선순위</th>
+            <th>기능</th>
+            <th>상태</th>
+            <th>비고</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>P01</td><td>무기 융합 시스템</td><td><span class="badge badge-done">완료</span></td><td>5종 융합, 🔮 카드 UI</td></tr>
+          <tr><td>P02</td><td>콘텐츠 잠금 해제 트리</td><td><span class="badge badge-done">완료</span></td><td>3클래스 조건 잠금</td></tr>
+          <tr><td>P03</td><td>보스 패턴 개별화</td><td><span class="badge badge-wip">진행 예정</span></td><td>사용자와 함께 설계</td></tr>
+          <tr><td>P04</td><td>맵 존 다양성</td><td><span class="badge badge-done">완료</span></td><td>5구역, 전환 오버레이</td></tr>
+          <tr><td>P05</td><td>미션 시스템</td><td><span class="badge badge-done">완료</span></td><td>9종 풀, 런 단위 리셋</td></tr>
+          <tr><td>P06</td><td>스테이지 100 엔딩 + NG+</td><td><span class="badge badge-done">완료</span></td><td>PROTOCOL COMPLETE</td></tr>
+          <tr><td>P07</td><td>클래스별 패시브 트리</td><td><span class="badge badge-done">완료</span></td><td>6클래스 × 2 패시브</td></tr>
+          <tr><td>P08</td><td>튜토리얼 / 온보딩</td><td><span class="badge badge-planned">계획</span></td><td>첫 5분 힌트 없음</td></tr>
+          <tr><td>P09</td><td>적 종류 추가</td><td><span class="badge badge-planned">계획</span></td><td>현재 4종 → 목표 10+</td></tr>
+          <tr><td>P10</td><td>SFX 강화</td><td><span class="badge badge-planned">계획</span></td><td>타격감 약함</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 모듈 맵 -->
+  <section>
+    <div class="section-title">src/ 모듈 맵</div>
+    <div class="module-grid">
+      <div class="module-chip"><code>config.js</code><span>상수, 클래스 정의, 상태 선언 (938줄)</span></div>
+      <div class="module-chip"><code>audio.js</code><span>Web Audio + BGM + 난이도 유틸 (507줄)</span></div>
+      <div class="module-chip"><code>player.js</code><span>Player 클래스 (480줄)</span></div>
+      <div class="module-chip"><code>weapons.js</code><span>무기 클래스 전체 (753줄)</span></div>
+      <div class="module-chip"><code>projectiles.js</code><span>투사체 + 레이저 (174줄)</span></div>
+      <div class="module-chip"><code>enemies.js</code><span>Enemy + Boss (885줄)</span></div>
+      <div class="module-chip"><code>entities.js</code><span>Gem, Particle, FieldItem (260줄)</span></div>
+      <div class="module-chip"><code>stage.js</code><span>스테이지/콤보/충돌/스폰 (939줄)</span></div>
+      <div class="module-chip"><code>flow.js</code><span>startGame, showScreen (427줄)</span></div>
+      <div class="module-chip"><code>loop.js</code><span>gameLoop, update, draw, HUD (616줄)</span></div>
+      <div class="module-chip"><code>upgrades.js</code><span>레벨업, 상점, 저주, 시너지 (669줄)</span></div>
+      <div class="module-chip"><code>endgame.js</code><span>종료, 빅토리, NG+ (357줄)</span></div>
+      <div class="module-chip"><code>extras.js</code><span>개발자 패널, 필드 이벤트 (212줄)</span></div>
+      <div class="module-chip"><code>input.js</code><span>터치, 유틸, 설정 (176줄)</span></div>
+      <div class="module-chip"><code>multiplayer.js</code><span>멀티플레이어, 초기화 (758줄)</span></div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  AntiSurge β v0.09 — Developer Docs &nbsp;|&nbsp; 2026 &nbsp;|&nbsp;
+  <a href="https://antisurge-c0463.web.app" style="color:var(--cyan)">antisurge-c0463.web.app</a>
+</footer>
+
+</body>
+</html>
