@@ -403,6 +403,45 @@ const SYNERGY_DEFS = [
   }
 ];
 
+// ─── 무기 융합 진화 정의 (두 무기 모두 Lv5 → 특별 카드 등장) ───
+const WEAPON_FUSIONS = [
+  {
+    id: 'arc_flare',
+    name: '아크 플레어',
+    icon: '✨⚡',
+    weapons: ['flare', 'chain'],
+    desc: '플레어 투사체 충돌 시 주변 2체에 연쇄 전격 발생. 투사체당 +2 체인!'
+  },
+  {
+    id: 'hellfire_drone',
+    name: '헬파이어 드론',
+    icon: '🛸🚀',
+    weapons: ['drone', 'missile'],
+    desc: '드론이 총알 대신 유도 미사일 발사. 드론 1기당 추적 미사일 발사!'
+  },
+  {
+    id: 'nova_collapse',
+    name: '노바 콜랩스',
+    icon: '🌑💥',
+    weapons: ['blackhole', 'ring'],
+    desc: '블랙홀 붕괴 시 12방향 폭발 투사체 발사. 광역 즉사 연쇄!'
+  },
+  {
+    id: 'spectrum_blade',
+    name: '스펙트럼 블레이드',
+    icon: '🚨🪃',
+    weapons: ['laser', 'boomerang'],
+    desc: '레이저 발사 시 수직 방향 부메랑 2개 동시 발사. 광역 + 회전 복합 공격!'
+  },
+  {
+    id: 'mine_orbital',
+    name: '폭발 오비탈',
+    icon: '🌀💣',
+    weapons: ['orbiter', 'mine'],
+    desc: '오비터가 적 접근 시 마인 자동 투하. 공전 중 폭탄 밭 자동 형성!'
+  }
+];
+
 // ─── 저주 정의 ───
 const CURSE_DEFS = [
   {
@@ -1235,6 +1274,8 @@ class Player {
 
     // 패시브 아이템
     this.passives        = { regen: 0, shield: 0, nanobots: 0, overclock: 0, resonance: 0, thorns: 0, critical: 0, explosive: 0, barrier: 0 };
+    // 무기 융합
+    this.fusions         = {};
     this.regenTimer      = 0;
     this.barrierTimer    = 0;
     this.damageReduction = 0.0;
@@ -1725,6 +1766,18 @@ class OrbiterWeapon extends BaseWeapon {
       if (this.level === 5 && Math.random() < 0.55) {
         particles.push(new Particle(orbX, orbY, (Math.random()-0.5)*0.4, (Math.random()-0.5)*0.4, '#ff00ff', 180));
       }
+      // mine_orbital 융합: 오비터가 적 접근 시 마인 투하
+      if (this.owner.fusions && this.owner.fusions.mine_orbital) {
+        this._mineDropCd = (this._mineDropCd || 0) - dt;
+        if (this._mineDropCd <= 0) {
+          const closeEnemy = enemies.find(e => dist(orbX, orbY, e.x, e.y) < 55);
+          if (closeEnemy) {
+            const mDmg = 55 * this.owner.damageMultiplier;
+            mines.push(new Mine(orbX, orbY, mDmg, 95, false));
+            this._mineDropCd = 1800;
+          }
+        }
+      }
     }
   }
   draw(ctx, camera) {
@@ -1862,6 +1915,13 @@ class LaserWeapon extends BaseWeapon {
       createLaserBeam(this.owner.x, this.owner.y, angle + Math.PI/2,   width, damage, 400);
       createLaserBeam(this.owner.x, this.owner.y, angle - Math.PI/2,   width, damage, 400);
     }
+    // spectrum_blade 융합: 레이저 수직 방향 부메랑 2발
+    if (this.owner.fusions && this.owner.fusions.spectrum_blade && projectiles.length < MAX_PROJECTILES - 2) {
+      const bDmg = 65 * this.owner.damageMultiplier;
+      const spd  = 9;
+      projectiles.push(new BoomerangProjectile(this.owner.x, this.owner.y, Math.cos(angle+Math.PI/2)*spd, Math.sin(angle+Math.PI/2)*spd, bDmg, '#ff6600', this.owner));
+      projectiles.push(new BoomerangProjectile(this.owner.x, this.owner.y, Math.cos(angle-Math.PI/2)*spd, Math.sin(angle-Math.PI/2)*spd, bDmg, '#ff6600', this.owner));
+    }
   }
 }
 
@@ -1920,9 +1980,16 @@ class DroneWeapon extends BaseWeapon {
           const dmg   = dmgB * this.owner.damageMultiplier;
           const shots = this.level === 5 ? 3 : 1;
           playSynthSound([700, 1100], 0.08, 'square', 0.05);
-          for (let s = 0; s < shots; s++) {
-            const sa = a + (shots > 1 ? (s - 1) * 0.14 : 0);
-            projectiles.push(new Projectile(droneX, droneY, Math.cos(sa) * 9, Math.sin(sa) * 9, dmg, 4, '#ff8800', 1, 'drone'));
+          // hellfire_drone 융합: 총알 대신 유도 미사일 발사
+          if (this.owner.fusions && this.owner.fusions.hellfire_drone) {
+            const mDmg = dmg * 2.8;
+            projectiles.push(new MissileProjectile(droneX, droneY, Math.cos(a)*7, Math.sin(a)*7, mDmg, 7, '#ff4400', 'drone', false));
+            playSynthSound([200, 500], 0.15, 'sawtooth', 0.08);
+          } else {
+            for (let s = 0; s < shots; s++) {
+              const sa = a + (shots > 1 ? (s - 1) * 0.14 : 0);
+              projectiles.push(new Projectile(droneX, droneY, Math.cos(sa) * 9, Math.sin(sa) * 9, dmg, 4, '#ff8800', 1, 'drone'));
+            }
           }
         }
       }
@@ -2294,6 +2361,16 @@ class BlackHole {
       activeBoss.takeDamage(Math.min(collapseDmg, activeBoss.maxHp * 0.4), 'blackhole');
     }
     addFloatingText(this.x, this.y - 30, '🌑 붕괴!', '#b026ff', 13);
+    // nova_collapse 융합: 12방향 폭발 투사체
+    if (player && player.fusions && player.fusions.nova_collapse) {
+      const burstDmg = this.dmg * 2.5 * (player.damageMultiplier || 1);
+      for (let ri = 0; ri < 12; ri++) {
+        const ra = (ri / 12) * Math.PI * 2;
+        projectiles.push(new Projectile(this.x, this.y, Math.cos(ra)*7, Math.sin(ra)*7, burstDmg, 9, '#b026ff', 4, 'blackhole'));
+      }
+      addFloatingText(this.x, this.y - 55, '💥 노바 콜랩스!', '#b026ff', 14);
+      playSynthSound([60, 200, 800], 0.3, 'sawtooth', 0.15);
+    }
   }
   draw(ctx, camera) {
     if (this.dead) return;
@@ -4350,6 +4427,16 @@ function checkCollisions() {
         let isDead = e.takeDamage(p.damage, p.weaponKey);
         if (isDead) killCount++;
         p.hitEnemies.add(e);
+        // arc_flare 융합: 플레어 충돌 시 주변 2체 연쇄 전격
+        if (p.weaponKey === 'flare' && player && player.fusions && player.fusions.arc_flare) {
+          const arcTargets = [...enemies].filter(en => !p.hitEnemies.has(en) && dist(p.x, p.y, en.x, en.y) < 170);
+          arcTargets.slice(0, 2).forEach(en => {
+            if (en.takeDamage(p.damage * 0.55, 'chain')) killCount++;
+            p.hitEnemies.add(en);
+            createExplosionParticles(en.x, en.y, '#00f0ff', 4);
+            addFloatingText((p.x+en.x)/2, (p.y+en.y)/2 - 10, '⚡', '#00f0ff', 11);
+          });
+        }
         // 미사일: 충돌 시 폭발
         if (p instanceof MissileProjectile) { p.explode(); projectiles.splice(i, 1); break; }
         p.pierce--;
@@ -5675,10 +5762,23 @@ function generateUpgradeChoices() {
     }
   }
 
+  // 무기 융합 카드 — 두 무기 모두 Lv5이고 미적용 시 최우선 삽입
+  const fusionCards = [];
+  for (const fus of WEAPON_FUSIONS) {
+    if (player.fusions && player.fusions[fus.id]) continue;
+    const ready = fus.weapons.every(w => player.weapons[w] && player.weapons[w].level >= 5);
+    if (ready) fusionCards.push({ type:'fusion', id:fus.id, name:fus.name, icon:fus.icon, desc:fus.desc, rarity:'legendary', rarityMult:1.0 });
+  }
+
   let choices = [];
   let tempPool = [...pool];
 
-  for (let i = 0; i < 4; i++) {
+  // 융합 카드가 있으면 첫 슬롯 강제 배치
+  if (fusionCards.length > 0) {
+    choices.push(fusionCards[Math.floor(Math.random() * fusionCards.length)]);
+  }
+
+  for (let i = choices.length; i < 4; i++) {
     let rarity = rollRarity();
 
     if (rarity === 'legendary') {
@@ -5720,7 +5820,8 @@ function renderUpgradeCards(choices) {
 
     // 기본 스타일 클래스
     let baseClass = 'new-weapon';
-    if      (choice.type === 'stat')                        baseClass = 'stat-boost';
+    if      (choice.type === 'fusion')                      baseClass = 'weapon-fusion';
+    else if (choice.type === 'stat')                        baseClass = 'stat-boost';
     else if (choice.type === 'passive' && choice.isUpgrade) baseClass = 'passive-upgrade';
     else if (choice.type === 'passive')                     baseClass = 'new-passive';
     else if (choice.isUpgrade)                              baseClass = 'weapon-upgrade';
@@ -5729,7 +5830,8 @@ function renderUpgradeCards(choices) {
     card.className = `upgrade-card ${baseClass} rarity-${choice.rarity || 'common'}`;
 
     let tagText  = '신규 무기';
-    if      (choice.type === 'revival')                      tagText = '💀 에픽 부활';
+    if      (choice.type === 'fusion')                       tagText = '🔮 무기 융합';
+    else if (choice.type === 'revival')                      tagText = '💀 에픽 부활';
     else if (choice.type === 'stat')                         tagText = '시스템 강화';
     else if (choice.type === 'passive' && !choice.isUpgrade) tagText = '패시브 신규';
     else if (choice.type === 'passive' && choice.isUpgrade)  tagText = `패시브 Lv${choice.nextLevel}`;
@@ -5949,6 +6051,19 @@ function applyUpgrade(choice) {
 
   if (choice.type === 'legendary') {
     applyLegendaryUpgrade(choice.id);
+    return;
+  }
+
+  if (choice.type === 'fusion') {
+    if (!player.fusions) player.fusions = {};
+    player.fusions[choice.id] = true;
+    const fus = WEAPON_FUSIONS.find(f => f.id === choice.id);
+    if (fus) {
+      showEvolutionNotification(fus.icon, fus.name + ' 융합 완료!');
+      addFloatingText(player.x, player.y - 70, `🔮 무기 융합: ${fus.name}!`, '#ffe600', 16);
+    }
+    triggerScreenShake(14, 900);
+    playSynthSound([200, 500, 1000, 2000, 800], 0.28, 'sine', 0.12);
     return;
   }
 
