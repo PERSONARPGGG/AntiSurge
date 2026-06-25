@@ -1468,6 +1468,38 @@ body {
   border-color: var(--cls-color, #00f0ff);
   box-shadow: 0 0 8px var(--cls-color, #00f0ff);
 }
+/* 잠긴 클래스 카드 */
+.class-card.class-locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  pointer-events: auto;
+}
+.class-card.class-locked:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(255,255,255,0.1);
+}
+.class-lock-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: rgba(0,0,0,0.55);
+  border-radius: 10px;
+  font-size: 0.65rem;
+  color: #aaa;
+  text-align: center;
+  padding: 0.5rem;
+  font-family: 'Orbitron', monospace;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+}
+.class-lock-badge span { display: block; line-height: 1.3; }
+
 .cls-header { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.2rem; flex-wrap: wrap; }
 .cls-icon   { font-size: 1.25rem; flex-shrink: 0; }
 .cls-name   { font-family: 'Orbitron', monospace; font-size: 0.85rem; font-weight: 700; color: var(--cls-color, #00f0ff); text-shadow: 0 0 6px var(--cls-color, #00f0ff); }

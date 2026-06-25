@@ -68,6 +68,26 @@ const CLASS_DEFS = {
   }
 };
 
+// ── 클래스 잠금 해제 조건 ──────────────────────────────────────
+const CLASS_UNLOCK_DEFS = {
+  hacker:   null, // 기본 개방
+  cyborg:   null, // 기본 개방
+  ghost:    null, // 기본 개방
+  engineer: { stat: 'maxStage',      goal: 5,   label: '스테이지 5 이상 도달' },
+  sniper:   { stat: 'totalKills',    goal: 300,  label: '바이러스 300마리 격리' },
+  support:  { stat: 'totalBossKills',goal: 3,   label: '바이러스 코어 3회 파괴' },
+};
+
+function isClassUnlocked(classId) {
+  const def = CLASS_UNLOCK_DEFS[classId];
+  if (!def) return true;
+  // 이미 한번 해금 저장된 경우
+  if (saveData._unlockedClasses && saveData._unlockedClasses[classId]) return true;
+  // 실시간 스탯 체크
+  const s = _getStats();
+  return (s[def.stat] || saveData[def.stat] || 0) >= def.goal;
+}
+
 let gameState    = STATE_MENU;
 let selectedClass = 'hacker';
 let keys = {};
@@ -3056,13 +3076,13 @@ class Boss {
     // 반경: 스테이지 높을수록 조금씩 성장
     this.radius = this.isFinalBoss ? 90 : Math.min(50 + bossIdx * 2, 70);
 
-    let scale   = 1 + bossIdx * 0.65;
-    // 최종 보스: HP 2.5배 추가
-    this.maxHp  = Math.floor(450 * scale * (this.isFinalBoss ? 2.5 : 1));
+    let scale   = 1 + bossIdx * 0.95;
+    // 최종 보스: HP 3.5배 추가
+    this.maxHp  = Math.floor(750 * scale * (this.isFinalBoss ? 3.5 : 1));
     this.hp     = this.maxHp;
-    this.damage = Math.floor(22 * (1 + bossIdx * 0.25));
-    this.xpValue = 40 + bossIdx * 15;
-    this.baseSpeed = this.isFinalBoss ? 1.6 : 1.3;
+    this.damage = Math.floor(32 * (1 + bossIdx * 0.35));
+    this.xpValue = 60 + bossIdx * 20;
+    this.baseSpeed = this.isFinalBoss ? 2.0 : Math.min(1.7 + bossIdx * 0.05, 2.4);
     this.name   = BOSS_NAMES[Math.min(bossIdx, BOSS_NAMES.length - 1)];
     this.phase  = 1;
     this.bossIdx = bossIdx;
@@ -3071,12 +3091,12 @@ class Boss {
       ? { id: 'final', label: 'FINAL PROTOCOL', outerColor: '#ffe600', innerColor: '#ff0044', glowColor: '#ffffff' }
       : BOSS_TYPES[bossIdx % 4];
 
-    // 공격성 스케일: bossIdx 높을수록 쿨다운 최대 60% 단축
-    const ag = Math.max(0.4, 1.0 - bossIdx * 0.06);
+    // 공격성 스케일: bossIdx 높을수록 쿨다운 최대 65% 단축
+    const ag = Math.max(0.35, 1.0 - bossIdx * 0.07);
 
     // 돌진 공격
     this.chargeTimer    = 0;
-    this.chargeCooldown = Math.round((this.isFinalBoss ? 2500 : (this.patternType.id === 'berserker' ? 3500 : 4500)) * ag);
+    this.chargeCooldown = Math.round((this.isFinalBoss ? 2000 : (this.patternType.id === 'berserker' ? 2800 : 3800)) * ag);
     this.isCharging     = false;
     this.chargeVx = 0; this.chargeVy = 0;
     this.chargeDuration = 0;
@@ -3084,23 +3104,23 @@ class Boss {
 
     // 미니언 소환
     this.minionTimer    = 0;
-    this.minionCooldown = Math.round((this.isFinalBoss ? 4000 : (this.patternType.id === 'summoner' ? 5000 : 8000)) * ag);
+    this.minionCooldown = Math.round((this.isFinalBoss ? 3500 : (this.patternType.id === 'summoner' ? 4000 : 6500)) * ag);
 
-    // 궤도 사격
+    // 궤도 사격 (bossIdx 1 이상부터 기본 활성 — 스테이지 20+)
     this.orbShotTimer    = 0;
-    this.orbShotCooldown = Math.round((this.isFinalBoss ? 3500 : 5000) * ag);
+    this.orbShotCooldown = Math.round((this.isFinalBoss ? 3000 : 4200) * ag);
 
-    // 유도탄
+    // 유도탄 (bossIdx 3 이상부터 기본 활성 — 스테이지 40+)
     this.homingTimer    = 0;
-    this.homingCooldown = Math.round((this.isFinalBoss ? 4000 : 6000) * ag);
+    this.homingCooldown = Math.round((this.isFinalBoss ? 3500 : 5000) * ag);
 
     // 방어막 (summoner + 최종 보스)
-    this.shieldCooldown = Math.round((this.isFinalBoss ? 10000 : 14000) * ag);
+    this.shieldCooldown = Math.round((this.isFinalBoss ? 9000 : 12000) * ag);
     this.shieldCDTimer  = 0;
 
     // 최종 보스 전용: 엘리트 파동
     this.eliteWaveTimer    = 0;
-    this.eliteWaveCooldown = 8000;
+    this.eliteWaveCooldown = 7000;
   }
 
   update(dt) {
@@ -3121,14 +3141,14 @@ class Boss {
       // 방어막 중에도 이동은 함
     }
 
-    // 페이즈 2 전환 (HP 50% 이하, 미니보스 제외)
-    if (!this.isMini && this.phase === 1 && this.hp <= this.maxHp * 0.5) {
+    // 페이즈 2 전환 (HP 55% 이하, 미니보스 제외) — 더 일찍 격해짐
+    if (!this.isMini && this.phase === 1 && this.hp <= this.maxHp * 0.55) {
       this.phase = 2;
-      this.baseSpeed    *= 1.5;
-      this.chargeCooldown = this.patternType.id === 'berserker' ? 2000 : 2500;
-      this.minionCooldown = this.patternType.id === 'summoner'  ? 3000 : 5000;
-      this.orbShotCooldown = 3500;
-      this.homingCooldown  = 4000;
+      this.baseSpeed    *= 1.6;
+      this.chargeCooldown = this.patternType.id === 'berserker' ? 1700 : 2200;
+      this.minionCooldown = this.patternType.id === 'summoner'  ? 2500 : 4000;
+      this.orbShotCooldown = 2800;
+      this.homingCooldown  = 3200;
       createExplosionParticles(this.x, this.y, this.patternType.outerColor, 25);
       triggerScreenShake(8, 500);
       addFloatingText(this.x, this.y - 70, 'PHASE 2!', '#ff6600', 18);
@@ -3136,13 +3156,13 @@ class Boss {
     }
 
     // 페이즈 3 전환 (HP 25% 이하, bossIdx >= 2 또는 최종 보스, 미니보스 제외)
-    if (!this.isMini && this.phase === 2 && (this.bossIdx >= 2 || this.isFinalBoss) && this.hp <= this.maxHp * 0.25) {
+    if (!this.isMini && this.phase === 2 && (this.bossIdx >= 1 || this.isFinalBoss) && this.hp <= this.maxHp * 0.25) {
       this.phase = 3;
-      this.baseSpeed    *= 1.3;
-      this.chargeCooldown  = 1800;
-      this.minionCooldown  = 2500;
-      this.orbShotCooldown = 2500;
-      this.homingCooldown  = 2500;
+      this.baseSpeed    *= 1.35;
+      this.chargeCooldown  = 1400;
+      this.minionCooldown  = 2000;
+      this.orbShotCooldown = 2000;
+      this.homingCooldown  = 2000;
       createExplosionParticles(this.x, this.y, '#ffffff', 35);
       triggerScreenShake(14, 800);
       addFloatingText(this.x, this.y - 70, '⚠ PHASE 3!', '#ffffff', 20);
@@ -3155,7 +3175,7 @@ class Boss {
       this.chargeDuration -= dt;
       if (this.chargeDuration <= 0) {
         this.isCharging = false;
-        const baseSpd = this.phase === 3 ? 2.5 : this.phase === 2 ? 1.95 : 1.3;
+        const baseSpd = this.phase === 3 ? 3.0 : this.phase === 2 ? 2.4 : this.baseSpeed;
         this.baseSpeed = baseSpd;
         // 베르세르커: 연속 돌진
         if (this.patternType.id === 'berserker' && this.pendingCharges > 0) {
@@ -3186,8 +3206,8 @@ class Boss {
       this.spawnMinions();
     }
 
-    // 궤도 사격 (sharpshooter + 페이즈2 이상 + bossIdx 3 이상 + 최종 보스)
-    if (this.patternType.id === 'sharpshooter' || this.phase >= 2 || this.bossIdx >= 3 || this.isFinalBoss) {
+    // 궤도 사격 (sharpshooter + 페이즈2 이상 + bossIdx 1 이상 = 스테이지 20+ + 최종 보스)
+    if (this.patternType.id === 'sharpshooter' || this.phase >= 2 || this.bossIdx >= 1 || this.isFinalBoss) {
       this.orbShotTimer += dt;
       if (this.orbShotTimer >= this.orbShotCooldown) {
         this.orbShotTimer = 0;
@@ -3195,8 +3215,8 @@ class Boss {
       }
     }
 
-    // 유도탄 (titan + 페이즈3 + bossIdx 5 이상 + 최종 보스)
-    if (this.patternType.id === 'titan' || this.phase >= 3 || this.bossIdx >= 5 || this.isFinalBoss) {
+    // 유도탄 (titan + 페이즈3 + bossIdx 3 이상 = 스테이지 40+ + 최종 보스)
+    if (this.patternType.id === 'titan' || this.phase >= 3 || this.bossIdx >= 3 || this.isFinalBoss) {
       this.homingTimer += dt;
       if (this.homingTimer >= this.homingCooldown) {
         this.homingTimer = 0;
@@ -3229,7 +3249,7 @@ class Boss {
     let d  = Math.sqrt(dx*dx + dy*dy);
     if (d > 0) { dx /= d; dy /= d; }
     const phase3 = this.phase >= 3;
-    let chargeSpd = phase3 ? 17 : (this.phase === 2 ? 14 : 9);
+    let chargeSpd = phase3 ? 22 : (this.phase === 2 ? 17 : 12);
     this.chargeVx = dx * chargeSpd;
     this.chargeVy = dy * chargeSpd;
     this.isCharging     = true;
@@ -3246,9 +3266,9 @@ class Boss {
 
   orbitalShot() {
     if (!player) return;
-    const shotCount = this.phase >= 3 ? 12 : (this.phase >= 2 ? 10 : 8);
-    const spd = 5.5;
-    const dmg = this.damage * 0.6;
+    const shotCount = this.phase >= 3 ? 16 : (this.phase >= 2 ? 12 : 10);
+    const spd = 6.5;
+    const dmg = this.damage * 0.85;
     if (bossProjectiles.length >= MAX_BOSS_PROJ) return;
     addFloatingText(this.x, this.y - 60, '🔵 궤도 사격!', this.patternType.glowColor, 12);
     playSynthSound([500, 300, 700], 0.12, 'triangle', 0.07);
@@ -3264,17 +3284,17 @@ class Boss {
 
   homingShot() {
     if (!player) return;
-    const count = this.phase >= 3 ? 3 : (this.phase >= 2 ? 2 : 1);
-    const dmg = this.damage * 0.8;
+    const count = this.phase >= 3 ? 4 : (this.phase >= 2 ? 3 : 2);
+    const dmg = this.damage * 1.1;
     if (bossProjectiles.length >= MAX_BOSS_PROJ) return;
     addFloatingText(this.x, this.y - 60, '🎯 유도탄!', '#ff8800', 12);
     playSynthSound([150, 400], 0.15, 'sawtooth', 0.08);
     for (let i = 0; i < count; i++) {
-      const spread = (i - (count - 1) / 2) * 0.3;
+      const spread = (i - (count - 1) / 2) * 0.28;
       const angle = Math.atan2(player.y - this.y, player.x - this.x) + spread;
       bossProjectiles.push(new BossProjectile(
         this.x, this.y,
-        Math.cos(angle) * 3.5, Math.sin(angle) * 3.5,
+        Math.cos(angle) * 4.5, Math.sin(angle) * 4.5,
         dmg, 9, '#ff8800', true
       ));
     }
@@ -3282,7 +3302,7 @@ class Boss {
 
   activateShield() {
     this.shieldActive = true;
-    this.shieldTimer  = 3500;
+    this.shieldTimer  = 5000;
     addFloatingText(this.x, this.y - 70, '🛡 방어막 발동!', '#b026ff', 14);
     createExplosionParticles(this.x, this.y, '#b026ff', 20);
     playSynthSound([400, 800, 1200], 0.15, 'triangle', 0.08);
@@ -3879,7 +3899,7 @@ function spawnMiniBoss() {
   const _bx  = Math.max(80, Math.min(MAP_WIDTH  - 80, player.x + Math.cos(_ang) * 380));
   const _by  = Math.max(80, Math.min(MAP_HEIGHT - 80, player.y + Math.sin(_ang) * 380));
   const miniBoss = new Boss(_bx, _by);
-  miniBoss.maxHp  = Math.floor(miniBoss.maxHp * 0.40);
+  miniBoss.maxHp  = Math.floor(miniBoss.maxHp * 0.55);
   miniBoss.hp     = miniBoss.maxHp;
   miniBoss.radius = Math.floor(miniBoss.radius * 0.75);
   miniBoss.isMini = true;
@@ -4837,6 +4857,7 @@ startBtn.addEventListener('click', () => {
   initAudio();
   menuScreen.classList.remove('active');
   document.getElementById('class-select-screen').classList.add('active');
+  refreshClassCardLockState();
 });
 retryBtn.addEventListener('click', () => { startGame(); });
 homeBtn.addEventListener('click',  () => {
@@ -4846,14 +4867,37 @@ homeBtn.addEventListener('click',  () => {
 document.getElementById('mute-btn').addEventListener('click', () => toggleBGM());
 
 // 클래스 선택 카드 이벤트 (2단계 선택 흐름)
+function refreshClassCardLockState() {
+  document.querySelectorAll('.class-card').forEach(card => {
+    const cls = card.dataset.class;
+    if (!cls) return;
+    const unlocked = isClassUnlocked(cls);
+    card.classList.toggle('class-locked', !unlocked);
+    let badge = card.querySelector('.class-lock-badge');
+    if (!unlocked) {
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'class-lock-badge';
+        card.appendChild(badge);
+      }
+      const def = CLASS_UNLOCK_DEFS[cls];
+      badge.innerHTML = `🔒 <span>${def.label}</span>`;
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+}
+
 document.querySelectorAll('.class-card').forEach(card => {
   card.addEventListener('click', () => {
+    const cls = card.dataset.class;
+    if (!isClassUnlocked(cls)) return; // 잠긴 클래스 선택 차단
     document.querySelectorAll('.class-card').forEach(c => c.classList.remove('class-selected'));
     card.classList.add('class-selected');
-    selectedClass = card.dataset.class;
+    selectedClass = cls;
     const hint = document.getElementById('class-selected-hint');
     const confirmBtn = document.getElementById('class-confirm-btn');
-    const names = { hacker:'해커', cyborg:'사이보그', ghost:'고스트', engineer:'엔지니어', sniper:'스나이퍼', support:'서포터' };
+    const names = { hacker:'해커', cyborg:'방화벽', ghost:'루트킷', engineer:'드론.exe', sniper:'스캐너', support:'패치봇' };
     if (hint) { hint.textContent = `✓ ${names[selectedClass] || selectedClass} 선택됨`; hint.classList.add('has-selection'); }
     if (confirmBtn) confirmBtn.disabled = false;
   });
@@ -6295,6 +6339,24 @@ function applyLegendaryUpgrade(id) {
 // ============================================================
 // 26. 게임 종료 / 결과 화면
 // ============================================================
+function _checkClassUnlocks() {
+  for (const [cls, def] of Object.entries(CLASS_UNLOCK_DEFS)) {
+    if (!def) continue;
+    if (saveData._unlockedClasses && saveData._unlockedClasses[cls]) continue;
+    const s = _getStats();
+    const val = s[def.stat] || saveData[def.stat] || 0;
+    if (val >= def.goal) {
+      if (!saveData._unlockedClasses) saveData._unlockedClasses = {};
+      saveData._unlockedClasses[cls] = true;
+      saveSaveData();
+      const info = CLASS_DEFS[cls];
+      setTimeout(() => {
+        _showAchievementToast({ icon: info.icon, name: `${info.name} 해금!`, desc: `${def.label} 달성으로 새 백신 클래스 개방!` });
+      }, 1200);
+    }
+  }
+}
+
 function endGame(isVictory) {
   gameState = STATE_GAME_OVER;
   stopBGM();
@@ -6322,6 +6384,7 @@ function endGame(isVictory) {
       if (cls === 'engineer') _statAdd('cls_engineer_droneKills', weaponStats.drone?.kills || 0);
     }
     _checkCloudAchievements();
+    _checkClassUnlocks();
     _syncToCloud();
     submitLeaderboard(isVictory);
   }
