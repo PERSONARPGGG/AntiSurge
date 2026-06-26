@@ -177,7 +177,7 @@ function update(dt) {
     if (b.hitsPlayer) {
       if (player && player.shieldTimer <= 0 && !player.voidActive &&
           dist(b.x, b.y, player.x, player.y) < b.radius + player.radius) {
-        player.takeDamage(b.damage); lastDamageSource = '영웅 탄환';
+        player.takeDamage(b.damage); lastDamageSource = LANG === 'en' ? 'Hero Bullet' : '영웅 탄환';
         heroBullets.splice(i, 1);
       }
       continue;
@@ -278,7 +278,7 @@ function update(dt) {
       }
       if (finalWave1Kills >= 80) {
         finalWave1Kills = 0;
-        addFloatingText(player?.x||MAP_WIDTH/2,(player?.y||MAP_HEIGHT/2)-80,'✓ 대군 섬멸!','#88ff44',22);
+        addFloatingText(player?.x||MAP_WIDTH/2,(player?.y||MAP_HEIGHT/2)-80, LANG === 'en' ? '✓ Army Eliminated!' : '✓ 대군 섬멸!','#88ff44',22);
         setTimeout(() => advanceFinalStageWave(2), 1500);
       }
     }
@@ -308,7 +308,7 @@ function update(dt) {
         const bp = bossProjectiles[i];
         if (dist(bp.x, bp.y, player.x, player.y) < player.radius + (bp.radius||8) + 22) {
           bp.vx = -bp.vx * 0.85; bp.vy = -bp.vy * 0.85;
-          addFloatingText(bp.x, bp.y, '반사!', '#aaddff', 11);
+          addFloatingText(bp.x, bp.y, LANG === 'en' ? 'Reflect!' : '반사!', '#aaddff', 11);
         }
       }
     }
@@ -395,7 +395,7 @@ function _heroGrenadeExplode(b) {
     activeBoss.takeDamage(Math.floor(b.damage * 0.28), 'rival_grenade');
   if (player && dist(b.x, b.y, player.x, player.y) < R + player.radius) {
     player.takeDamage(Math.floor(b.damage * 0.72));
-    lastDamageSource = '영웅 수류탄';
+    lastDamageSource = LANG === 'en' ? 'Hero Grenade' : '영웅 수류탄';
   }
   createExplosionParticles(b.x, b.y, '#ff8800', 14);
   addFloatingText(b.x, b.y - 22, '💥', '#ff8800', 15);
@@ -558,7 +558,7 @@ function draw(dt) {
     ctx.shadowBlur = jcharge > 0.8 ? 10 : 0; ctx.shadowColor = '#aaffff';
     ctx.fillRect(jbx, jby, 80 * jcharge, 8);
     ctx.font = '9px monospace'; ctx.fillStyle = '#aaffff'; ctx.textAlign = 'center';
-    ctx.fillText('충전', canvas.width/2, jby - 2);
+    ctx.fillText(LANG === 'en' ? 'CHARGE' : '충전', canvas.width/2, jby - 2);
     ctx.restore();
   }
   if (player?.classId === 'parasite') {
@@ -573,7 +573,7 @@ function draw(dt) {
     // 파이널 스테이지 조건 진행 표시
     if (!isFinalStage && totalAbs > 0) {
       ctx.font = '9px monospace'; ctx.fillStyle = 'rgba(136,255,68,0.5)';
-      ctx.fillText(`흡수 ${totalAbs}/50`, canvas.width/2, canvas.height - 70);
+      ctx.fillText(LANG === 'en' ? `Absorb ${totalAbs}/50` : `흡수 ${totalAbs}/50`, canvas.width/2, canvas.height - 70);
     }
     ctx.restore();
   }
@@ -584,7 +584,7 @@ function draw(dt) {
     ctx.font = 'bold 12px Orbitron, monospace';
     ctx.fillStyle = '#88ff44';
     ctx.shadowBlur = 10; ctx.shadowColor = '#88ff44';
-    const waveLabel = finalStageWave === 1 ? `☣ WAVE 1 — 대군 처치 ${finalWave1Kills}/80`
+    const waveLabel = finalStageWave === 1 ? (LANG === 'en' ? `☣ WAVE 1 — Eliminate ${finalWave1Kills}/80` : `☣ WAVE 1 — 대군 처치 ${finalWave1Kills}/80`)
                     : finalStageWave === 2 ? '☣ WAVE 2 — VIRUS CORE'
                     : finalStageWave === 3 ? '🦠 FINAL — VIRUS ORIGIN' : '';
     ctx.fillText(waveLabel, canvas.width/2, 48);
@@ -613,7 +613,7 @@ function draw(dt) {
     ctx.fillText('💀', bx, by + 8);
     ctx.font = 'bold 9px Orbitron, monospace';
     ctx.fillStyle = ready ? '#ff4466' : '#888';
-    ctx.fillText(ready ? '[E] 방해' : `${Math.ceil(mpSabotageTimer/1000)}s`, bx, by + 24);
+    ctx.fillText(ready ? (LANG === 'en' ? '[E] SABOTAGE' : '[E] 방해') : `${Math.ceil(mpSabotageTimer/1000)}s`, bx, by + 24);
     ctx.restore();
   }
 
@@ -632,9 +632,9 @@ function draw(dt) {
     ctx.font = '12px Orbitron, monospace';
     ctx.fillStyle = '#ffffff';
     if (mpGameMode === 'battle') {
-      ctx.fillText('관전 중 — 팀원을 응원하세요!', cx, cy + 10);
+      ctx.fillText(LANG === 'en' ? 'Spectating — cheer on your teammates!' : '관전 중 — 팀원을 응원하세요!', cx, cy + 10);
     } else {
-      ctx.fillText(`부활까지  ${Math.ceil(Math.max(0, mpRespawnTimer))}초`, cx, cy + 10);
+      ctx.fillText(LANG === 'en' ? `Respawn in  ${Math.ceil(Math.max(0, mpRespawnTimer))}s` : `부활까지  ${Math.ceil(Math.max(0, mpRespawnTimer))}초`, cx, cy + 10);
     }
     ctx.restore();
   }
@@ -919,7 +919,9 @@ function updateHUD() {
       const maxLvl = UPGRADES.weapons[key].maxLevel;
       const isEvolved = w.level >= maxLvl;
       const pct = (w.level / maxLvl) * 100;
-      slot.title = UPGRADES.weapons[key].name + (isEvolved ? ` — ${UPGRADES.weapons[key].evolvedName || '진화'}` : ` Lv.${w.level}`);
+      const _wName = LANG === 'en' ? (tGame('weapons', key, 'name') || UPGRADES.weapons[key].name) : UPGRADES.weapons[key].name;
+      const _wEvoName = LANG === 'en' ? (tGame('weapons', key, 'evolvedName') || UPGRADES.weapons[key].evolvedName || 'EVOLVED') : (UPGRADES.weapons[key].evolvedName || '진화');
+      slot.title = _wName + (isEvolved ? ` — ${_wEvoName}` : ` Lv.${w.level}`);
       slot.innerHTML = `${UPGRADES.weapons[key].icon}<span class="weapon-level">${isEvolved ? '✨' : `Lv.${w.level}`}</span><div class="weapon-evo-bar"><div class="weapon-evo-fill" style="width:${pct}%;background:${isEvolved ? '#ffe600' : '#00f0ff'}"></div></div>`;
       wc.appendChild(slot);
     }
@@ -937,7 +939,9 @@ function updateHUD() {
     const cdReady = player.activeSkillCd <= 0;
     skillEl.innerHTML = `<span>${actCls.activeSkill.icon}</span><span class="skill-cd-text">${cdReady ? 'Q' : Math.ceil(player.activeSkillCd / 1000) + 's'}</span>`;
     skillEl.style.opacity = cdReady ? '1' : '0.5';
-    skillEl.title = `[Q] ${actCls.activeSkill.name}: ${actCls.activeSkill.desc}`;
+    const _skillName = (LANG === 'en' && actCls.activeSkill.nameEn) ? actCls.activeSkill.nameEn : actCls.activeSkill.name;
+    const _skillDesc = (LANG === 'en' && actCls.activeSkill.descEn) ? actCls.activeSkill.descEn : actCls.activeSkill.desc;
+    skillEl.title = `[Q] ${_skillName}: ${_skillDesc}`;
   }
   // 빌드 요약 HUD
   const buildHud = document.getElementById('build-summary-hud');
@@ -946,9 +950,9 @@ function updateHUD() {
     if (activeSynergies.size > 0) {
       [...activeSynergies].forEach(id => { const s = SYNERGY_DEFS.find(d => d.id === id); if (s) parts.push(`${s.icon}${s.name}`); });
     }
-    if (player._curseDamageMult > 1) parts.push('🦠감염');
-    if (player.skillShieldActive)    parts.push('🛡강화');
-    if (player.skillInvincible)      parts.push('👁위상');
+    if (player._curseDamageMult > 1) parts.push(LANG === 'en' ? '🦠Infected' : '🦠감염');
+    if (player.skillShieldActive)    parts.push(LANG === 'en' ? '🛡Shielded' : '🛡강화');
+    if (player.skillInvincible)      parts.push(LANG === 'en' ? '👁Phased' : '👁위상');
     buildHud.style.display = parts.length > 0 ? 'flex' : 'none';
     buildHud.textContent = parts.join('  ·  ');
   }

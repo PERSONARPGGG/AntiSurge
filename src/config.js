@@ -25,74 +25,84 @@ const STATE_CURSE        = 'CURSE';
 // ============================================================
 const CLASS_DEFS = {
   hacker: {
-    name: '해커', icon: '💻', color: '#00f0ff',
+    name: '해커', nameEn: 'Hacker', icon: '💻', color: '#00f0ff',
     desc: '침투형. 빠른 레벨업, 리롤 3회. EMP로 적 집단 무력화.',
+    descEn: 'Infiltrator. Fast leveling, 3 rerolls. EMP disables enemy clusters.',
     hp: 100, speed: 3.4, damageMult: 1.0, magnetRadius: 90,
     startWeapon: 'flare', rerolls: 3, xpBonus: 1.15,
-    activeSkill: { name: 'EMP 펄스', icon: '🔌', cd: 12000, desc: '반경 250 내 모든 적 3초 스턴 + 보스 1.5초 스턴' }
+    activeSkill: { name: 'EMP 펄스', nameEn: 'EMP Pulse', icon: '🔌', cd: 12000, desc: '반경 250 내 모든 적 3초 스턴 + 보스 1.5초 스턴', descEn: 'Stun all enemies in r250 for 3s. Boss stunned 1.5s.' }
   },
   cyborg: {
-    name: '방화벽', icon: '🔥', color: '#b026ff',
+    name: '방화벽', nameEn: 'Firewall', icon: '🔥', color: '#b026ff',
     desc: '방어형. HP 최고, 방어막으로 피해 차단. 근접전 특화.',
+    descEn: 'Defender. Highest HP, shield blocks damage. Close-range specialist.',
     hp: 200, speed: 2.8, damageMult: 0.9, magnetRadius: 80,
     startWeapon: 'orbiter', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '방어막 가동', icon: '🛡', cd: 15000, desc: '8초간 피해 감소 60% + 주변 적 밀쳐냄' }
+    activeSkill: { name: '방어막 가동', nameEn: 'Shield Burst', icon: '🛡', cd: 15000, desc: '8초간 피해 감소 60% + 주변 적 밀쳐냄', descEn: '8s: -60% damage taken + repel nearby enemies' }
   },
   ghost: {
-    name: '루트킷', icon: '🔓', color: '#39ff14',
+    name: '루트킷', nameEn: 'Rootkit', icon: '🔓', color: '#39ff14',
     desc: '기동형. 속도 최고, 무적 대시로 전장 누빔. 순수 기동 특화.',
+    descEn: 'Speed type. Highest move speed, invincible dash. Pure mobility specialist.',
     hp: 65, speed: 5.0, damageMult: 1.05, magnetRadius: 70,
     startWeapon: 'flare', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '위상 침투', icon: '👁', cd: 10000, desc: '4초간 무적 + 이동속도 2배' }
+    activeSkill: { name: '위상 침투', nameEn: 'Phase Shift', icon: '👁', cd: 10000, desc: '4초간 무적 + 이동속도 2배', descEn: '4s invincibility + double move speed' }
   },
   engineer: {
-    name: '드론.exe', icon: '🤖', color: '#ffe600',
+    name: '드론.exe', nameEn: 'Drone.exe', icon: '🤖', color: '#ffe600',
     desc: '자동화형. 드론이 자동 격리. Q스킬로 근접 적 밀쳐냄.',
+    descEn: 'Automation. Drones auto-contain enemies. Q skill repels nearby foes.',
     hp: 115, speed: 3.2, damageMult: 1.0, magnetRadius: 180,
     startWeapon: 'drone', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '드론 폭발', icon: '💥', cd: 14000, desc: '반경 180 적 밀쳐냄 + 폭발 피해 + HP 20% 회복' }
+    activeSkill: { name: '드론 폭발', nameEn: 'Drone Burst', icon: '💥', cd: 14000, desc: '반경 180 적 밀쳐냄 + 폭발 피해 + HP 20% 회복', descEn: 'Repel enemies r180 + explosion + heal 20% HP' }
   },
   sniper: {
-    name: '스캐너', icon: '🎯', color: '#ff4466',
+    name: '스캐너', nameEn: 'Scanner', icon: '🎯', color: '#ff4466',
     desc: '원거리형. 피해량 최고, 원거리에서 코어 저격. 근접 취약.',
+    descEn: 'Ranged. Highest damage, picks off cores at distance. Weak up close.',
     hp: 80, speed: 3.2, damageMult: 1.6, magnetRadius: 70,
     startWeapon: 'missile', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '정밀 스캔', icon: '🎯', cd: 8000, desc: '다음 미사일 5발 피해 5배 + 자동 추적' }
+    activeSkill: { name: '정밀 스캔', nameEn: 'Precision Scan', icon: '🎯', cd: 8000, desc: '다음 미사일 5발 피해 5배 + 자동 추적', descEn: 'Next 5 missiles deal 5× dmg + auto-track' }
   },
   support: {
-    name: '패치봇', icon: '💊', color: '#00ffaa',
+    name: '패치봇', nameEn: 'Patchbot', icon: '💊', color: '#00ffaa',
     desc: '생존형. HP 재생 특화, XP +15%, 리롤 3회. 절대 안 죽는 플레이.',
+    descEn: 'Survivor. HP regen specialist, XP +15%, 3 rerolls. Near-unkillable playstyle.',
     hp: 130, speed: 3.0, damageMult: 0.9, magnetRadius: 130,
     startWeapon: 'drone', rerolls: 3, xpBonus: 1.15,
-    activeSkill: { name: '비상 패치', icon: '💊', cd: 15000, desc: 'HP 25% 즉시 회복 + 20초간 HP 재생 +3/s' }
+    activeSkill: { name: '비상 패치', nameEn: 'Emergency Patch', icon: '💊', cd: 15000, desc: 'HP 25% 즉시 회복 + 20초간 HP 재생 +3/s', descEn: 'Heal 25% HP + regen +3/s for 20s' }
   },
   cracker: {
-    name: '크래커', icon: '🕹️', color: '#ff6600',
+    name: '크래커', nameEn: 'Cracker', icon: '🕹️', color: '#ff6600',
     desc: '조종형. 적을 해킹해 아군으로 전환. Q스킬로 2기 즉시 해킹. 해킹 강화 특화.',
+    descEn: 'Controller. Hack enemies to turn them ally. Q skill instantly hacks 2 foes.',
     hp: 90, speed: 3.3, damageMult: 0.85, magnetRadius: 85,
     startWeapon: 'hack_gun', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '바이러스 주입', icon: '🖥️', cd: 18000, desc: '가장 가까운 적 2기를 즉시 8초간 해킹' }
+    activeSkill: { name: '바이러스 주입', nameEn: 'Virus Inject', icon: '🖥️', cd: 18000, desc: '가장 가까운 적 2기를 즉시 8초간 해킹', descEn: 'Instantly hack 2 nearest enemies for 8s' }
   },
   glitch_dancer: {
-    name: '글리치 댄서', icon: '🕺', color: '#ff88ff',
+    name: '글리치 댄서', nameEn: 'Glitch Dancer', icon: '🕺', color: '#ff88ff',
     desc: '리듬형. command_dance 특화. Q로 즉시 댄스 폭발.',
+    descEn: 'Rhythm type. Command Dance specialist. Q triggers instant dance burst.',
     hp: 85, speed: 3.8, damageMult: 1.1, magnetRadius: 80,
     startWeapon: 'command_dance', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '즉흥 댄스', icon: '💃', cd: 10000, desc: '방향키 콤보 없이 즉시 댄스 폭발 + 댄스 마스터 진화 적용' }
+    activeSkill: { name: '즉흥 댄스', nameEn: 'Improv Dance', icon: '💃', cd: 10000, desc: '방향키 콤보 없이 즉시 댄스 폭발 + 댄스 마스터 진화 적용', descEn: 'Instant dance burst without combo + Dance Master applied' }
   },
   parasite: {
-    name: '패러사이트', icon: '🧬', color: '#88ff44',
+    name: '패러사이트', nameEn: 'Parasite', icon: '🧬', color: '#88ff44',
     desc: '흡수형. 적 처치 시 패턴 흡수(최대 3). Q로 스택 비례 전방위 폭발.',
+    descEn: 'Absorber. Kills absorb patterns (max 3 stacks). Q fires burst scaled by stacks.',
     hp: 95, speed: 3.2, damageMult: 1.0, magnetRadius: 90,
     startWeapon: 'viral_bomb', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '패턴 방출', icon: '🦠', cd: 15000, desc: '흡수 스택 전부 소모 → 스택당 피해+200, 전방위 폭발' }
+    activeSkill: { name: '패턴 방출', nameEn: 'Pattern Release', icon: '🦠', cd: 15000, desc: '흡수 스택 전부 소모 → 스택당 피해+200, 전방위 폭발', descEn: 'Consume all stacks → +200 dmg/stack, omnidirectional burst' }
   },
   jammer: {
-    name: '재머', icon: '📡', color: '#aaffff',
+    name: '재머', nameEn: 'Jammer', icon: '📡', color: '#aaffff',
     desc: '방해형. 이동=펄스 방출, 정지=충전. 충전량 비례 강력 재밍 펄스.',
+    descEn: 'Disruptor. Move=emit pulses, stand still=charge. Power scales with charge.',
     hp: 100, speed: 3.6, damageMult: 0.9, magnetRadius: 90,
     startWeapon: 'zone', rerolls: 2, xpBonus: 1.0,
-    activeSkill: { name: '집중 방해파', icon: '📻', cd: 12000, desc: '이동 방향 전방 120° 콘에 집중 방해파 → 3초 스턴' }
+    activeSkill: { name: '집중 방해파', nameEn: 'Focus Jamwave', icon: '📻', cd: 12000, desc: '이동 방향 전방 120° 콘에 집중 방해파 → 3초 스턴', descEn: '120° cone focused jamwave in move direction → 3s stun' }
   }
 };
 
@@ -101,17 +111,18 @@ const CLASS_UNLOCK_DEFS = {
   hacker:   null,
   cyborg:   null,
   ghost:    null,
-  engineer:      { stat: 'maxStage',       goal: 5,   label: '스테이지 5 이상 도달' },
-  sniper:        { stat: 'totalKills',     goal: 300, label: '바이러스 300마리 격리' },
-  support:       { stat: 'totalBossKills', goal: 3,   label: '바이러스 코어 3회 파괴' },
+  engineer:      { stat: 'maxStage',       goal: 5,   label: '스테이지 5 이상 도달',    labelEn: 'Reach stage 5' },
+  sniper:        { stat: 'totalKills',     goal: 300, label: '바이러스 300마리 격리',   labelEn: 'Eliminate 300 viruses' },
+  support:       { stat: 'totalBossKills', goal: 3,   label: '바이러스 코어 3회 파괴',  labelEn: 'Destroy 3 virus cores' },
   jammer: {
     requires: ['hacker','cyborg','ghost','engineer','sniper','support'],
     stats: [{ stat: 'maxStage', goal: 10 }, { stat: 'totalEliteKills', goal: 200 }],
-    label: '모든 기본 직업 해금 + 스테이지 10 도달 + 엘리트 200 처치'
+    label: '모든 기본 직업 해금 + 스테이지 10 도달 + 엘리트 200 처치',
+    labelEn: 'Unlock all base classes + reach stage 10 + 200 elite kills'
   },
-  cracker:       { requires: ['jammer'],        label: '재머 해금' },
-  glitch_dancer: { requires: ['cracker'],       label: '크래커 해금' },
-  parasite:      { requires: ['glitch_dancer'], label: '글리치 댄서 해금' },
+  cracker:       { requires: ['jammer'],        label: '재머 해금',        labelEn: 'Unlock Jammer' },
+  glitch_dancer: { requires: ['cracker'],       label: '크래커 해금',      labelEn: 'Unlock Cracker' },
+  parasite:      { requires: ['glitch_dancer'], label: '글리치 댄서 해금', labelEn: 'Unlock Glitch Dancer' },
 };
 
 function isClassUnlocked(classId) {
@@ -290,7 +301,7 @@ let obstacles = [];
 // ── 배경 테마 (스테이지별 자동 전환) ──────────────────────────
 const BG_THEMES = [
   { // Stage 1-24: Cyan / Neon — 슬럼 지구
-    zoneName:'🌆 슬럼 지구', zoneTag:'SLUM DISTRICT', zoneColor:'#00f0ff',
+    zoneName:'🌆 슬럼 지구', zoneNameEn:'🌆 Slum District', zoneTag:'SLUM DISTRICT', zoneColor:'#00f0ff',
     bgDark:'#01010a', glow:'rgba(0,18,45,0.4)',
     stars:['#00f0ff','#b026ff','#ffe600'],
     gridRgb:'0,240,255', scanRgb:'0,240,255',
@@ -298,7 +309,7 @@ const BG_THEMES = [
     vignetteColor:'rgba(0,0,10,0.6)'
   },
   { // Stage 25-49: Void / Purple — 서버 팜
-    zoneName:'🖥 서버 팜', zoneTag:'SERVER FARM', zoneColor:'#b026ff',
+    zoneName:'🖥 서버 팜', zoneNameEn:'🖥 Server Farm', zoneTag:'SERVER FARM', zoneColor:'#b026ff',
     bgDark:'#07010e', glow:'rgba(35,0,65,0.45)',
     stars:['#b026ff','#ff00cc','#00f0ff'],
     gridRgb:'160,0,255', scanRgb:'176,38,255',
@@ -306,7 +317,7 @@ const BG_THEMES = [
     vignetteColor:'rgba(5,0,15,0.65)'
   },
   { // Stage 50-74: Crimson / Red — 바이러스 코어
-    zoneName:'☣ 바이러스 코어', zoneTag:'VIRUS CORE', zoneColor:'#ff4466',
+    zoneName:'☣ 바이러스 코어', zoneNameEn:'☣ Virus Core', zoneTag:'VIRUS CORE', zoneColor:'#ff4466',
     bgDark:'#0a0101', glow:'rgba(50,0,5,0.45)',
     stars:['#ff4466','#ff8800','#ffe600'],
     gridRgb:'255,50,80', scanRgb:'255,68,102',
@@ -314,7 +325,7 @@ const BG_THEMES = [
     vignetteColor:'rgba(12,0,0,0.65)'
   },
   { // Stage 75-99: Matrix / Green — 붕괴 지대
-    zoneName:'💀 붕괴 지대', zoneTag:'COLLAPSE ZONE', zoneColor:'#39ff14',
+    zoneName:'💀 붕괴 지대', zoneNameEn:'💀 Collapse Zone', zoneTag:'COLLAPSE ZONE', zoneColor:'#39ff14',
     bgDark:'#000a01', glow:'rgba(0,30,5,0.4)',
     stars:['#39ff14','#00f0ff','#ffe600'],
     gridRgb:'57,255,20', scanRgb:'57,255,20',
@@ -322,7 +333,7 @@ const BG_THEMES = [
     vignetteColor:'rgba(0,8,0,0.65)'
   },
   { // Stage 100+: Endless / Gold — 엔드리스 존
-    zoneName:'∞ 엔드리스 존', zoneTag:'ENDLESS ZONE', zoneColor:'#ffe600',
+    zoneName:'∞ 엔드리스 존', zoneNameEn:'∞ Endless Zone', zoneTag:'ENDLESS ZONE', zoneColor:'#ffe600',
     bgDark:'#060400', glow:'rgba(60,40,0,0.45)',
     stars:['#ffe600','#ff8800','#ffffff'],
     gridRgb:'255,200,0', scanRgb:'255,230,0',
@@ -363,7 +374,7 @@ function showZoneEntryOverlay(th) {
   if (!ov || !tagEl || !nameEl) return;
   ov.style.color = th.zoneColor;
   tagEl.textContent  = `— ${th.zoneTag} —`;
-  nameEl.textContent = th.zoneName;
+  nameEl.textContent = (typeof LANG !== 'undefined' && LANG === 'en' && th.zoneNameEn) ? th.zoneNameEn : th.zoneName;
   ov.classList.remove('active');
   void ov.offsetWidth; // reflow for re-animation
   ov.classList.add('active');
@@ -380,7 +391,7 @@ function showZoneEntryOverlay(th) {
 function updateZoneHUDBadge(th) {
   const badge = document.getElementById('zone-hud-badge');
   if (!badge) return;
-  badge.textContent = th.zoneName;
+  badge.textContent = (typeof LANG !== 'undefined' && LANG === 'en' && th.zoneNameEn) ? th.zoneNameEn : th.zoneName;
   badge.style.color = th.zoneColor;
   badge.style.borderColor = th.zoneColor;
   badge.style.textShadow = `0 0 6px ${th.zoneColor}`;
@@ -453,30 +464,30 @@ const BEAT_CHAIN_DECAY = 4000;   // ms
 
 // ─── 랜덤 필드 이벤트 시스템 ───
 const FIELD_EVENTS = [
-  { id: 'core_surge',      icon: '💫', name: '코어 서지',     color: '#00f0ff', duration: 6000,
-    desc: 'XP 흡수량 3배! 젬을 최대한 수집하세요.' },
-  { id: 'virus_frenzy',    icon: '⚡', name: '바이러스 광란',  color: '#ff4400', duration: 9000,
-    desc: '모든 적 이동속도 1.7배! 살아남으세요.' },
-  { id: 'emf_pulse',       icon: '🔵', name: 'EMF 펄스',     color: '#39ff14', duration: 1200,
-    desc: '전자기 펄스 발사! 범위 내 적 2.5초 스턴.' },
-  { id: 'golden_rush',     icon: '💰', name: '골든 러쉬',     color: '#ffe600', duration: 7000,
-    desc: '황금의 시간! 모든 처치 시 골드 3배 드롭.' },
-  { id: 'data_storm',      icon: '🌪️', name: '데이터 폭풍',   color: '#b026ff', duration: 10000,
-    desc: '혼돈의 폭풍! 적들이 불규칙하게 이동합니다.' },
-  { id: 'elite_invasion',  icon: '👾', name: '엘리트 침공',   color: '#ff6600', duration: 12000,
-    desc: '정예 바이러스 8기 긴급 침투! 20% 속도 강화 상태입니다.' },
-  { id: 'virus_surge',     icon: '🦠', name: '바이러스 급증', color: '#ff0066', duration: 1200,
-    desc: '바이러스 대량 출현! 25기가 동시에 쏟아집니다.' },
-  { id: 'core_overload',   icon: '🔥', name: '코어 과부하',   color: '#ff8800', duration: 8000,
-    desc: '공격력 3배 상승! 하지만 받는 피해도 1.5배 증가합니다.' },
-  { id: 'phantom_shift',   icon: '👁', name: '팬텀 시프트',   color: '#8800ff', duration: 7000,
-    desc: '적들의 추적 AI 오작동! 혼란 상태로 무작위 이동합니다.' },
-  { id: 'freeze_zone',     icon: '❄️', name: '프리즈 존',     color: '#00cfff', duration: 10000,
-    desc: '냉각 필드 발생! 10초간 모든 적 이동속도 -60% 감소합니다.' },
-  { id: 'repair_drone',    icon: '🔧', name: '수리 드론',     color: '#39ff14', duration: 15000,
-    desc: '수리 드론 출동! 15초간 매초 HP 5를 자동 회복합니다.' },
-  { id: 'cyber_mine_field',icon: '💣', name: '마인 필드',     color: '#ff8800', duration: 1200,
-    desc: '자동 마인 배치! 주변 랜덤 위치에 사이버 마인 8개가 설치됩니다.' }
+  { id: 'core_surge',      icon: '💫', name: '코어 서지',     nameEn: 'Core Surge',        color: '#00f0ff', duration: 6000,
+    desc: 'XP 흡수량 3배! 젬을 최대한 수집하세요.',                         descEn: 'XP gain ×3! Collect as many gems as possible.' },
+  { id: 'virus_frenzy',    icon: '⚡', name: '바이러스 광란',  nameEn: 'Virus Frenzy',      color: '#ff4400', duration: 9000,
+    desc: '모든 적 이동속도 1.7배! 살아남으세요.',                           descEn: 'All enemy move speed ×1.7! Survive!' },
+  { id: 'emf_pulse',       icon: '🔵', name: 'EMF 펄스',     nameEn: 'EMF Pulse',          color: '#39ff14', duration: 1200,
+    desc: '전자기 펄스 발사! 범위 내 적 2.5초 스턴.',                       descEn: 'Electromagnetic pulse fires! Stuns enemies in range for 2.5s.' },
+  { id: 'golden_rush',     icon: '💰', name: '골든 러쉬',     nameEn: 'Golden Rush',        color: '#ffe600', duration: 7000,
+    desc: '황금의 시간! 모든 처치 시 골드 3배 드롭.',                       descEn: 'Golden moment! All kills drop ×3 gold.' },
+  { id: 'data_storm',      icon: '🌪️', name: '데이터 폭풍',   nameEn: 'Data Storm',         color: '#b026ff', duration: 10000,
+    desc: '혼돈의 폭풍! 적들이 불규칙하게 이동합니다.',                     descEn: 'Chaos storm! Enemies move erratically.' },
+  { id: 'elite_invasion',  icon: '👾', name: '엘리트 침공',   nameEn: 'Elite Invasion',     color: '#ff6600', duration: 12000,
+    desc: '정예 바이러스 8기 긴급 침투! 20% 속도 강화 상태입니다.',         descEn: '8 elite viruses infiltrate! Moving at 20% extra speed.' },
+  { id: 'virus_surge',     icon: '🦠', name: '바이러스 급증', nameEn: 'Virus Surge',        color: '#ff0066', duration: 1200,
+    desc: '바이러스 대량 출현! 25기가 동시에 쏟아집니다.',                   descEn: 'Mass outbreak! 25 viruses flood the area simultaneously.' },
+  { id: 'core_overload',   icon: '🔥', name: '코어 과부하',   nameEn: 'Core Overload',      color: '#ff8800', duration: 8000,
+    desc: '공격력 3배 상승! 하지만 받는 피해도 1.5배 증가합니다.',          descEn: 'Attack power ×3! But damage taken also ×1.5.' },
+  { id: 'phantom_shift',   icon: '👁', name: '팬텀 시프트',   nameEn: 'Phantom Shift',      color: '#8800ff', duration: 7000,
+    desc: '적들의 추적 AI 오작동! 혼란 상태로 무작위 이동합니다.',          descEn: 'Enemy AI malfunctions! Enemies move randomly in confusion.' },
+  { id: 'freeze_zone',     icon: '❄️', name: '프리즈 존',     nameEn: 'Freeze Zone',        color: '#00cfff', duration: 10000,
+    desc: '냉각 필드 발생! 10초간 모든 적 이동속도 -60% 감소합니다.',       descEn: 'Cryo field active! All enemy move speed -60% for 10s.' },
+  { id: 'repair_drone',    icon: '🔧', name: '수리 드론',     nameEn: 'Repair Drone',       color: '#39ff14', duration: 15000,
+    desc: '수리 드론 출동! 15초간 매초 HP 5를 자동 회복합니다.',            descEn: 'Repair drone deployed! Auto-heals 5 HP/s for 15s.' },
+  { id: 'cyber_mine_field',icon: '💣', name: '마인 필드',     nameEn: 'Cyber Mine Field',   color: '#ff8800', duration: 1200,
+    desc: '자동 마인 배치! 주변 랜덤 위치에 사이버 마인 8개가 설치됩니다.', descEn: 'Auto mine deployment! 8 cyber mines planted at random nearby positions.' }
 ];
 let fieldEventTimer    = 0;
 let fieldEventInterval = 40000 + Math.random() * 20000;
@@ -485,43 +496,43 @@ let activeFieldEvent   = null;
 // ─── 무기 시너지 정의 ───
 const SYNERGY_DEFS = [
   {
-    id: 'lightning_storm', name: '번개 폭풍', icon: '⚡',
+    id: 'lightning_storm', name: '번개 폭풍', nameEn: 'Lightning Storm', icon: '⚡',
     desc: '피해량 +20%, 이동속도 +10%',
     weapons: ['flare', 'zone'],
     apply: (p) => { p.damageMultiplier *= 1.20; p.speed *= 1.10; }
   },
   {
-    id: 'orbital_network', name: '궤도 네트워크', icon: '🌀',
+    id: 'orbital_network', name: '궤도 네트워크', nameEn: 'Orbital Network', icon: '🌀',
     desc: '피해량 +20%, 최대 HP +40',
     weapons: ['orbiter', 'drone'],
     apply: (p) => { p.damageMultiplier *= 1.20; p.maxHp += 40; p.hp = Math.min(p.hp+40, p.maxHp); }
   },
   {
-    id: 'void_collapse', name: '공허 붕괴', icon: '🌑',
+    id: 'void_collapse', name: '공허 붕괴', nameEn: 'Void Collapse', icon: '🌑',
     desc: '피해량 +25%, 자석 범위 +30%',
     weapons: ['blackhole', 'ring'],
     apply: (p) => { p.damageMultiplier *= 1.25; p.magnetRadius *= 1.30; }
   },
   {
-    id: 'chain_barrage', name: '연쇄 포격', icon: '🔗',
+    id: 'chain_barrage', name: '연쇄 포격', nameEn: 'Chain Barrage', icon: '🔗',
     desc: '피해량 +20%, 이동속도 +15%',
     weapons: ['chain', 'missile'],
     apply: (p) => { p.damageMultiplier *= 1.20; p.speed *= 1.15; }
   },
   {
-    id: 'cluster_bomb', name: '집속 폭탄', icon: '💥',
+    id: 'cluster_bomb', name: '집속 폭탄', nameEn: 'Cluster Bomb', icon: '💥',
     desc: '피해량 +20%, 폭발 피해 +30%',
     weapons: ['mine', 'boomerang'],
     apply: (p) => { p.damageMultiplier *= 1.20; }
   },
   {
-    id: 'ghost_protocol', name: '고스트 프로토콜', icon: '👻',
+    id: 'ghost_protocol', name: '고스트 프로토콜', nameEn: 'Ghost Protocol', icon: '👻',
     desc: '피해량 +20%, 속도 +12%',
     weapons: ['laser', 'boomerang'],
     apply: (p) => { p.damageMultiplier *= 1.20; p.speed *= 1.12; }
   },
   {
-    id: 'digital_storm', name: '디지털 폭풍', icon: '🌪',
+    id: 'digital_storm', name: '디지털 폭풍', nameEn: 'Digital Storm', icon: '🌪',
     desc: '피해량 +30%, 이동속도 +10%',
     weapons: ['chain', 'zone'],
     apply: (p) => { p.damageMultiplier *= 1.30; p.speed *= 1.10; }
@@ -530,76 +541,16 @@ const SYNERGY_DEFS = [
 
 // ─── 무기 융합 진화 정의 (두 무기 모두 Lv5 → 특별 카드 등장) ───
 const WEAPON_FUSIONS = [
-  {
-    id: 'arc_flare',
-    name: '아크 플레어',
-    icon: '✨⚡',
-    weapons: ['flare', 'chain'],
-    desc: '플레어 투사체 충돌 시 주변 2체에 연쇄 전격 발생. 투사체당 +2 체인!'
-  },
-  {
-    id: 'hellfire_drone',
-    name: '헬파이어 드론',
-    icon: '🛸🚀',
-    weapons: ['drone', 'missile'],
-    desc: '드론이 총알 대신 유도 미사일 발사. 드론 1기당 추적 미사일 발사!'
-  },
-  {
-    id: 'nova_collapse',
-    name: '노바 콜랩스',
-    icon: '🌑💥',
-    weapons: ['blackhole', 'ring'],
-    desc: '블랙홀 붕괴 시 12방향 폭발 투사체 발사. 광역 즉사 연쇄!'
-  },
-  {
-    id: 'spectrum_blade',
-    name: '스펙트럼 블레이드',
-    icon: '🚨🪃',
-    weapons: ['laser', 'boomerang'],
-    desc: '레이저 발사 시 수직 방향 부메랑 2개 동시 발사. 광역 + 회전 복합 공격!'
-  },
-  {
-    id: 'mine_orbital',
-    name: '폭발 오비탈',
-    icon: '🌀💣',
-    weapons: ['orbiter', 'mine'],
-    desc: '오비터가 적 접근 시 마인 자동 투하. 공전 중 폭탄 밭 자동 형성!'
-  },
-  {
-    id: 'dance_master',
-    name: '댄스 마스터',
-    icon: '🕺💥',
-    weapons: ['command_dance', 'orbiter'],
-    desc: '커맨드 성공 시 8방향 투사체 추가 발사. 오비터가 댄스 폭발과 연동!'
-  },
-  {
-    id: 'pandemic',
-    name: '팬데믹',
-    icon: '🦠💀',
-    weapons: ['viral_bomb', 'mine'],
-    desc: '바이러스 폭발 피해 +50%, 감염 반경 +40px. 마인과 감염 공간 제압!'
-  },
-  {
-    id: 'critical_collapse',
-    name: '임계 붕괴',
-    icon: '🔊💥',
-    weapons: ['resonance', 'blackhole'],
-    desc: '공명 폭발이 인접 적에게 2스택 전이. 블랙홀 흡입 + 공명 조합!'
-  },
-  {
-    id: 'virus_takeover',
-    name: '바이러스 장악',
-    icon: '💻🦠',
-    weapons: ['hack_gun', 'viral_bomb'],
-    desc: '해킹된 적 사망 시 주변 1체 즉시 감염. 해킹 + 바이러스 무한 연쇄!'
-  },
-  {
-    id: 'critical_discharge',
-    name: '임계 방전',
-    icon: '⚡🔗',
-    weapons: ['overcharge', 'chain'],
-    desc: '방전 시 전격 연쇄 4체 추가 타격. 오버차지 + 체인 최강 광역!'
-  }
+  { id: 'arc_flare',          name: '아크 플레어',     nameEn: 'Arc Flare',          icon: '✨⚡', weapons: ['flare', 'chain'],         desc: '플레어 투사체 충돌 시 주변 2체에 연쇄 전격 발생. 투사체당 +2 체인!',               descEn: 'Flare hits trigger chain lightning on 2 nearby foes. +2 chains per projectile!' },
+  { id: 'hellfire_drone',     name: '헬파이어 드론',   nameEn: 'Hellfire Drone',     icon: '🛸🚀', weapons: ['drone', 'missile'],       desc: '드론이 총알 대신 유도 미사일 발사. 드론 1기당 추적 미사일 발사!',               descEn: 'Drones fire homing missiles instead of bullets. 1 tracking missile per drone!' },
+  { id: 'nova_collapse',      name: '노바 콜랩스',     nameEn: 'Nova Collapse',      icon: '🌑💥', weapons: ['blackhole', 'ring'],      desc: '블랙홀 붕괴 시 12방향 폭발 투사체 발사. 광역 즉사 연쇄!',                       descEn: 'Blackhole collapse fires 12-way burst projectiles. Area instant-kill chain!' },
+  { id: 'spectrum_blade',     name: '스펙트럼 블레이드',nameEn: 'Spectrum Blade',     icon: '🚨🪃', weapons: ['laser', 'boomerang'],     desc: '레이저 발사 시 수직 방향 부메랑 2개 동시 발사. 광역 + 회전 복합 공격!',         descEn: 'Laser fires 2 perpendicular boomerangs simultaneously. Area + rotation combo!' },
+  { id: 'mine_orbital',       name: '폭발 오비탈',     nameEn: 'Mine Orbital',       icon: '🌀💣', weapons: ['orbiter', 'mine'],        desc: '오비터가 적 접근 시 마인 자동 투하. 공전 중 폭탄 밭 자동 형성!',               descEn: 'Orbiter auto-drops mines on enemy approach. Creates a mine field while orbiting!' },
+  { id: 'dance_master',       name: '댄스 마스터',     nameEn: 'Dance Master',       icon: '🕺💥', weapons: ['command_dance', 'orbiter'],desc: '커맨드 성공 시 8방향 투사체 추가 발사. 오비터가 댄스 폭발과 연동!',             descEn: 'Successful command fires 8-way burst. Orbiter syncs with dance explosions!' },
+  { id: 'pandemic',           name: '팬데믹',           nameEn: 'Pandemic',           icon: '🦠💀', weapons: ['viral_bomb', 'mine'],     desc: '바이러스 폭발 피해 +50%, 감염 반경 +40px. 마인과 감염 공간 제압!',             descEn: 'Virus explosion dmg +50%, infection radius +40px. Mines dominate infected zones!' },
+  { id: 'critical_collapse',  name: '임계 붕괴',       nameEn: 'Critical Collapse',  icon: '🔊💥', weapons: ['resonance', 'blackhole'], desc: '공명 폭발이 인접 적에게 2스택 전이. 블랙홀 흡입 + 공명 조합!',                 descEn: 'Resonance blasts transfer 2 stacks to adjacent foes. Blackhole + resonance combo!' },
+  { id: 'virus_takeover',     name: '바이러스 장악',   nameEn: 'Virus Takeover',     icon: '💻🦠', weapons: ['hack_gun', 'viral_bomb'], desc: '해킹된 적 사망 시 주변 1체 즉시 감염. 해킹 + 바이러스 무한 연쇄!',             descEn: 'Hacked foe death instantly infects 1 nearby enemy. Hack + virus infinite chain!' },
+  { id: 'critical_discharge', name: '임계 방전',       nameEn: 'Critical Discharge', icon: '⚡🔗', weapons: ['overcharge', 'chain'],    desc: '방전 시 전격 연쇄 4체 추가 타격. 오버차지 + 체인 최강 광역!',                   descEn: 'Discharge chains lightning to 4 more targets. Overcharge + chain ultimate AoE!' }
 ];
 
 // ─── 미션 풀 ───────────────────────────────────────────────────
@@ -718,8 +669,8 @@ function toggleMissionPanel() {
 const CURSE_DEFS = [
   {
     id: 'curse_hp',
-    debuff: '최대 HP -25%',
-    reward: '보유한 모든 무기 레벨 +1 즉시',
+    debuff: '최대 HP -25%',      debuffEn: 'Max HP -25%',
+    reward: '보유한 모든 무기 레벨 +1 즉시', rewardEn: 'All weapons level +1 instantly',
     debuffFn: (p) => { const lose = Math.floor(p.maxHp * 0.25); p.maxHp -= lose; p.hp = Math.min(p.hp, p.maxHp); },
     rewardFn: () => {
       for (let key in player.weapons) {
@@ -731,28 +682,28 @@ const CURSE_DEFS = [
   },
   {
     id: 'curse_speed',
-    debuff: '이동속도 -25%',
-    reward: '피해량 영구 +50%',
+    debuff: '이동속도 -25%',     debuffEn: 'Move speed -25%',
+    reward: '피해량 영구 +50%',  rewardEn: 'Damage permanently +50%',
     debuffFn: (p) => { const red = p.cursePenaltyReduce || 0; p.speed *= (1 - 0.25 * (1 - red)); },
-    rewardFn: () => { player.damageMultiplier *= 1.50; addFloatingText(player.x, player.y-50, '🔥 피해 +50%!', '#ff6600', 16); }
+    rewardFn: () => { player.damageMultiplier *= 1.50; addFloatingText(player.x, player.y-50, LANG === 'en' ? '🔥 DMG +50%!' : '🔥 피해 +50%!', '#ff6600', 16); }
   },
   {
     id: 'curse_dmg',
-    debuff: '받는 피해 +40%',
-    reward: '리롤 +5회, 골드 +30 즉시',
+    debuff: '받는 피해 +40%',    debuffEn: 'Damage taken +40%',
+    reward: '리롤 +5회, 골드 +30 즉시', rewardEn: 'Rerolls +5, Gold +30 instantly',
     debuffFn: (p) => { const red = p.cursePenaltyReduce || 0; p._curseDamageMult = (p._curseDamageMult || 1) * (1 + (0.40 * (1 - red))); },
     rewardFn: () => {
       rerollUses += 5;
       if (player) player.gold += 30;
-      addFloatingText(player.x, player.y-50, '🔄 리롤 +5 · 💰 +30G!', '#b026ff', 15);
+      addFloatingText(player.x, player.y-50, '🔄 Reroll +5 · 💰 +30G!', '#b026ff', 15);
     }
   },
   {
     id: 'curse_magnet',
-    debuff: '젬 자석 범위 -50%',
-    reward: '골드 +40 즉시 획득',
+    debuff: '젬 자석 범위 -50%', debuffEn: 'Gem magnet range -50%',
+    reward: '골드 +40 즉시 획득', rewardEn: 'Gain +40 Gold instantly',
     debuffFn: (p) => { p.magnetRadius *= 0.50; },
-    rewardFn: () => { player.gold += 40; addFloatingText(player.x, player.y-50, '💰 +40 골드!', '#ffe600', 16); }
+    rewardFn: () => { player.gold += 40; addFloatingText(player.x, player.y-50, LANG === 'en' ? '💰 +40 Gold!' : '💰 +40 골드!', '#ffe600', 16); }
   }
 ];
 
@@ -943,57 +894,56 @@ const META_UPGRADES = [
 ];
 
 const ACHIEVEMENTS = [
-  { id: 'ach_first',    icon: '🦠', name: '첫 격리',         desc: '바이러스 1마리 격리',          reward: 1  },
-  { id: 'ach_hunter',   icon: '⚔️', name: '바이러스 헌터',   desc: '바이러스 100마리 격리',        reward: 3  },
-  { id: 'ach_survivor', icon: '🛡️', name: '방화벽 유지',     desc: '스테이지 5 돌파',              reward: 3  },
-  { id: 'ach_stage10',  icon: '🏆', name: '시스템 수호자',   desc: '스테이지 10 돌파',             reward: 6  },
-  { id: 'ach_evolved',  icon: '✨', name: '시스템 진화',     desc: '백신 모듈 진화 1회',           reward: 5  },
-  { id: 'ach_combo',    icon: '🎯', name: '연속 격리',       desc: '콤보 25 이상 달성',            reward: 3  },
-  { id: 'ach_gold',     icon: '💾', name: '코어 수집가',     desc: '골드 50 이상 보유',            reward: 3  },
-  { id: 'ach_endless',  icon: '∞',  name: '무한 방어 프로토콜', desc: '무한 모드 진입',            reward: 12 },
-  // 트루 엔딩 힌트 업적
-  { id: 'ach_absorb30',   icon: '🧬', name: '흡수 적응',       desc: '패러사이트로 런 중 30회 흡수. 더 깊이 들어가라.', reward: 8 },
-  { id: 'ach_hidden_trio', icon: '🔓', name: '히든 마스터',    desc: '재머·크래커·글리치 댄서 완전 마스터. ...문이 열릴 것 같다.', reward: 20 },
-  { id: 'ach_true_ending', icon: '🦠', name: 'VIRUS ERADICATED', desc: '패러사이트 트루 엔딩 달성. 진실을 보았다.', reward: 50 }
+  { id: 'ach_first',    icon: '🦠', name: '첫 격리',            nameEn: 'First Containment',     desc: '바이러스 1마리 격리',          descEn: 'Contain 1 virus',                    reward: 1  },
+  { id: 'ach_hunter',   icon: '⚔️', name: '바이러스 헌터',      nameEn: 'Virus Hunter',           desc: '바이러스 100마리 격리',        descEn: 'Contain 100 viruses',                reward: 3  },
+  { id: 'ach_survivor', icon: '🛡️', name: '방화벽 유지',        nameEn: 'Firewall Intact',        desc: '스테이지 5 돌파',              descEn: 'Clear Stage 5',                      reward: 3  },
+  { id: 'ach_stage10',  icon: '🏆', name: '시스템 수호자',      nameEn: 'System Guardian',        desc: '스테이지 10 돌파',             descEn: 'Clear Stage 10',                     reward: 6  },
+  { id: 'ach_evolved',  icon: '✨', name: '시스템 진화',        nameEn: 'System Evolution',       desc: '백신 모듈 진화 1회',           descEn: 'Evolve a vaccine module once',       reward: 5  },
+  { id: 'ach_combo',    icon: '🎯', name: '연속 격리',          nameEn: 'Combo Containment',      desc: '콤보 25 이상 달성',            descEn: 'Achieve combo 25 or higher',         reward: 3  },
+  { id: 'ach_gold',     icon: '💾', name: '코어 수집가',        nameEn: 'Core Collector',         desc: '골드 50 이상 보유',            descEn: 'Accumulate 50 or more gold',         reward: 3  },
+  { id: 'ach_endless',  icon: '∞',  name: '무한 방어 프로토콜', nameEn: 'Endless Defense Protocol',desc: '무한 모드 진입',              descEn: 'Enter endless mode',                 reward: 12 },
+  { id: 'ach_absorb30',   icon: '🧬', name: '흡수 적응',       nameEn: 'Absorption Adapted',     desc: '패러사이트로 런 중 30회 흡수. 더 깊이 들어가라.', descEn: 'Absorb 30 times as Parasite in one run. Go deeper.', reward: 8 },
+  { id: 'ach_hidden_trio', icon: '🔓', name: '히든 마스터',    nameEn: 'Hidden Master',          desc: '재머·크래커·글리치 댄서 완전 마스터. ...문이 열릴 것 같다.', descEn: 'Master Jammer · Cracker · Glitch Dancer. ...A door seems to be opening.', reward: 20 },
+  { id: 'ach_true_ending', icon: '🦠', name: 'VIRUS ERADICATED', nameEn: 'VIRUS ERADICATED',    desc: '패러사이트 트루 엔딩 달성. 진실을 보았다.', descEn: 'Achieve Parasite true ending. You have seen the truth.', reward: 50 }
 ];
 
 const CLOUD_ACHIEVEMENTS = [
-  { id: 'kill_500',    name: '격리 전문가',     icon: '⚔',  desc: '바이러스 500마리 격리',  stat: 'totalKills',      goal: 500   },
-  { id: 'kill_5000',   name: '네온 박멸자',     icon: '💀',  desc: '바이러스 5000마리 격리', stat: 'totalKills',      goal: 5000  },
-  { id: 'kill_50000',  name: '사이버 신',       icon: '🔥',  desc: '바이러스 5만 마리 격리', stat: 'totalKills',      goal: 50000 },
-  { id: 'boss_5',      name: '코어 파괴자',     icon: '👑',  desc: '바이러스 코어 5회 파괴', stat: 'totalBossKills',  goal: 5     },
-  { id: 'boss_20',     name: '코어 킬러',       icon: '💥',  desc: '바이러스 코어 20회 파괴',stat: 'totalBossKills',  goal: 20    },
-  { id: 'stage_20',    name: '하이퍼 방어막',   icon: '⚡',  desc: '스테이지 20 돌파',       stat: 'maxStage',        goal: 20    },
-  { id: 'stage_50',    name: '디지털 레전드',   icon: '🌀',  desc: '스테이지 50 돌파',       stat: 'maxStage',        goal: 50    },
-  { id: 'stage_100',   name: '프로토콜 완료',   icon: '🏆',  desc: '스테이지 100 돌파',      stat: 'maxStage',        goal: 100   },
-  { id: 'time_600',    name: '10분 방어',       icon: '⏱',  desc: '단일 세션 10분 생존',    stat: 'maxSurviveTime',  goal: 600   },
-  { id: 'time_1800',   name: '30분 방어',       icon: '⌛',  desc: '단일 세션 30분 생존',    stat: 'maxSurviveTime',  goal: 1800  },
-  { id: 'evolve_5',    name: '업그레이드 마니아',icon: '🔮', desc: '백신 모듈 진화 5회',     stat: 'totalEvolutions', goal: 5     },
-  { id: 'evolve_20',   name: '진화의 신',       icon: '💎',  desc: '백신 모듈 진화 20회',    stat: 'totalEvolutions', goal: 20    },
-  { id: 'mp_first',    name: '네트워크 데뷔',   icon: '🌐',  desc: '멀티 첫 세션',           stat: 'mpGamesPlayed',   goal: 1     },
-  { id: 'mp_win',      name: '네트워크 지배자', icon: '🥊',  desc: '경쟁 모드 1위',          stat: 'mpBattleWins',    goal: 1     },
-  { id: 'mp_revive3',  name: '불사 프로토콜',   icon: '🔄',  desc: '멀티 부활 3회',          stat: 'mpRevives',       goal: 3     },
-  { id: 'games_10',    name: '방어 루틴 가동',  icon: '🎮',  desc: '10번 세션 플레이',       stat: 'totalGamesPlayed',goal: 10    },
-  { id: 'games_50',    name: '시스템 마스터',   icon: '🌟',  desc: '50번 세션 플레이',       stat: 'totalGamesPlayed',goal: 50    },
-  { id: 'boss_50',     name: '코어 헌터',       icon: '🩸',  desc: '바이러스 코어 50회 파괴',stat: 'totalBossKills',  goal: 50    },
-  { id: 'kills_1000',  name: '바이러스 박멸자', icon: '🦠',  desc: '바이러스 1000마리 격리', stat: 'totalKills',      goal: 1000  },
-  { id: 'combo_30',    name: '연속 격리 달인',  icon: '🎯',  desc: '최대 콤보 30 달성',      stat: 'maxCombo',        goal: 30    },
-  { id: 'combo_75',    name: '격리 체인 신',    icon: '⚡',  desc: '최대 콤보 75 달성',      stat: 'maxCombo',        goal: 75    },
-  { id: 'survive_20m', name: '20분 방어',       icon: '🕐',  desc: '단일 세션 20분 생존',    stat: 'maxSurviveTime',  goal: 1200  },
-  { id: 'mp_battle3',  name: '네트워크 고수',   icon: '🏅',  desc: '경쟁 모드 3회 우승',     stat: 'mpBattleWins',    goal: 3     },
+  { id: 'kill_500',    name: '격리 전문가',      nameEn: 'Containment Expert',   icon: '⚔',  desc: '바이러스 500마리 격리',   descEn: 'Contain 500 viruses',    stat: 'totalKills',      goal: 500   },
+  { id: 'kill_5000',   name: '네온 박멸자',      nameEn: 'Neon Eliminator',      icon: '💀',  desc: '바이러스 5000마리 격리',  descEn: 'Contain 5000 viruses',   stat: 'totalKills',      goal: 5000  },
+  { id: 'kill_50000',  name: '사이버 신',        nameEn: 'Cyber God',            icon: '🔥',  desc: '바이러스 5만 마리 격리',  descEn: 'Contain 50000 viruses',  stat: 'totalKills',      goal: 50000 },
+  { id: 'boss_5',      name: '코어 파괴자',      nameEn: 'Core Destroyer',       icon: '👑',  desc: '바이러스 코어 5회 파괴',  descEn: 'Destroy 5 virus cores',  stat: 'totalBossKills',  goal: 5     },
+  { id: 'boss_20',     name: '코어 킬러',        nameEn: 'Core Killer',          icon: '💥',  desc: '바이러스 코어 20회 파괴', descEn: 'Destroy 20 virus cores', stat: 'totalBossKills',  goal: 20    },
+  { id: 'stage_20',    name: '하이퍼 방어막',    nameEn: 'Hyper Firewall',       icon: '⚡',  desc: '스테이지 20 돌파',        descEn: 'Clear Stage 20',         stat: 'maxStage',        goal: 20    },
+  { id: 'stage_50',    name: '디지털 레전드',    nameEn: 'Digital Legend',       icon: '🌀',  desc: '스테이지 50 돌파',        descEn: 'Clear Stage 50',         stat: 'maxStage',        goal: 50    },
+  { id: 'stage_100',   name: '프로토콜 완료',    nameEn: 'Protocol Complete',    icon: '🏆',  desc: '스테이지 100 돌파',       descEn: 'Clear Stage 100',        stat: 'maxStage',        goal: 100   },
+  { id: 'time_600',    name: '10분 방어',        nameEn: '10-Min Defense',       icon: '⏱',  desc: '단일 세션 10분 생존',     descEn: 'Survive 10 minutes',     stat: 'maxSurviveTime',  goal: 600   },
+  { id: 'time_1800',   name: '30분 방어',        nameEn: '30-Min Defense',       icon: '⌛',  desc: '단일 세션 30분 생존',     descEn: 'Survive 30 minutes',     stat: 'maxSurviveTime',  goal: 1800  },
+  { id: 'evolve_5',    name: '업그레이드 마니아', nameEn: 'Upgrade Maniac',      icon: '🔮',  desc: '백신 모듈 진화 5회',      descEn: 'Evolve modules 5 times', stat: 'totalEvolutions', goal: 5     },
+  { id: 'evolve_20',   name: '진화의 신',        nameEn: 'God of Evolution',     icon: '💎',  desc: '백신 모듈 진화 20회',     descEn: 'Evolve modules 20 times',stat: 'totalEvolutions', goal: 20    },
+  { id: 'mp_first',    name: '네트워크 데뷔',    nameEn: 'Network Debut',        icon: '🌐',  desc: '멀티 첫 세션',            descEn: 'First multiplayer session',stat:'mpGamesPlayed',  goal: 1     },
+  { id: 'mp_win',      name: '네트워크 지배자',  nameEn: 'Network Dominator',    icon: '🥊',  desc: '경쟁 모드 1위',           descEn: 'Rank 1st in battle mode', stat: 'mpBattleWins',    goal: 1     },
+  { id: 'mp_revive3',  name: '불사 프로토콜',    nameEn: 'Undying Protocol',     icon: '🔄',  desc: '멀티 부활 3회',           descEn: 'Respawn 3 times in MP',   stat: 'mpRevives',       goal: 3     },
+  { id: 'games_10',    name: '방어 루틴 가동',   nameEn: 'Defense Routine Active',icon: '🎮', desc: '10번 세션 플레이',        descEn: 'Play 10 sessions',        stat: 'totalGamesPlayed',goal: 10    },
+  { id: 'games_50',    name: '시스템 마스터',    nameEn: 'System Master',        icon: '🌟',  desc: '50번 세션 플레이',        descEn: 'Play 50 sessions',        stat: 'totalGamesPlayed',goal: 50    },
+  { id: 'boss_50',     name: '코어 헌터',        nameEn: 'Core Hunter',          icon: '🩸',  desc: '바이러스 코어 50회 파괴', descEn: 'Destroy 50 virus cores',  stat: 'totalBossKills',  goal: 50    },
+  { id: 'kills_1000',  name: '바이러스 박멸자',  nameEn: 'Virus Annihilator',    icon: '🦠',  desc: '바이러스 1000마리 격리',  descEn: 'Contain 1000 viruses',    stat: 'totalKills',      goal: 1000  },
+  { id: 'combo_30',    name: '연속 격리 달인',   nameEn: 'Combo Master',         icon: '🎯',  desc: '최대 콤보 30 달성',       descEn: 'Achieve max combo 30',    stat: 'maxCombo',        goal: 30    },
+  { id: 'combo_75',    name: '격리 체인 신',     nameEn: 'Chain God',            icon: '⚡',  desc: '최대 콤보 75 달성',       descEn: 'Achieve max combo 75',    stat: 'maxCombo',        goal: 75    },
+  { id: 'survive_20m', name: '20분 방어',        nameEn: '20-Min Defense',       icon: '🕐',  desc: '단일 세션 20분 생존',     descEn: 'Survive 20 minutes',      stat: 'maxSurviveTime',  goal: 1200  },
+  { id: 'mp_battle3',  name: '네트워크 고수',    nameEn: 'Network Veteran',      icon: '🏅',  desc: '경쟁 모드 3회 우승',      descEn: 'Win battle mode 3 times', stat: 'mpBattleWins',    goal: 3     },
   // ── 히든 업적 ──────────────────────────────────────────
-  { id: 'hidden_dedicated', hidden: true, realName: '이름 없는 방어자', name: '???', icon: '🌙', desc: '100번 세션 플레이',          stat: 'totalGamesPlayed', goal: 100   },
-  { id: 'hidden_slayer',    hidden: true, realName: '코어의 악몽',      name: '???', icon: '💀', desc: '바이러스 코어 100회 파괴',   stat: 'totalBossKills',   goal: 100   },
-  { id: 'hidden_combo',     hidden: true, realName: '격리 전설',        name: '???', icon: '🌀', desc: '최대 콤보 100 달성',         stat: 'maxCombo',         goal: 100   },
-  { id: 'hidden_mp_vet',    hidden: true, realName: '베테랑 방어자',    name: '???', icon: '🔱', desc: '멀티 10세션 플레이',         stat: 'mpGamesPlayed',    goal: 10    },
-  { id: 'hidden_legend',    hidden: true, realName: '안티서지 레전드',  name: '???', icon: '👑', desc: '모든 기본 업적 달성',        stat: '__allBasic__',     goal: 8     },
+  { id: 'hidden_dedicated', hidden: true, realName: '이름 없는 방어자', realNameEn: 'The Nameless Defender', name: '???', icon: '🌙', desc: '100번 세션 플레이',          descEn: 'Play 100 sessions',          stat: 'totalGamesPlayed', goal: 100   },
+  { id: 'hidden_slayer',    hidden: true, realName: '코어의 악몽',      realNameEn: 'Nightmare of the Core', name: '???', icon: '💀', desc: '바이러스 코어 100회 파괴',   descEn: 'Destroy 100 virus cores',    stat: 'totalBossKills',   goal: 100   },
+  { id: 'hidden_combo',     hidden: true, realName: '격리 전설',        realNameEn: 'Containment Legend',    name: '???', icon: '🌀', desc: '최대 콤보 100 달성',         descEn: 'Achieve max combo 100',      stat: 'maxCombo',         goal: 100   },
+  { id: 'hidden_mp_vet',    hidden: true, realName: '베테랑 방어자',    realNameEn: 'Veteran Defender',      name: '???', icon: '🔱', desc: '멀티 10세션 플레이',         descEn: 'Play 10 MP sessions',        stat: 'mpGamesPlayed',    goal: 10    },
+  { id: 'hidden_legend',    hidden: true, realName: '안티서지 레전드',  realNameEn: 'AntiSurge Legend',      name: '???', icon: '👑', desc: '모든 기본 업적 달성',        descEn: 'Achieve all basic achievements', stat: '__allBasic__', goal: 8     },
   // ── 클래스 전용 업적 ──────────────────────────────────────
-  { id: 'cls_hacker',   name: '시스템 침투자',  icon: '💻', desc: '[해커] 스테이지 20 돌파',         stat: 'cls_hacker_maxStage',    goal: 20  },
-  { id: 'cls_cyborg',   name: '강철 방어막',    icon: '🤖', desc: '[사이보그] 30세션 플레이',         stat: 'cls_cyborg_games',       goal: 30  },
-  { id: 'cls_ghost',    name: '페이즈 전술가',  icon: '👻', desc: '[고스트] 스테이지 15 돌파',        stat: 'cls_ghost_maxStage',     goal: 15  },
-  { id: 'cls_engineer', name: '드론 마스터',    icon: '🔧', desc: '[엔지니어] 드론 격리 300회 누적',  stat: 'cls_engineer_droneKills',goal: 300 },
-  { id: 'cls_sniper',   name: '원거리 방어자',  icon: '🎯', desc: '[저격수] 스테이지 25 돌파',        stat: 'cls_sniper_maxStage',    goal: 25  },
-  { id: 'cls_support',  name: '방어 코어',      icon: '💊', desc: '[서포트] 10세션 플레이',           stat: 'cls_support_games',      goal: 10  },
+  { id: 'cls_hacker',   name: '시스템 침투자',  nameEn: 'System Infiltrator',  icon: '💻', desc: '[해커] 스테이지 20 돌파',         descEn: '[Hacker] Clear Stage 20',           stat: 'cls_hacker_maxStage',    goal: 20  },
+  { id: 'cls_cyborg',   name: '강철 방어막',    nameEn: 'Iron Firewall',       icon: '🤖', desc: '[사이보그] 30세션 플레이',         descEn: '[Cyborg] Play 30 sessions',         stat: 'cls_cyborg_games',       goal: 30  },
+  { id: 'cls_ghost',    name: '페이즈 전술가',  nameEn: 'Phase Tactician',     icon: '👻', desc: '[고스트] 스테이지 15 돌파',        descEn: '[Ghost] Clear Stage 15',            stat: 'cls_ghost_maxStage',     goal: 15  },
+  { id: 'cls_engineer', name: '드론 마스터',    nameEn: 'Drone Master',        icon: '🔧', desc: '[엔지니어] 드론 격리 300회 누적',  descEn: '[Engineer] 300 cumulative drone kills', stat: 'cls_engineer_droneKills',goal: 300 },
+  { id: 'cls_sniper',   name: '원거리 방어자',  nameEn: 'Ranged Defender',     icon: '🎯', desc: '[저격수] 스테이지 25 돌파',        descEn: '[Sniper] Clear Stage 25',           stat: 'cls_sniper_maxStage',    goal: 25  },
+  { id: 'cls_support',  name: '방어 코어',      nameEn: 'Defense Core',        icon: '💊', desc: '[서포트] 10세션 플레이',           descEn: '[Support] Play 10 sessions',        stat: 'cls_support_games',      goal: 10  },
 ];
 
 // ============================================================

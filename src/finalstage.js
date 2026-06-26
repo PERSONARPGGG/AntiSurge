@@ -22,7 +22,7 @@ class VirusCoreEnemy {
     this.minionTimer = 0; this.minionCooldown = 4000;
     this.pulseTimer  = 0; this.pulseCooldown  = 5500;
     this.phase = 1;
-    this.name = '바이러스 코어';
+    this.name = LANG === 'en' ? 'Virus Core' : '바이러스 코어';
   }
 
   takeDamage(amount, sourceKey) {
@@ -41,7 +41,7 @@ class VirusCoreEnemy {
     createExplosionParticles(this.x, this.y, '#88ff44', 60);
     createExplosionParticles(this.x, this.y, '#00f0ff', 30);
     triggerScreenShake(22, 1200);
-    addFloatingText(this.x, this.y - 90, '☠ VIRUS CORE 파괴!', '#88ff44', 22);
+    addFloatingText(this.x, this.y - 90, LANG === 'en' ? '☠ VIRUS CORE DESTROYED!' : '☠ VIRUS CORE 파괴!', '#88ff44', 22);
     playSynthSound([300, 150, 80, 40], 0.7, 'sawtooth', 0.18);
     killCount++; stageKillProgress++;
     setTimeout(() => advanceFinalStageWave(3), 3000);
@@ -84,7 +84,7 @@ class VirusCoreEnemy {
           this.phase >= 2 ? 'elite' : 'tank'
         ));
       }
-      addFloatingText(this.x, this.y-65, '☣ 바이러스 방출!', '#88ff44', 12);
+      addFloatingText(this.x, this.y-65, LANG === 'en' ? '☣ Virus Discharge!' : '☣ 바이러스 방출!', '#88ff44', 12);
       playSynthSound([80, 160], 0.3, 'sawtooth', 0.1);
     }
 
@@ -94,7 +94,7 @@ class VirusCoreEnemy {
       this.pulseTimer = 0;
       if (dist(this.x, this.y, player.x, player.y) < 220) {
         player.hp -= this.damage; player.flashTimer = 90;
-        addFloatingText(player.x, player.y-35, `-${this.damage} 코어 펄스!`, '#88ff44', 12);
+        addFloatingText(player.x, player.y-35, LANG === 'en' ? `-${this.damage} Core Pulse!` : `-${this.damage} 코어 펄스!`, '#88ff44', 12);
         if (player.hp <= 0) endGame(false);
       }
       createExplosionParticles(this.x, this.y, '#88ff44', 18);
@@ -161,7 +161,7 @@ class VirusOriginBoss {
     this.isCharging   = false; this.chargeDuration = 0;
     this.chargeVx = 0; this.chargeVy = 0; this._savedBaseSpeed = this.baseSpeed;
     this.orbTimer = 0; this.orbCooldown = 4500;
-    this.name = '바이러스 원점';
+    this.name = LANG === 'en' ? 'Virus Origin' : '바이러스 원점';
     this.isFinalBoss = false; this.isMini = false;
   }
 
@@ -185,7 +185,7 @@ class VirusOriginBoss {
     triggerScreenShake(28, 1500);
     createExplosionParticles(this.x, this.y, '#88ff44', 70);
     createExplosionParticles(this.x, this.y, '#ffffff', 40);
-    addFloatingText(this.x, this.y-110, `🧬 감염 역전 ${this.reversals}/3!`, '#88ff44', 26);
+    addFloatingText(this.x, this.y-110, LANG === 'en' ? `🧬 Infection Reversal ${this.reversals}/3!` : `🧬 감염 역전 ${this.reversals}/3!`, '#88ff44', 26);
     playSynthSound([200,400,800,1600,3200], 0.7, 'sine', 0.22);
     this.stunTimer = 2500;
     this.hp = Math.max(1, this.hp - this.maxHp * 0.22);
@@ -208,7 +208,7 @@ class VirusOriginBoss {
     createExplosionParticles(this.x, this.y, '#88ff44', 120);
     createExplosionParticles(this.x, this.y, '#00f0ff', 80);
     createExplosionParticles(this.x, this.y, '#ffe600', 60);
-    addFloatingText(this.x, this.y-120, '☠ VIRUS ORIGIN 소멸!', '#ffe600', 32);
+    addFloatingText(this.x, this.y-120, LANG === 'en' ? '☠ VIRUS ORIGIN DESTROYED!' : '☠ VIRUS ORIGIN 소멸!', '#ffe600', 32);
     playSynthSound([400,600,800,1200,2000,3200], 0.9, 'sine', 0.3);
     killCount++;
     setTimeout(() => showParasiteEnding(), 3500);
@@ -251,7 +251,7 @@ class VirusOriginBoss {
         const dx = player.x-this.x, dy = player.y-this.y, d = Math.sqrt(dx*dx+dy*dy)||1;
         this.chargeVx = (dx/d)*22; this.chargeVy = (dy/d)*22;
         this.isCharging = true; this.chargeDuration = 550;
-        addFloatingText(this.x, this.y-80, '☣ 바이러스 돌진!', '#88ff44', 15);
+        addFloatingText(this.x, this.y-80, LANG === 'en' ? '☣ Virus Charge!' : '☣ 바이러스 돌진!', '#88ff44', 15);
         triggerScreenShake(8, 350);
       }
     }
@@ -266,7 +266,7 @@ class VirusOriginBoss {
           this.damage, 9, '#88ff44', false
         ));
       }
-      addFloatingText(this.x, this.y-75, '🦠 바이러스 방사!', '#88ff44', 13);
+      addFloatingText(this.x, this.y-75, LANG === 'en' ? '🦠 Virus Spread!' : '🦠 바이러스 방사!', '#88ff44', 13);
       playSynthSound([150, 80], 0.2, 'square', 0.08);
     }
   }
@@ -309,7 +309,7 @@ class VirusOriginBoss {
     ctx.strokeRect(sx-70, sy-this.radius-42, 140, 10);
     ctx.font = 'bold 8px Orbitron,monospace';
     ctx.fillStyle = gPct>=0.8 ? '#ffe600' : '#88ff44'; ctx.textAlign='center';
-    ctx.fillText(`감염 역전 게이지 ${Math.round(gPct*100)}%  [${this.reversals}/3]`, sx, sy-this.radius-46);
+    ctx.fillText(LANG === 'en' ? `Reversal Gauge ${Math.round(gPct*100)}%  [${this.reversals}/3]` : `감염 역전 게이지 ${Math.round(gPct*100)}%  [${this.reversals}/3]`, sx, sy-this.radius-46);
     ctx.fillStyle = '#88ff44';
     ctx.fillText('🦠 VIRUS ORIGIN', sx, sy-this.radius-30);
     ctx.restore();
@@ -348,7 +348,7 @@ function triggerParasiteFinalStage() {
   activeBoss = null;
   isBossStage = false;
   isStageClearAnim = false;
-  showStageOverlay('🦠 PARASITE PROTOCOL', '안티 바이러스 감염 시퀀스 개시...', '#88ff44');
+  showStageOverlay('🦠 PARASITE PROTOCOL', LANG === 'en' ? 'Anti-virus infection sequence initiated...' : '안티 바이러스 감염 시퀀스 개시...', '#88ff44');
   triggerScreenShake(12, 800);
   setTimeout(() => { hideStageOverlay(); advanceFinalStageWave(1); }, 3000);
   ensureGameLoopRunning();
@@ -367,14 +367,14 @@ function advanceFinalStageWave(wave) {
 
   if (wave === 1) {
     finalWave1Kills = 0; finalWave1SpawnTimer = 0;
-    showStageOverlay('⚠ WAVE 1 — 바이러스 대군', '바이러스 80마리를 처치하라!', '#ff4466');
+    showStageOverlay(LANG === 'en' ? '⚠ WAVE 1 — VIRUS SWARM' : '⚠ WAVE 1 — 바이러스 대군', LANG === 'en' ? 'Eliminate 80 viruses!' : '바이러스 80마리를 처치하라!', '#ff4466');
     setTimeout(hideStageOverlay, 2800);
-    if (player) addFloatingText(player.x, player.y-60, '☣ 대군 출현!', '#ff4466', 20);
+    if (player) addFloatingText(player.x, player.y-60, LANG === 'en' ? '☣ Swarm Incoming!' : '☣ 대군 출현!', '#ff4466', 20);
     playSynthSound([80,40], 0.5, 'sawtooth', 0.12);
     triggerScreenShake(10, 600);
 
   } else if (wave === 2) {
-    showStageOverlay('⚠ WAVE 2 — 바이러스 코어', '핵심 코어를 파괴하라!', '#88ff44');
+    showStageOverlay(LANG === 'en' ? '⚠ WAVE 2 — VIRUS CORE' : '⚠ WAVE 2 — 바이러스 코어', LANG === 'en' ? 'Destroy the virus core!' : '핵심 코어를 파괴하라!', '#88ff44');
     setTimeout(hideStageOverlay, 2800);
     setTimeout(() => {
       if (!isFinalStage || finalStageWave !== 2) return;
@@ -382,13 +382,13 @@ function advanceFinalStageWave(wave) {
       const bx = Math.max(150,Math.min(MAP_WIDTH-150,  (player?.x||MAP_WIDTH/2)+Math.cos(angle)*550));
       const by = Math.max(150,Math.min(MAP_HEIGHT-150, (player?.y||MAP_HEIGHT/2)+Math.sin(angle)*550));
       finalWaveVirusCore = new VirusCoreEnemy(bx, by);
-      addFloatingText(bx, by-80, '🧬 바이러스 코어 출현!', '#88ff44', 22);
+      addFloatingText(bx, by-80, LANG === 'en' ? '🧬 Virus Core Emerged!' : '🧬 바이러스 코어 출현!', '#88ff44', 22);
       playSynthSound([60,120,240], 0.6, 'sawtooth', 0.14);
       triggerScreenShake(16, 900);
     }, 2500);
 
   } else if (wave === 3) {
-    showStageOverlay('★ FINAL WAVE — 바이러스 원점', '모든 감염의 원천을 소멸시켜라!', '#ffe600');
+    showStageOverlay(LANG === 'en' ? '★ FINAL WAVE — VIRUS ORIGIN' : '★ FINAL WAVE — 바이러스 원점', LANG === 'en' ? 'Destroy the source of all infection!' : '모든 감염의 원천을 소멸시켜라!', '#ffe600');
     setTimeout(hideStageOverlay, 3200);
     setTimeout(() => {
       if (!isFinalStage || finalStageWave !== 3) return;
@@ -396,7 +396,7 @@ function advanceFinalStageWave(wave) {
       const bx = Math.max(180,Math.min(MAP_WIDTH-180,  (player?.x||MAP_WIDTH/2)+Math.cos(angle)*600));
       const by = Math.max(180,Math.min(MAP_HEIGHT-180, (player?.y||MAP_HEIGHT/2)+Math.sin(angle)*600));
       finalWaveVirusOrigin = new VirusOriginBoss(bx, by);
-      addFloatingText(bx, by-100, '🦠 바이러스 원점 출현!', '#ffe600', 26);
+      addFloatingText(bx, by-100, LANG === 'en' ? '🦠 Virus Origin Emerged!' : '🦠 바이러스 원점 출현!', '#ffe600', 26);
       playSynthSound([40,80,160], 0.8, 'sawtooth', 0.2);
       triggerScreenShake(22, 1200);
     }, 3000);
@@ -448,7 +448,12 @@ function _runEndingCutscene(el) {
 
   const statsEl = el.querySelector('#ending-stats');
   if (statsEl) {
-    statsEl.innerHTML = `
+    statsEl.innerHTML = LANG === 'en' ? `
+      <div class="ending-stat-row">⏱ Clear Time <span>${timeStr}</span></div>
+      <div class="ending-stat-row">☠ Total Kills <span>${killCount.toLocaleString()}</span></div>
+      <div class="ending-stat-row">🧬 Absorptions <span>${player?._totalAbsorptions||0}</span></div>
+      <div class="ending-stat-row">💀 Reversals <span>3 / 3</span></div>
+    ` : `
       <div class="ending-stat-row">⏱ 클리어 타임 <span>${timeStr}</span></div>
       <div class="ending-stat-row">☠ 총 킬 <span>${killCount.toLocaleString()}</span></div>
       <div class="ending-stat-row">🧬 흡수 횟수 <span>${player?._totalAbsorptions||0}</span></div>
@@ -497,7 +502,7 @@ function _showParasiteVictoryModal(timeStr) {
   const statLevel = document.getElementById('stat-level');
 
   if (title)    { title.textContent = '🦠 PARASITE PROTOCOL — COMPLETE'; title.style.color = '#88ff44'; title.style.textShadow = '0 0 20px #88ff44, 0 0 60px #88ff44'; }
-  if (subtitle) subtitle.textContent = '바이러스 원점 소멸. 네트워크 정화 완료. 패러사이트 프로토콜 성공.';
+  if (subtitle) subtitle.textContent = LANG === 'en' ? 'Virus Origin eliminated. Network purged. Parasite Protocol complete.' : '바이러스 원점 소멸. 네트워크 정화 완료. 패러사이트 프로토콜 성공.';
   if (deathRow) deathRow.style.display = 'none';
   if (statTime) statTime.textContent = timeStr;
   if (statStage)statStage.textContent = '100 ★ TRUE ENDING';
@@ -510,7 +515,7 @@ function _showParasiteVictoryModal(timeStr) {
   saveData.completions = (saveData.completions||0) + 1;
   saveSaveData();
   const coresEl = document.getElementById('cores-earned-row');
-  if (coresEl) { coresEl.textContent = `✨ TRUE ENDING 보상: +${coresBonus} 데이터 코어`; coresEl.style.color = '#88ff44'; }
+  if (coresEl) { coresEl.textContent = LANG === 'en' ? `✨ TRUE ENDING Reward: +${coresBonus} Data Cores` : `✨ TRUE ENDING 보상: +${coresBonus} 데이터 코어`; coresEl.style.color = '#88ff44'; }
   gameOverModal.classList.add('active');
   buildWeaponContributionList();
   playSynthSound([440,880,1320,2200,1760,1320,880,440], 0.3, 'triangle', 0.12);

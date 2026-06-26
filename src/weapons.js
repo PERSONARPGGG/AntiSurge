@@ -846,7 +846,7 @@ class BlackHole {
     if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < collapseR + activeBoss.radius) {
       activeBoss.takeDamage(Math.min(collapseDmg, activeBoss.maxHp * 0.4), 'blackhole');
     }
-    addFloatingText(this.x, this.y - 30, '🌑 붕괴!', '#b026ff', 13);
+    addFloatingText(this.x, this.y - 30, LANG === 'en' ? '🌑 Collapse!' : '🌑 붕괴!', '#b026ff', 13);
     // nova_collapse 융합: 12방향 폭발 투사체
     if (player && player.fusions && player.fusions.nova_collapse) {
       const burstDmg = this.dmg * 2.5 * (player.damageMultiplier || 1);
@@ -854,7 +854,7 @@ class BlackHole {
         const ra = (ri / 12) * Math.PI * 2;
         projectiles.push(new Projectile(this.x, this.y, Math.cos(ra)*7, Math.sin(ra)*7, burstDmg, 9, '#b026ff', 4, 'blackhole'));
       }
-      addFloatingText(this.x, this.y - 55, '💥 노바 콜랩스!', '#b026ff', 14);
+      addFloatingText(this.x, this.y - 55, LANG === 'en' ? '💥 Nova Collapse!' : '💥 노바 콜랩스!', '#b026ff', 14);
       playSynthSound([60, 200, 800], 0.3, 'sawtooth', 0.15);
     }
   }
@@ -923,7 +923,7 @@ class BlackHoleWeapon extends BaseWeapon {
     }
     playSynthSound([60, 30], 0.22, 'sawtooth', 0.1);
     triggerScreenShake(5, 300);
-    addFloatingText(this.owner.x, this.owner.y - 30, '🌑 블랙홀 생성!', '#b026ff', 11);
+    addFloatingText(this.owner.x, this.owner.y - 30, LANG === 'en' ? '🌑 Black Hole!' : '🌑 블랙홀 생성!', '#b026ff', 11);
   }
 }
 
@@ -986,7 +986,7 @@ class CommandDanceWeapon extends BaseWeapon {
     createExplosionParticles(this.owner.x, this.owner.y, '#ff88ff', Math.min(22, MAX_PARTICLES - particles.length));
     triggerScreenShake(8, 320);
     playSynthSound([600,900,1200,800], 0.18, 'triangle', 0.09);
-    addFloatingText(this.owner.x, this.owner.y - 65, '💃 댄스!', '#ff88ff', 15);
+    addFloatingText(this.owner.x, this.owner.y - 65, LANG === 'en' ? '💃 Dance!' : '💃 댄스!', '#ff88ff', 15);
     let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
     const chainTargets = [];
     for (const e of allT) {
@@ -1090,7 +1090,7 @@ class EchoRecordWeapon extends BaseWeapon {
       const maxE = [1,1,1,2,3][Math.min(this.level-1,4)];
       if (this._echoes.length < maxE) {
         this._echoes.push({ snaps:[...this._snaps], idx:0, t:0, atkT:0 });
-        addFloatingText(player.x, player.y - 70, '🔄 에코!', '#88ffff', 13);
+        addFloatingText(player.x, player.y - 70, LANG === 'en' ? '🔄 Echo!' : '🔄 에코!', '#88ffff', 13);
         playSynthSound([600,400,800], 0.11, 'sine', 0.05);
       }
     }
@@ -1182,7 +1182,7 @@ class ViralBombWeapon extends BaseWeapon {
     target._infectTimer = 4000;
     target._infectChain = chain;
     target._infectDmg   = dmg;
-    addFloatingText(target.x, target.y - 35, '🦠 감염!', '#33ff33', 12);
+    addFloatingText(target.x, target.y - 35, LANG === 'en' ? '🦠 Infected!' : '🦠 감염!', '#33ff33', 12);
     playSynthSound([200,150,80], 0.10, 'sawtooth', 0.05);
     // 시각용 투사체 (0 데미지, 빠름)
     if (projectiles.length < MAX_PROJECTILES) {
@@ -1275,7 +1275,7 @@ class HackGunWeapon extends BaseWeapon {
     target._hackTimer   = dur;
     target._hackDmgTimer= 0;
     target._hackExplosion = expl;
-    addFloatingText(target.x, target.y - 40, '💻 해킹!', '#00ccff', 13);
+    addFloatingText(target.x, target.y - 40, LANG === 'en' ? '💻 Hacked!' : '💻 해킹!', '#00ccff', 13);
     playSynthSound([1000,600,300], 0.13, 'square', 0.06);
     this._lineTarget = target;
     this._lineTimer  = 600;

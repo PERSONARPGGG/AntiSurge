@@ -213,7 +213,7 @@ function refreshClassCardLockState() {
         card.appendChild(badge);
       }
       const def = CLASS_UNLOCK_DEFS[cls];
-      badge.innerHTML = `🔒 <span>${def?.label || ''}</span>`;
+      badge.innerHTML = `🔒 <span>${(LANG === 'en' && def?.labelEn) ? def.labelEn : (def?.label || '')}</span>`;
     } else if (badge) {
       badge.remove();
     }
@@ -239,16 +239,31 @@ function refreshClassCardLockState() {
     const def = CLASS_DEFS[cls];
     card.classList.toggle('class-locked', !unlocked);
     if (unlocked && def) {
-      const speedLabel = def.speed >= 4.5 ? '극빠름' : def.speed >= 3.8 ? '빠름' : def.speed >= 3.3 ? '약빠름' : '보통';
-      card.querySelector('.cls-preview').textContent = def.desc.split('. ').slice(0,2).join(' · ');
+      const speedLabel = LANG === 'en'
+        ? (def.speed >= 4.5 ? 'Ultra Fast' : def.speed >= 3.8 ? 'Fast' : def.speed >= 3.3 ? 'Agile' : 'Normal')
+        : (def.speed >= 4.5 ? '극빠름' : def.speed >= 3.8 ? '빠름' : def.speed >= 3.3 ? '약빠름' : '보통');
+      const descSrc = (LANG === 'en' && def.descEn) ? def.descEn : def.desc;
+      card.querySelector('.cls-preview').textContent = descSrc.split('. ').slice(0,2).join(' · ');
       const statsEl = card.querySelector('.cls-stats');
-      statsEl.innerHTML = `
-        <li>HP ${def.hp} / 속도 ${speedLabel}</li>
-        <li>시작 무기: ${def.startWeapon}</li>
-        <li>피해량 ${def.damageMult > 1 ? '+' : ''}${Math.round((def.damageMult-1)*100)}%</li>
-        <li>✨ 히든 클래스 해금!</li>
-        <li class="cls-skill">[Q] ${def.activeSkill.name} (${def.activeSkill.cd/1000}초)</li>
-      `;
+      const skillNameDisp = (LANG === 'en' && def.activeSkill.nameEn) ? def.activeSkill.nameEn : def.activeSkill.name;
+      const cdSuffix = LANG === 'en' ? 's' : '초';
+      if (LANG === 'en') {
+        statsEl.innerHTML = `
+          <li>HP ${def.hp} / Speed ${speedLabel}</li>
+          <li>Start Weapon: ${def.startWeapon}</li>
+          <li>Damage ${def.damageMult > 1 ? '+' : ''}${Math.round((def.damageMult-1)*100)}%</li>
+          <li>✨ Hidden Class Unlocked!</li>
+          <li class="cls-skill">[Q] ${skillNameDisp} (${def.activeSkill.cd/1000}${cdSuffix})</li>
+        `;
+      } else {
+        statsEl.innerHTML = `
+          <li>HP ${def.hp} / 속도 ${speedLabel}</li>
+          <li>시작 무기: ${def.startWeapon}</li>
+          <li>피해량 ${def.damageMult > 1 ? '+' : ''}${Math.round((def.damageMult-1)*100)}%</li>
+          <li>✨ 히든 클래스 해금!</li>
+          <li class="cls-skill">[Q] ${skillNameDisp} (${def.activeSkill.cd/1000}${cdSuffix})</li>
+        `;
+      }
       const badge = card.querySelector('.class-lock-badge');
       if (badge) badge.remove();
     }
@@ -263,7 +278,7 @@ document.querySelectorAll('.class-card').forEach(card => {
       const popup = document.getElementById('hidden-hint-popup');
       const unlockDef = CLASS_UNLOCK_DEFS[cls];
       if (popup && unlockDef) {
-        popup.textContent = `🔒 해금 조건: ${unlockDef.label}`;
+        popup.textContent = LANG === 'en' ? `🔒 Unlock: ${unlockDef.labelEn || unlockDef.label}` : `🔒 해금 조건: ${unlockDef.label}`;
         const rect = card.getBoundingClientRect();
         popup.style.display = 'block';
         popup.style.top = (rect.top - 44 + window.scrollY) + 'px';
@@ -278,8 +293,10 @@ document.querySelectorAll('.class-card').forEach(card => {
     selectedClass = cls;
     const hint = document.getElementById('class-selected-hint');
     const confirmBtn = document.getElementById('class-confirm-btn');
-    const names = { hacker:'해커', cyborg:'방화벽', ghost:'루트킷', engineer:'드론.exe', sniper:'스캐너', support:'패치봇', cracker:'크래커', glitch_dancer:'글리치 댄서', parasite:'패러사이트', jammer:'재머' };
-    if (hint) { hint.textContent = `✓ ${names[selectedClass] || selectedClass} 선택됨`; hint.classList.add('has-selection'); }
+    const namesKo = { hacker:'해커', cyborg:'방화벽', ghost:'루트킷', engineer:'드론.exe', sniper:'스캐너', support:'패치봇', cracker:'크래커', glitch_dancer:'글리치 댄서', parasite:'패러사이트', jammer:'재머' };
+    const namesEn = { hacker:'Hacker', cyborg:'Firewall', ghost:'Rootkit', engineer:'Drone.exe', sniper:'Scanner', support:'Patchbot', cracker:'Cracker', glitch_dancer:'Glitch Dancer', parasite:'Parasite', jammer:'Jammer' };
+    const dispName = LANG === 'en' ? (namesEn[selectedClass] || selectedClass) : (namesKo[selectedClass] || selectedClass);
+    if (hint) { hint.textContent = LANG === 'en' ? `✓ ${dispName} Selected` : `✓ ${dispName} 선택됨`; hint.classList.add('has-selection'); }
     if (confirmBtn) confirmBtn.disabled = false;
   });
 });
@@ -297,7 +314,7 @@ function goBackToMenu() {
   document.querySelectorAll('.class-card').forEach(c => c.classList.remove('class-selected'));
   const hint = document.getElementById('class-selected-hint');
   const confirmBtn = document.getElementById('class-confirm-btn');
-  if (hint) { hint.textContent = '백신 유형을 선택하세요'; hint.classList.remove('has-selection'); }
+  if (hint) { hint.textContent = LANG === 'en' ? 'Select a vaccine type' : '백신 유형을 선택하세요'; hint.classList.remove('has-selection'); }
   if (confirmBtn) confirmBtn.disabled = true;
 }
 
@@ -451,7 +468,7 @@ function startGame() {
     player.hp    += hpBonus;
     rerollUses   += Math.floor(ascensionLevel / 2);
     if (ascensionLevel >= 3) player.passiveXpMult *= 1.10;
-    addFloatingText(player.x, player.y - 50, `✨ 승천 Lv.${ascensionLevel} 보너스 적용!`, '#ffe600', 13);
+    addFloatingText(player.x, player.y - 50, LANG === 'en' ? `✨ Ascension Lv.${ascensionLevel} Bonus!` : `✨ 승천 Lv.${ascensionLevel} 보너스 적용!`, '#ffe600', 13);
   }
 
   // 일일 변이 적용
@@ -469,9 +486,12 @@ function startGame() {
     // 변이 공개
     const c1 = curses[0], c2 = curses[1];
     setTimeout(() => {
+      const _c1n = LANG === 'en' ? (c1.nameEn || c1.name) : c1.name;
+      const _c2n = LANG === 'en' ? (c2.nameEn || c2.name) : c2.name;
+      const _bn  = LANG === 'en' ? (buff.nameEn || buff.name) : buff.name;
       showStageOverlay(
-        '⚡ 오늘의 변이',
-        `${c1.icon}${c1.name}  ${c2.icon}${c2.name}  |  ${buff.icon}${buff.name}`,
+        LANG === 'en' ? '⚡ Today\'s Mutation' : '⚡ 오늘의 변이',
+        `${c1.icon}${_c1n}  ${c2.icon}${_c2n}  |  ${buff.icon}${_bn}`,
         '#ff4466'
       );
       setTimeout(hideStageOverlay, 4500);
@@ -525,7 +545,10 @@ function startGame() {
       }
     }
     // HUD 알림
-    setTimeout(() => showStageOverlay(`▶ STAGE ${s.stage} 재개`, `이전 런 복원됨  ·  Lv.${s.level}  ·  ${Math.floor(s.gameTime/60)}분 경과`, '#00f0ff'), 500);
+    const _resumeSub = LANG === 'en'
+      ? `Run Restored  ·  Lv.${s.level}  ·  ${Math.floor(s.gameTime/60)}m elapsed`
+      : `이전 런 복원됨  ·  Lv.${s.level}  ·  ${Math.floor(s.gameTime/60)}분 경과`;
+    setTimeout(() => showStageOverlay(LANG === 'en' ? `▶ STAGE ${s.stage} RESUME` : `▶ STAGE ${s.stage} 재개`, _resumeSub, '#00f0ff'), 500);
     setTimeout(hideStageOverlay, 3000);
   }
 }
@@ -550,10 +573,14 @@ function _checkMidRunPrompt() {
   if (!el) return;
   if (!s) { el.classList.remove('active'); return; }
   const mins = Math.floor((Date.now() - s.ts) / 60000);
-  const timeStr = mins < 1 ? '방금 전' : mins < 60 ? `${mins}분 전` : `${Math.floor(mins/60)}시간 전`;
+  const timeStr = LANG === 'en'
+    ? (mins < 1 ? 'just now' : mins < 60 ? `${mins}min ago` : `${Math.floor(mins/60)}h ago`)
+    : (mins < 1 ? '방금 전' : mins < 60 ? `${mins}분 전` : `${Math.floor(mins/60)}시간 전`);
   const cls = CLASS_DEFS[s.classId];
+  const _mrEnNames = { hacker:'Hacker', cyborg:'Firewall', ghost:'Rootkit', engineer:'Drone.exe', sniper:'Scanner', support:'Patchbot', cracker:'Cracker', glitch_dancer:'Glitch Dancer', parasite:'Parasite', jammer:'Jammer' };
+  const clsDisplayName = LANG === 'en' ? (_mrEnNames[s.classId] || s.classId) : (cls?.name || s.classId);
   el.querySelector('.midrun-info').textContent =
-    `${cls?.icon || '?'} ${cls?.name || s.classId}  ·  Stage ${s.stage}  ·  Lv.${s.level}  ·  ${timeStr}`;
+    `${cls?.icon || '?'} ${clsDisplayName}  ·  Stage ${s.stage}  ·  Lv.${s.level}  ·  ${timeStr}`;
   el.classList.add('active');
 }
 
@@ -584,10 +611,10 @@ function showGameConfirm(msg, onOk, onCancel, opts = {}) {
   const modal  = document.getElementById('game-confirm-modal');
   const cancelBtn = document.getElementById('gc-cancel-btn');
   document.getElementById('gc-icon').textContent  = opts.icon    || '⚠';
-  document.getElementById('gc-title').textContent = opts.title   || '확인';
+  document.getElementById('gc-title').textContent = opts.title   || (LANG === 'en' ? 'Confirm' : '확인');
   document.getElementById('gc-msg').textContent   = msg;
-  document.getElementById('gc-ok-btn').textContent = opts.okLabel || '확인';
-  cancelBtn.textContent = opts.cancelLabel || '취소';
+  document.getElementById('gc-ok-btn').textContent = opts.okLabel || (LANG === 'en' ? 'OK' : '확인');
+  cancelBtn.textContent = opts.cancelLabel || (LANG === 'en' ? 'CANCEL' : '취소');
   cancelBtn.style.display = opts.noCancel ? 'none' : '';
   const copyBox = document.getElementById('gc-copy-box');
   if (opts.copyText) {
@@ -601,7 +628,7 @@ function showGameConfirm(msg, onOk, onCancel, opts = {}) {
   modal.classList.add('active');
 }
 function showGameAlert(msg, opts = {}) {
-  showGameConfirm(msg, null, null, { ...opts, noCancel: true, icon: opts.icon || '⚡', title: opts.title || '알림', okLabel: opts.okLabel || '확인' });
+  showGameConfirm(msg, null, null, { ...opts, noCancel: true, icon: opts.icon || '⚡', title: opts.title || (LANG === 'en' ? 'Notice' : '알림'), okLabel: opts.okLabel || (LANG === 'en' ? 'OK' : '확인') });
 }
 function showGameToast(msg, duration = 2200) {
   const t = document.getElementById('game-toast');
@@ -617,7 +644,7 @@ function gcCopyText() {
   const ta = document.getElementById('gc-copy-text');
   if (!ta) return;
   ta.select(); document.execCommand('copy');
-  showGameToast('📋 클립보드에 복사되었습니다');
+  showGameToast(LANG === 'en' ? '📋 Copied to clipboard!' : '📋 클립보드에 복사되었습니다');
   gcCancel();
 }
 // 커스텀 confirm/alert 모달 키보드 (Enter=OK, ESC=Cancel)
@@ -640,7 +667,8 @@ function openArchiveModal() {
   if (!saveData._codec) saveData._codec = {};
   const modal = document.getElementById('archive-modal');
   if (!modal) return;
-  _renderArchiveTabs('hacker');
+  const _firstVisible = _ARCHIVE_CLASS_ORDER.find(c => _isClassVisible(c)) || 'hacker';
+  _renderArchiveTabs(_firstVisible);
   modal.classList.add('active');
   // 새 로그 배지 숨김 (본 것으로 처리)
   const badge = document.getElementById('archive-new-badge');
@@ -656,14 +684,16 @@ function _renderArchiveTabs(activeCls) {
   const viewEl  = document.getElementById('archive-log-viewer');
   if (!tabsEl || !viewEl) return;
 
-  tabsEl.innerHTML = _ARCHIVE_CLASS_ORDER.map(cls => {
+  const _visibleClasses = _ARCHIVE_CLASS_ORDER.filter(c => _isClassVisible(c));
+  tabsEl.innerHTML = _visibleClasses.map(cls => {
     const def = CLASS_DEFS[cls];
     const logs = CLASS_CODEC[cls] || [];
     const unlocked = logs.filter((_, i) => saveData._codec[`${cls}_${i}`]).length;
     const isActive = cls === activeCls;
+    const clsLabel = LANG === 'en' ? (def?.nameEn || def?.name || cls) : (def?.name || cls);
     return `<button class="archive-tab${isActive?' active':''}" onclick="_renderArchiveTabs('${cls}')">
       <span>${def?.icon||'?'}</span>
-      <span style="font-size:9px">${def?.name||cls}</span>
+      <span style="font-size:9px">${clsLabel}</span>
       <span class="archive-tab-count">${unlocked}/${logs.length}</span>
     </button>`;
   }).join('');
@@ -681,7 +711,7 @@ function _renderArchiveTabs(activeCls) {
     } else {
       return `<div class="archive-log-entry locked">
         <div class="archive-log-title">[CLASSIFIED] LOG-0${i+1}</div>
-        <div class="archive-log-locked-hint">해금 조건: ${log.condLabel}</div>
+        <div class="archive-log-locked-hint">${LANG === 'en' ? 'Unlock: ' : '해금 조건: '}${LANG === 'en' && log.condLabelEn ? log.condLabelEn : log.condLabel}</div>
         <div class="archive-log-text" style="color:#334155;letter-spacing:2px">
           ██ ████ ██████ ████ ██ ██████ ████ ██</div>
       </div>`;

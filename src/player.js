@@ -209,7 +209,7 @@ class Player {
       if (this._droneHealTimer >= 1000) {
         this._droneHealTimer -= 1000;
         this.hp = Math.min(this.hp + 5, this.maxHp);
-        addFloatingText(this.x, this.y - 30, '+5 수리', '#39ff14', 11);
+        addFloatingText(this.x, this.y - 30, LANG === 'en' ? '+5 Repair' : '+5 수리', '#39ff14', 11);
       }
     } else {
       this._droneHealTimer = 0;
@@ -230,7 +230,7 @@ class Player {
           activeBoss.stunTimer = Math.min(stunDur * 0.4, 800);
         createExplosionParticles(this.x, this.y, '#00f0ff', 18);
         playSynthSound([300, 900, 200], 0.12, 'triangle', 0.07);
-        addFloatingText(this.x, this.y - 40, '🛡 전기 방벽!', '#00f0ff', 13);
+        addFloatingText(this.x, this.y - 40, LANG === 'en' ? '🛡 Electric Barrier!' : '🛡 전기 방벽!', '#00f0ff', 13);
       }
     }
 
@@ -238,7 +238,7 @@ class Player {
     if (this.revivals.backup && this.hp > 0 && this.hp <= this.maxHp * 0.15) {
       this.revivals.backup = false;
       this.hp = Math.ceil(this.maxHp * 0.50);
-      addFloatingText(this.x, this.y - 50, '🔄 긴급 백업!', '#ffe600', 18);
+      addFloatingText(this.x, this.y - 50, LANG === 'en' ? '🔄 Emergency Backup!' : '🔄 긴급 백업!', '#ffe600', 18);
       createExplosionParticles(this.x, this.y, '#ffe600', 15);
     }
     // 부활 퍽: 공허의 각성 타이머
@@ -251,7 +251,7 @@ class Player {
         this.damageMultiplier /= (this._voidDmgMult || 2.5);
         this._voidDmgMult = 1;
         this.hp = Math.max(1, this.hp - Math.floor(this.maxHp * 0.5));
-        addFloatingText(this.x, this.y - 40, '공허 종료', '#b026ff', 14);
+        addFloatingText(this.x, this.y - 40, LANG === 'en' ? 'Void Ended' : '공허 종료', '#b026ff', 14);
         triggerScreenShake(8, 400);
       }
     }
@@ -499,7 +499,7 @@ class Player {
         this.voidActive = true; this.voidTimer = 8000;
         this._voidDmgMult = 2.5; this.damageMultiplier *= 2.5;
         this.hp = 1;
-        addFloatingText(this.x, this.y - 50, '🌀 공허의 각성!', '#b026ff', 20);
+        addFloatingText(this.x, this.y - 50, LANG === 'en' ? '🌀 Void Awakening!' : '🌀 공허의 각성!', '#b026ff', 20);
         triggerScreenShake(15, 600);
         createExplosionParticles(this.x, this.y, '#b026ff', 25);
         return;
@@ -508,7 +508,7 @@ class Player {
         this.revivals.lastStand--;
         this.hp = Math.ceil(this.maxHp * 0.20);
         this.shieldTimer = 4000;
-        addFloatingText(this.x, this.y - 50, '🛡 최후의 방어막!', '#00f0ff', 20);
+        addFloatingText(this.x, this.y - 50, LANG === 'en' ? '🛡 Last Barrier!' : '🛡 최후의 방어막!', '#00f0ff', 20);
         triggerScreenShake(10, 400);
         createExplosionParticles(this.x, this.y, '#00f0ff', 15);
         return;
@@ -518,7 +518,7 @@ class Player {
         this.hp = Math.ceil(this.maxHp * 0.30);
         const allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
         for (let e of allT) { if (dist(this.x, this.y, e.x, e.y) < 500 && e.takeDamage(200, 'counter')) killCount++; }
-        addFloatingText(this.x, this.y - 50, '💥 절명 반격!', '#ff4466', 20);
+        addFloatingText(this.x, this.y - 50, LANG === 'en' ? '💥 Last Counter!' : '💥 절명 반격!', '#ff4466', 20);
         createExplosionParticles(this.x, this.y, '#ff4466', 30);
         triggerScreenShake(20, 600);
         return;
@@ -526,7 +526,7 @@ class Player {
       if (this.revivals.restore) {
         this.revivals.restore = false;
         this.hp = Math.ceil(this.maxHp * 0.30);
-        addFloatingText(this.x, this.y - 50, '💾 데이터 복원!', '#39ff14', 20);
+        addFloatingText(this.x, this.y - 50, LANG === 'en' ? '💾 Data Restored!' : '💾 데이터 복원!', '#39ff14', 20);
         createExplosionParticles(this.x, this.y, '#39ff14', 15);
         return;
       }

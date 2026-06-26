@@ -13,7 +13,7 @@ function closeDevPanel() {
 function devToggleGodMode() {
   devGodMode = !devGodMode;
   const btn = document.getElementById('dev-godmode-btn');
-  if (btn) { btn.textContent = `🛡 무적: ${devGodMode ? 'ON ✓' : 'OFF'}`; btn.style.color = devGodMode ? '#39ff14' : ''; }
+  if (btn) { btn.textContent = `🛡 Invincible: ${devGodMode ? 'ON ✓' : 'OFF'}`; btn.style.color = devGodMode ? '#39ff14' : ''; }
   if (player) addFloatingText(player.x, player.y - 40, `GOD MODE ${devGodMode ? 'ON' : 'OFF'}`, '#39ff14', 14);
 }
 
@@ -49,14 +49,14 @@ function devKillAll() {
   const n = enemies.length;
   for (let e of enemies) createExplosionParticles(e.x, e.y, e.color, 5);
   enemies.length = 0;
-  if (player) addFloatingText(player.x, player.y - 40, `DEV: 적 ${n}마리 제거`, '#ff4466', 13);
+  if (player) addFloatingText(player.x, player.y - 40, LANG === 'en' ? `DEV: ${n} enemies removed` : `DEV: 적 ${n}마리 제거`, '#ff4466', 13);
 }
 
 function devSpawnBoss() {
   if (!player || gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
-  if (activeBoss) { if (player) addFloatingText(player.x, player.y-40,'보스 이미 존재','#ff4466',12); return; }
+  if (activeBoss) { if (player) addFloatingText(player.x, player.y-40, LANG === 'en' ? 'Boss already active' : '보스 이미 존재','#ff4466',12); return; }
   isBossStage = true; spawnBossEnemy();
-  addFloatingText(player.x, player.y - 40, 'DEV: 보스 소환!', '#ff0044', 14);
+  addFloatingText(player.x, player.y - 40, LANG === 'en' ? 'DEV: Boss Spawned!' : 'DEV: 보스 소환!', '#ff0044', 14);
 }
 
 function devTriggerEvent() {
@@ -103,36 +103,36 @@ function devMaxWeapons() {
     player.weapons[key].level = 5;
     weaponStats[key].level = 5;
   }
-  if (player) addFloatingText(player.x, player.y-50, '⚔ DEV: 전무기 MAX', '#ffe600', 14);
+  if (player) addFloatingText(player.x, player.y-50, LANG === 'en' ? '⚔ DEV: All Weapons MAX' : '⚔ DEV: 전무기 MAX', '#ffe600', 14);
 }
 
 function devToggleInvincible() {
   devGodMode = !devGodMode;
   if (player) {
     player._devInvincible = devGodMode;
-    addFloatingText(player.x, player.y-40, `DEV 무적 ${devGodMode?'ON':'OFF'}`, '#39ff14', 14);
+    addFloatingText(player.x, player.y-40, `DEV Invincible: ${devGodMode?'ON':'OFF'}`, '#39ff14', 14);
   }
   const btn = document.getElementById('dev-godmode-btn');
-  if (btn) { btn.textContent = `🛡 무적: ${devGodMode ? 'ON ✓' : 'OFF'}`; btn.style.color = devGodMode ? '#39ff14' : ''; }
+  if (btn) { btn.textContent = `🛡 Invincible: ${devGodMode ? 'ON ✓' : 'OFF'}`; btn.style.color = devGodMode ? '#39ff14' : ''; }
 }
 
 function devSwitchClass() {
   if (!player || gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
   const sel = document.getElementById('dev-class-select');
   const cls = sel?.value;
-  if (!cls || !CLASS_DEFS[cls]) { if (player) addFloatingText(player.x, player.y-40, '직업을 선택하세요', '#ff4466', 12); return; }
+  if (!cls || !CLASS_DEFS[cls]) { if (player) addFloatingText(player.x, player.y-40, LANG === 'en' ? 'Select a class' : '직업을 선택하세요', '#ff4466', 12); return; }
   player.classId = cls;
   const def = CLASS_DEFS[cls];
   player.damageMultiplier = def.damageMult || 1.0;
   player.speed = def.speed || 3.4;
   player.color = def.color || '#00f0ff';
   player.classPassives = {};
-  addFloatingText(player.x, player.y-50, `DEV: ${def.name} 전환!`, def.color||'#00f0ff', 16);
+  addFloatingText(player.x, player.y-50, `DEV: Switch → ${LANG === 'en' ? (def.nameEn || def.name) : def.name}!`, def.color||'#00f0ff', 16);
 }
 
 // ---- 파이널 스테이지 DEV ----
 function devFinalStageUnlock() {
-  if (!player) { showGameToast('게임 플레이 중에만 사용 가능'); return; }
+  if (!player) { showGameToast(LANG === 'en' ? 'Only available during gameplay' : '게임 플레이 중에만 사용 가능'); return; }
   player.classId = 'parasite';
   player._totalAbsorptions = 50;
   if (!saveData._hiddenClassClears) saveData._hiddenClassClears = {};
@@ -140,12 +140,12 @@ function devFinalStageUnlock() {
   saveData._hiddenClassClears.cracker       = true;
   saveData._hiddenClassClears.glitch_dancer = true;
   saveSaveData();
-  showGameToast('🧬 파이널 스테이지 조건 강제 충족 완료');
-  if (player) addFloatingText(player.x, player.y-60, '파이널 조건 OK!', '#88ff44', 16);
+  showGameToast(LANG === 'en' ? '🧬 Final stage conditions forced' : '🧬 파이널 스테이지 조건 강제 충족 완료');
+  if (player) addFloatingText(player.x, player.y-60, LANG === 'en' ? 'Final conditions OK!' : '파이널 조건 OK!', '#88ff44', 16);
 }
 
 function devFinalStageStart() {
-  if (gameState === STATE_MENU || gameState === STATE_GAME_OVER) { showGameToast('게임 플레이 중에만 사용 가능'); return; }
+  if (gameState === STATE_MENU || gameState === STATE_GAME_OVER) { showGameToast(LANG === 'en' ? 'Only available during gameplay' : '게임 플레이 중에만 사용 가능'); return; }
   devFinalStageUnlock();
   setTimeout(() => triggerParasiteFinalStage(), 200);
 }
@@ -169,15 +169,15 @@ function devPlayEnding() {
 
 function devResetSave() {
   showGameConfirm(
-    '모든 저장 데이터를 초기화합니다.\n메타 업그레이드, 업적, 최고기록이 전부 삭제됩니다.',
+    LANG === 'en' ? 'This will erase ALL save data.\nMeta upgrades, achievements, and best records will be deleted.' : '모든 저장 데이터를 초기화합니다.\n메타 업그레이드, 업적, 최고기록이 전부 삭제됩니다.',
     () => {
       localStorage.removeItem(SAVE_KEY);
       saveData = loadSaveData();
       updateMenuMetaBadge();
-      showGameToast('⚡ 저장 데이터가 초기화되었습니다');
+      showGameToast(LANG === 'en' ? '⚡ Save data has been reset' : '⚡ 저장 데이터가 초기화되었습니다');
     },
     null,
-    { title: '데이터 초기화', icon: '💀', okLabel: '전부 삭제', cancelLabel: '취소' }
+    { title: LANG === 'en' ? 'Reset Data' : '데이터 초기화', icon: '💀', okLabel: LANG === 'en' ? 'Delete All' : '전부 삭제', cancelLabel: LANG === 'en' ? 'Cancel' : '취소' }
   );
 }
 
@@ -251,7 +251,7 @@ function triggerFieldEvent() {
 function endFieldEvent() {
   if (!activeFieldEvent) return;
   addFloatingText(player ? player.x : MAP_WIDTH/2, player ? player.y - 50 : MAP_HEIGHT/2,
-    `${activeFieldEvent.icon} 이벤트 종료`, '#94a3b8', 12);
+    LANG === 'en' ? `${activeFieldEvent.icon} Event Ended` : `${activeFieldEvent.icon} 이벤트 종료`, '#94a3b8', 12);
   activeFieldEvent = null;
   hideFieldEventBanner();
 }
@@ -260,8 +260,8 @@ function showFieldEventBanner(ev) {
   const el = document.getElementById('field-event-banner');
   if (!el) return;
   el.querySelector('.fev-icon').textContent  = ev.icon;
-  el.querySelector('.fev-name').textContent  = ev.name;
-  el.querySelector('.fev-desc').textContent  = ev.desc;
+  el.querySelector('.fev-name').textContent  = (LANG === 'en' && ev.nameEn) ? ev.nameEn : ev.name;
+  el.querySelector('.fev-desc').textContent  = (LANG === 'en' && ev.descEn) ? ev.descEn : ev.desc;
   el.style.borderColor = ev.color;
   el.style.setProperty('--fev-color', ev.color);
   el.classList.add('active');

@@ -23,7 +23,7 @@ function triggerLevelUpModal() {
   const rerollBtn  = document.getElementById('reroll-btn');
   const rerollUsesEl = document.getElementById('reroll-uses');
   rerollBtn.disabled = (rerollUses <= 0);
-  if (rerollUsesEl) rerollUsesEl.textContent = `(${rerollUses}회)`;
+  if (rerollUsesEl) rerollUsesEl.textContent = LANG === 'en' ? `(${rerollUses}×)` : `(${rerollUses}회)`;
 
   rerollBtn.onclick = () => {
     if (rerollUses <= 0) return;
@@ -32,7 +32,7 @@ function triggerLevelUpModal() {
     levelUpSelectedIdx = 0;
     updateLevelUpFocus([...document.querySelectorAll('#card-container .upgrade-card')]);
     rerollBtn.disabled = (rerollUses <= 0);
-    if (rerollUsesEl) rerollUsesEl.textContent = `(${rerollUses}회)`;
+    if (rerollUsesEl) rerollUsesEl.textContent = LANG === 'en' ? `(${rerollUses}×)` : `(${rerollUses}회)`;
     playSynthSound([400, 600, 800], 0.15, 'square', 0.05);
   };
 }
@@ -217,7 +217,7 @@ function renderUpgradeCards(choices) {
     }
 
     // i18n: evolved weapon name in preview badge
-    const baseEvoName = UPGRADES.weapons[choice.key]?.evolvedName || '진화형';
+    const baseEvoName = UPGRADES.weapons[choice.key]?.evolvedName || (LANG === 'en' ? 'EVOLVED' : '진화형');
     const evoName = (choice.type === 'weapon' && choice.key)
       ? (tGame('weapons', choice.key, 'evolvedName') || baseEvoName)
       : baseEvoName;
@@ -324,8 +324,8 @@ function showCurseModal() {
   const modal = document.getElementById('curse-modal');
   const card  = document.getElementById('curse-offer-card');
   if (!modal || !card) { gameState = STATE_STAGE_BONUS; showStageBonusModal(); return; }
-  const cDebuff = (LANG === 'en' ? tGame('curses', curse.id, 'debuff') : null) || curse.debuff;
-  const cReward = (LANG === 'en' ? tGame('curses', curse.id, 'reward') : null) || curse.reward;
+  const cDebuff = (LANG === 'en' ? (curse.debuffEn || tGame('curses', curse.id, 'debuff')) : null) || curse.debuff;
+  const cReward = (LANG === 'en' ? (curse.rewardEn || tGame('curses', curse.id, 'reward')) : null) || curse.reward;
   card.innerHTML = `
     <div class="curse-debuff">🦠 ${LANG === 'en' ? 'Infection:' : '감염:'} ${cDebuff}</div>
     <div class="curse-reward">⚡ ${LANG === 'en' ? 'Extract:' : '추출:'} ${cReward}</div>
@@ -343,8 +343,8 @@ function showNearDeathCurseModal() {
   const modal = document.getElementById('curse-modal');
   const card  = document.getElementById('curse-offer-card');
   if (!modal || !card) { gameState = STATE_PLAYING; ensureGameLoopRunning(); return; }
-  const ndDebuff = (LANG === 'en' ? tGame('curses', curse.id, 'debuff') : null) || curse.debuff;
-  const ndReward = (LANG === 'en' ? tGame('curses', curse.id, 'reward') : null) || curse.reward;
+  const ndDebuff = (LANG === 'en' ? (curse.debuffEn || tGame('curses', curse.id, 'debuff')) : null) || curse.debuff;
+  const ndReward = (LANG === 'en' ? (curse.rewardEn || tGame('curses', curse.id, 'reward')) : null) || curse.reward;
   card.innerHTML = `
     <div style="color:#ff8800;font-size:0.75rem;margin-bottom:6px">${t('curse.neardeath')}</div>
     <div class="curse-debuff">🦠 ${LANG === 'en' ? 'Infection:' : '감염:'} ${ndDebuff}</div>
@@ -361,11 +361,11 @@ function applyNearDeathCurseChoice(curse, accepted) {
   if (accepted && player) {
     curse.debuffFn(player);
     curse.rewardFn();
-    addFloatingText(player.x, player.y - 40, '🦠 감염 감수!', '#ff4466', 15);
+    addFloatingText(player.x, player.y - 40, LANG === 'en' ? '🦠 Infection Accepted!' : '🦠 감염 감수!', '#ff4466', 15);
     playSynthSound([150, 80, 200], 0.2, 'sawtooth', 0.1);
     triggerScreenShake(8, 400);
   } else {
-    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, '🛡 격리 완료', '#94a3b8', 13);
+    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, LANG === 'en' ? '🛡 Contained' : '🛡 격리 완료', '#94a3b8', 13);
   }
   // 근사망 저주는 스테이지 보너스 없이 바로 게임 복귀
   gameState = STATE_PLAYING;
@@ -378,11 +378,11 @@ function applyCurseChoice(curse, accepted) {
   if (accepted && player) {
     curse.debuffFn(player);
     curse.rewardFn();
-    addFloatingText(player.x, player.y - 40, '🦠 감염 감수!', '#ff4466', 15);
+    addFloatingText(player.x, player.y - 40, LANG === 'en' ? '🦠 Infection Accepted!' : '🦠 감염 감수!', '#ff4466', 15);
     playSynthSound([150, 80, 200], 0.2, 'sawtooth', 0.1);
     triggerScreenShake(8, 400);
   } else {
-    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, '🛡 격리 완료', '#94a3b8', 13);
+    addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 40, LANG === 'en' ? '🛡 Contained' : '🛡 격리 완료', '#94a3b8', 13);
   }
   gameState = STATE_STAGE_BONUS;
   showStageBonusModal();
@@ -404,7 +404,8 @@ function checkSynergies() {
       activeSynergies.add(syn.id);
       syn.apply(player);
       showSynergyBanner(syn.icon, syn.name);
-      addFloatingText(player.x, player.y - 55, `✨ 시너지: ${syn.name}!`, '#ffe600', 14);
+      const _synName = (LANG === 'en' && syn.nameEn) ? syn.nameEn : syn.name;
+      addFloatingText(player.x, player.y - 55, LANG === 'en' ? `✨ Synergy: ${_synName}!` : `✨ 시너지: ${_synName}!`, '#ffe600', 14);
       triggerScreenShake(6, 400);
       playSynthSound([600, 900, 1400, 800], 0.18, 'sine', 0.07);
     }
@@ -445,8 +446,9 @@ function applyUpgrade(choice) {
     player.fusions[choice.id] = true;
     const fus = WEAPON_FUSIONS.find(f => f.id === choice.id);
     if (fus) {
-      showEvolutionNotification(fus.icon, fus.name + ' 융합 완료!');
-      addFloatingText(player.x, player.y - 70, `🔮 무기 융합: ${fus.name}!`, '#ffe600', 16);
+      const _fusName = (LANG === 'en' && typeof tGame !== 'undefined' && tGame('fusions', fus.id, 'name')) || fus.name;
+      showEvolutionNotification(fus.icon, _fusName + (LANG === 'en' ? ' Fusion Complete!' : ' 융합 완료!'));
+      addFloatingText(player.x, player.y - 70, LANG === 'en' ? `🔮 Weapon Fusion: ${_fusName}!` : `🔮 무기 융합: ${_fusName}!`, '#ffe600', 16);
     }
     triggerScreenShake(14, 900);
     playSynthSound([200, 500, 1000, 2000, 800], 0.28, 'sine', 0.12);
@@ -500,71 +502,71 @@ function applyClassPassiveEffect(key, level) {
   switch (key) {
     case 'hk_skill':
       player._skillCdMult = level >= 2 ? 0.55 : 0.75;
-      addFloatingText(player.x, player.y - 40, `⏩ 해킹 가속 Lv${level}!`, '#00f0ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `⏩ Hack Accelerator Lv${level}!` : `⏩ 해킹 가속 Lv${level}!`, '#00f0ff', 14);
       break;
     case 'hk_xp':
       player.passiveXpMult = (player.passiveXpMult || 1.0) + 0.20;
-      addFloatingText(player.x, player.y - 40, `💽 데이터 수집 Lv${level}!`, '#00f0ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💽 Data Harvest Lv${level}!` : `💽 데이터 수집 Lv${level}!`, '#00f0ff', 14);
       break;
     case 'fw_armor':
       player.damageReduction = Math.min(0.75, (player.damageReduction || 0) + (level === 1 ? 0.12 : 0.10));
-      addFloatingText(player.x, player.y - 40, `🧱 강화 방호 Lv${level}!`, '#b026ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🧱 Reinforced Armor Lv${level}!` : `🧱 강화 방호 Lv${level}!`, '#b026ff', 14);
       break;
     case 'fw_regen':
-      addFloatingText(player.x, player.y - 40, `🔋 자가 수복 Lv${level}!`, '#b026ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🔋 Self-Repair Lv${level}!` : `🔋 자가 수복 Lv${level}!`, '#b026ff', 14);
       break;
     case 'rk_evade':
-      addFloatingText(player.x, player.y - 40, `👻 위상 회피 Lv${level}!`, '#39ff14', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `👻 Phase Dodge Lv${level}!` : `👻 위상 회피 Lv${level}!`, '#39ff14', 14);
       break;
     case 'rk_speed':
       player.speed += level === 1 ? 0.5 : 0.7;
-      addFloatingText(player.x, player.y - 40, `💨 고속 침투 Lv${level}!`, '#39ff14', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💨 High-Speed Breach Lv${level}!` : `💨 고속 침투 Lv${level}!`, '#39ff14', 14);
       break;
     case 'dr_dmg':
-      addFloatingText(player.x, player.y - 40, `⚡ 드론 과부하 Lv${level}!`, '#ffe600', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `⚡ Drone Overload Lv${level}!` : `⚡ 드론 과부하 Lv${level}!`, '#ffe600', 14);
       break;
     case 'dr_count':
-      addFloatingText(player.x, player.y - 40, `🛸 추가 배치 Lv${level}!`, '#ffe600', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🛸 Extra Deploy Lv${level}!` : `🛸 추가 배치 Lv${level}!`, '#ffe600', 14);
       break;
     case 'sc_crit':
       player.critBonus = (player.critBonus || 0) + (level === 1 ? 0.15 : 0.13);
-      addFloatingText(player.x, player.y - 40, `🎯 치명 조준 Lv${level}!`, '#ff4466', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🎯 Lethal Aim Lv${level}!` : `🎯 치명 조준 Lv${level}!`, '#ff4466', 14);
       break;
     case 'sc_magnet':
       player.magnetRadius += 60;
-      addFloatingText(player.x, player.y - 40, `🔭 광역 탐지 Lv${level}!`, '#ff4466', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🔭 Wide Scan Lv${level}!` : `🔭 광역 탐지 Lv${level}!`, '#ff4466', 14);
       break;
     case 'pb_maxhp':
       player.maxHp += 40;
       player.hp     = Math.min(player.hp + 40, player.maxHp);
-      addFloatingText(player.x, player.y - 40, `💪 핵심 강화 Lv${level}!`, '#39ff14', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💪 Core Expansion Lv${level}!` : `💪 핵심 강화 Lv${level}!`, '#39ff14', 14);
       break;
     case 'pb_triage':
-      addFloatingText(player.x, player.y - 40, `🏥 응급 처치 Lv${level}!`, '#39ff14', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🏥 Field Triage Lv${level}!` : `🏥 응급 처치 Lv${level}!`, '#39ff14', 14);
       break;
     case 'ck_zombie':
-      addFloatingText(player.x, player.y - 40, `🧟 좀비 프로토콜 Lv${level}!`, '#ff6600', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🧟 Zombie Protocol Lv${level}!` : `🧟 좀비 프로토콜 Lv${level}!`, '#ff6600', 14);
       break;
     case 'ck_blast':
-      addFloatingText(player.x, player.y - 40, `💥 자폭 명령 Lv${level}!`, '#ff6600', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💥 Suicide Command Lv${level}!` : `💥 자폭 명령 Lv${level}!`, '#ff6600', 14);
       break;
     case 'gd_rhythm':
-      addFloatingText(player.x, player.y - 40, `🎵 리듬 강화 Lv${level}!`, '#ff88ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🎵 Rhythm Boost Lv${level}!` : `🎵 리듬 강화 Lv${level}!`, '#ff88ff', 14);
       break;
     case 'gd_burst':
-      addFloatingText(player.x, player.y - 40, `💫 연속 폭발 Lv${level}!`, '#ff88ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💫 Chain Burst Lv${level}!` : `💫 연속 폭발 Lv${level}!`, '#ff88ff', 14);
       break;
     case 'ps_absorb':
-      addFloatingText(player.x, player.y - 40, `💉 강화 흡수 Lv${level}!`, '#88ff44', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💉 Enhanced Absorption Lv${level}!` : `💉 강화 흡수 Lv${level}!`, '#88ff44', 14);
       break;
     case 'ps_surge':
-      addFloatingText(player.x, player.y - 40, `🌊 방출 급등 Lv${level}!`, '#88ff44', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🌊 Release Surge Lv${level}!` : `🌊 방출 급등 Lv${level}!`, '#88ff44', 14);
       break;
     case 'jm_wave':
-      addFloatingText(player.x, player.y - 40, `📶 광대역 간섭 Lv${level}!`, '#aaffff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `📶 Broadband Jam Lv${level}!` : `📶 광대역 간섭 Lv${level}!`, '#aaffff', 14);
       break;
     case 'jm_static':
-      addFloatingText(player.x, player.y - 40, `⚡ 정전기 누적 Lv${level}!`, '#aaffff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `⚡ Static Buildup Lv${level}!` : `⚡ 정전기 누적 Lv${level}!`, '#aaffff', 14);
       break;
   }
 }
@@ -573,34 +575,34 @@ function applyPassiveEffect(key, level) {
   switch (key) {
     case 'overclock':
       player.damageMultiplier *= level === 2 ? (1.4 / 1.12) : 1.12;
-      addFloatingText(player.x, player.y - 40, `⚙️ 과부하 회로 Lv${level}!`, '#ffe600', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `⚙️ Overdrive Circuit Lv${level}!` : `⚙️ 과부하 회로 Lv${level}!`, '#ffe600', 14);
       break;
     case 'resonance':
       player.passiveXpMult = level === 2 ? 1.45 : 1.2;
-      addFloatingText(player.x, player.y - 40, `🔮 공명 코어 Lv${level}!`, '#b026ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🔮 Resonance Core Lv${level}!` : `🔮 공명 코어 Lv${level}!`, '#b026ff', 14);
       break;
     case 'shield':
       player.damageReduction = level === 2 ? 0.22 : 0.10;
-      addFloatingText(player.x, player.y - 40, `💠 방어막 Lv${level}!`, '#00f0ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💠 Defense Chip Lv${level}!` : `💠 방어막 Lv${level}!`, '#00f0ff', 14);
       break;
     case 'regen':
-      addFloatingText(player.x, player.y - 40, `🔋 회생 코어 Lv${level}!`, '#39ff14', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🔋 Regen Core Lv${level}!` : `🔋 회생 코어 Lv${level}!`, '#39ff14', 14);
       break;
     case 'nanobots':
-      addFloatingText(player.x, player.y - 40, `🦠 나노봇 Lv${level}!`, '#b026ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🦠 Nanobot Swarm Lv${level}!` : `🦠 나노봇 Lv${level}!`, '#b026ff', 14);
       break;
     case 'thorns':
-      addFloatingText(player.x, player.y - 40, `⚔️ 복수의 가시 Lv${level}!`, '#ff4466', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `⚔️ Revenge Spikes Lv${level}!` : `⚔️ 복수의 가시 Lv${level}!`, '#ff4466', 14);
       break;
     case 'critical':
-      addFloatingText(player.x, player.y - 40, `💥 크리티컬 코어 Lv${level}!`, '#ffe600', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💥 Critical Core Lv${level}!` : `💥 크리티컬 코어 Lv${level}!`, '#ffe600', 14);
       break;
     case 'explosive':
-      addFloatingText(player.x, player.y - 40, `💣 폭발 연쇄 Lv${level}!`, '#ff8800', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `💣 Chain Explosion Lv${level}!` : `💣 폭발 연쇄 Lv${level}!`, '#ff8800', 14);
       break;
     case 'barrier':
       player.barrierTimer = 0;
-      addFloatingText(player.x, player.y - 40, `🛡 전기 방벽 Lv${level}!`, '#00f0ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🛡 Electric Barrier Lv${level}!` : `🛡 전기 방벽 Lv${level}!`, '#00f0ff', 14);
       break;
   }
 }
@@ -617,7 +619,7 @@ function triggerShopModal() {
   shopFocusIdx = 0;
   const modal    = document.getElementById('shop-modal');
   const goldDisp = document.getElementById('shop-gold-display');
-  if (goldDisp) goldDisp.textContent = `보유 골드: 💰 ${player.gold}G`;
+  if (goldDisp) goldDisp.textContent = LANG === 'en' ? `Gold: 💰 ${player.gold}G` : `보유 골드: 💰 ${player.gold}G`;
   const shuffled = [...SHOP_ITEMS].sort(() => Math.random() - 0.5).slice(0, 3);
   renderShopItems(shuffled);
   modal.classList.add('active');
@@ -684,24 +686,24 @@ function applyShopItem(item) {
     }
     case 'shop_damage':
       player.damageMultiplier *= 1.2;
-      addFloatingText(player.x, player.y - 40, '🔥 피해 +20%', '#ff6600', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '🔥 DMG +20%' : '🔥 피해 +20%', '#ff6600', 14);
       break;
     case 'shop_speed':
       player.speed *= 1.15;
-      addFloatingText(player.x, player.y - 40, '🏃 속도 +15%', '#39ff14', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '🏃 SPD +15%' : '🏃 속도 +15%', '#39ff14', 14);
       break;
     case 'shop_magnet':
       player.magnetRadius *= 1.4;
-      addFloatingText(player.x, player.y - 40, '🧲 자석 +40%', '#b026ff', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '🧲 Magnet +40%' : '🧲 자석 +40%', '#b026ff', 14);
       break;
     case 'shop_reroll':
       rerollUses += 2;
-      addFloatingText(player.x, player.y - 40, '🔄 리롤 +2', '#ffe600', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '🔄 Rerolls +2' : '🔄 리롤 +2', '#ffe600', 14);
       break;
     case 'shop_maxhp':
       player.maxHp += 30;
       player.hp = Math.min(player.hp + 30, player.maxHp);
-      addFloatingText(player.x, player.y - 40, '❤️ 최대 HP +30', '#ff4466', 14);
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '❤️ Max HP +30' : '❤️ 최대 HP +30', '#ff4466', 14);
       break;
   }
   playSynthSound([440, 880], 0.1, 'sine', 0.06);
@@ -720,19 +722,19 @@ function applyRevivalPerk(id) {
   switch (id) {
     case 'rev_restore':
       player.revivals.restore = true;
-      addFloatingText(player.x, player.y - 40, '💾 복원 칩 장착!', '#39ff14', 14); break;
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '💾 Restore Chip Equipped!' : '💾 복원 칩 장착!', '#39ff14', 14); break;
     case 'rev_backup':
       player.revivals.backup  = true;
-      addFloatingText(player.x, player.y - 40, '🔄 긴급 백업 장착!', '#ffe600', 14); break;
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '🔄 Emergency Backup Equipped!' : '🔄 긴급 백업 장착!', '#ffe600', 14); break;
     case 'rev_laststand':
       player.revivals.lastStand += 2;
-      addFloatingText(player.x, player.y - 40, `🛡 방어막 장전! (${player.revivals.lastStand}회)`, '#00f0ff', 14); break;
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? `🛡 Barrier Loaded! (${player.revivals.lastStand}×)` : `🛡 방어막 장전! (${player.revivals.lastStand}회)`, '#00f0ff', 14); break;
     case 'rev_counter':
       player.revivals.counter = true;
-      addFloatingText(player.x, player.y - 40, '💥 절명 반격 장착!', '#ff4466', 14); break;
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '💥 Last Counter Equipped!' : '💥 절명 반격 장착!', '#ff4466', 14); break;
     case 'rev_void':
       player.revivals.void    = true;
-      addFloatingText(player.x, player.y - 40, '🌀 공허 코어 장착!', '#b026ff', 14); break;
+      addFloatingText(player.x, player.y - 40, LANG === 'en' ? '🌀 Void Core Equipped!' : '🌀 공허 코어 장착!', '#b026ff', 14); break;
   }
   playSynthSound([300, 600, 1000, 1500], 0.15, 'sine', 0.07);
   triggerScreenShake(5, 300);

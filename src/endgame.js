@@ -75,20 +75,22 @@ function showVictoryScreen() {
     title.style.color = '#ffe600';
     title.style.textShadow = '0 0 12px #ffe600, 0 0 40px #ffe600, 0 0 80px #ff8800';
   }
-  if (subtitle) subtitle.textContent = '시스템 위협 완전 제압. 승천 레벨 해금!';
+  if (subtitle) subtitle.textContent = LANG === 'en' ? 'All threats eliminated. Ascension unlocked!' : '시스템 위협 완전 제압. 승천 레벨 해금!';
   if (deathRow) deathRow.style.display = 'none';
 
   const coresBonus = 30 + (saveData.completions || 1) * 5;
   saveData.dataCores += coresBonus;
   saveSaveData();
-  if (coresRow) { coresRow.textContent = `+${coresBonus} 데이터 코어 획득`; coresRow.style.color = '#00f0ff'; }
+  if (coresRow) { coresRow.textContent = LANG === 'en' ? `+${coresBonus} Data Cores Acquired` : `+${coresBonus} 데이터 코어 획득`; coresRow.style.color = '#00f0ff'; }
   if (bestRow)  bestRow.textContent = '';
 
   const nextAsc = (saveData.ascensionLevel || 0) + 1;
   const ngBtn   = document.getElementById('ng-plus-btn');
   const ascDisp = document.getElementById('ascension-display');
-  if (ngBtn)   ngBtn.textContent = `✨ NG+${nextAsc} 시작`;
-  if (ascDisp) ascDisp.textContent = `승천 Lv.${saveData.ascensionLevel || 0} → Lv.${nextAsc}  |  적 HP +${nextAsc * 25}%  |  플레이어 +${nextAsc * 15} HP`;
+  if (ngBtn)   ngBtn.textContent = LANG === 'en' ? `✨ Start NG+${nextAsc}` : `✨ NG+${nextAsc} 시작`;
+  if (ascDisp) ascDisp.textContent = LANG === 'en'
+    ? `Ascension Lv.${saveData.ascensionLevel || 0} → Lv.${nextAsc}  |  Enemy HP +${nextAsc * 25}%  |  Player +${nextAsc * 15} HP`
+    : `승천 Lv.${saveData.ascensionLevel || 0} → Lv.${nextAsc}  |  적 HP +${nextAsc * 25}%  |  플레이어 +${nextAsc * 15} HP`;
   if (victoryExtra) victoryExtra.style.display = 'block';
 
   gameOverModal.classList.add('active');
@@ -129,7 +131,9 @@ function _checkClassUnlocks() {
       saveSaveData();
       const info = CLASS_DEFS[cls];
       setTimeout(() => {
-        _showAchievementToast({ icon: info.icon, name: `${info.name} 해금!`, desc: `${def.label} 달성으로 새 히든 클래스 개방!` });
+        _showAchievementToast({ icon: info.icon,
+          name: LANG === 'en' ? `${info.nameEn || info.name} Unlocked!` : `${info.name} 해금!`,
+          desc: LANG === 'en' ? `${def.labelEn || def.label} — New hidden class available!` : `${def.label} 달성으로 새 히든 클래스 개방!` });
       }, 1200);
     }
   }
@@ -145,7 +149,9 @@ function _checkHiddenClassClears() {
       saveSaveData();
       const info = CLASS_DEFS[cls];
       setTimeout(() => {
-        _showAchievementToast({ icon: info?.icon||'🏆', name: `${info?.name||cls} 마스터!`, desc: `히든 클래스로 스테이지 100 클리어 — 패러사이트 해금 조건 진행!` });
+        _showAchievementToast({ icon: info?.icon||'🏆',
+          name: LANG === 'en' ? `${info?.nameEn || info?.name||cls} Master!` : `${info?.name||cls} 마스터!`,
+          desc: LANG === 'en' ? 'Cleared Stage 100 as hidden class — Parasite unlock condition progress!' : '히든 클래스로 스테이지 100 클리어 — 패러사이트 해금 조건 진행!' });
       }, 2000);
     }
   }
@@ -169,13 +175,13 @@ function _checkClassDiscovery() {
       key: 'tier2',
       condition: (stats.totalGamesPlayed || 0) >= 1,
       classes: ['cyborg','ghost'],
-      msg: '방화벽 · 루트킷 해금!'
+      msg: '방화벽 · 루트킷 해금!', msgEn: 'Firewall · Rootkit Unlocked!'
     },
     {
       key: 'tier3',
       condition: ((stats.cls_cyborg_games||0) + (stats.cls_ghost_games||0)) >= 1,
       classes: ['engineer','sniper','support'],
-      msg: '드론.exe · 스캐너 · 패치봇 해금!'
+      msg: '드론.exe · 스캐너 · 패치봇 해금!', msgEn: 'Drone.exe · Scanner · Patchbot Unlocked!'
     }
   ];
 
@@ -184,7 +190,7 @@ function _checkClassDiscovery() {
     if (!tier.condition) return;
     saveData._classDiscovered[tier.key] = true;
     setTimeout(() => {
-      _showAchievementToast({ icon: '🔓', name: '새 직업 해금', desc: tier.msg });
+      _showAchievementToast({ icon: '🔓', name: LANG === 'en' ? 'New Classes Unlocked' : '새 직업 해금', desc: LANG === 'en' ? tier.msgEn : tier.msg });
     }, 2400);
   });
 
@@ -197,7 +203,9 @@ function _checkClassDiscovery() {
     saveData._classDiscovered[key] = true;
     const info = CLASS_DEFS[cls];
     setTimeout(() => {
-      _showAchievementToast({ icon: info?.icon||'🔓', name: `히든 클래스 해금`, desc: `${info?.name||cls} — 선택 화면에서 확인하세요!` });
+      _showAchievementToast({ icon: info?.icon||'🔓',
+        name: LANG === 'en' ? 'Hidden Class Unlocked' : '히든 클래스 해금',
+        desc: LANG === 'en' ? `${info?.nameEn || info?.name||cls} — Check the class select screen!` : `${info?.name||cls} — 선택 화면에서 확인하세요!` });
     }, 3200);
   });
 }
@@ -293,7 +301,9 @@ function endGame(isVictory) {
     title.innerText = '📅 DAILY RUN';
     title.style.textShadow = '0 0 10px #ffe600, 0 0 20px #ffe600';
     title.style.color = '#fff';
-    subtitle.innerText = `[${getDailyRunDate()}] 일일 챌린지 완료! STAGE ${currentStage} 도달`;
+    subtitle.innerText = LANG === 'en'
+      ? `[${getDailyRunDate()}] Daily Challenge Complete! Reached STAGE ${currentStage}`
+      : `[${getDailyRunDate()}] 일일 챌린지 완료! STAGE ${currentStage} 도달`;
     const dailyKey = `ns_daily_${getDailyRunDate()}`;
     const prev = parseInt(localStorage.getItem(dailyKey) || '0');
     if (currentStage > prev) localStorage.setItem(dailyKey, currentStage);
@@ -302,23 +312,27 @@ function endGame(isVictory) {
     title.innerText = 'ENDLESS TERMINATED';
     title.style.textShadow = '0 0 10px #ffe600, 0 0 20px #ffe600';
     title.style.color = '#fff';
-    subtitle.innerText = `★ STAGE ${currentStage} 도달! STAGE 100 돌파 후 무한 생존! ★`;
+    subtitle.innerText = LANG === 'en'
+      ? `★ Reached STAGE ${currentStage}! Clear Stage 100 to unlock endless! ★`
+      : `★ STAGE ${currentStage} 도달! STAGE 100 돌파 후 무한 생존! ★`;
     // 승천 레벨 증가 가능
     if (isVictory && !saveData._ascendedToday) {
       saveData.ascensionLevel = (saveData.ascensionLevel || 0) + 1;
       ascensionLevel = saveData.ascensionLevel;
       saveSaveData();
-      addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 60, `✨ 승천 Lv.${ascensionLevel}!`, '#ffe600', 18);
+      addFloatingText(player?.x ?? 0, (player?.y ?? 0) - 60, `✨ Ascension Lv.${ascensionLevel}!`, '#ffe600', 18);
     }
   } else {
     title.innerText = 'SYSTEM OVERLOAD';
     title.style.textShadow = '0 0 10px var(--color-neon-pink), 0 0 20px var(--color-neon-pink)';
     title.style.color = '#fff';
-    subtitle.innerText = `STAGE ${currentStage}에서 바이러스에 감염되었습니다.`;
+    subtitle.innerText = LANG === 'en'
+      ? `Infected by virus at STAGE ${currentStage}.`
+      : `STAGE ${currentStage}에서 바이러스에 감염되었습니다.`;
     const causeEl = document.getElementById('death-cause-row');
     if (causeEl) {
       if (lastDamageSource) {
-        causeEl.textContent = `☠ 사망 원인: ${lastDamageSource}`;
+        causeEl.textContent = LANG === 'en' ? `☠ Cause: ${lastDamageSource}` : `☠ 사망 원인: ${lastDamageSource}`;
         causeEl.style.display = 'block';
       } else {
         causeEl.style.display = 'none';
@@ -342,9 +356,9 @@ function endGame(isVictory) {
     if (activeSynergies.size > 0) {
       const names = [...activeSynergies].map(id => {
         const s = SYNERGY_DEFS.find(d => d.id === id);
-        return s ? `${s.icon} ${s.name}` : id;
+        return s ? `${s.icon} ${(LANG === 'en' && s.nameEn) ? s.nameEn : s.name}` : id;
       }).join('  ·  ');
-      synRow.textContent = `시너지 발동: ${names}`;
+      synRow.textContent = LANG === 'en' ? `Synergies: ${names}` : `시너지 발동: ${names}`;
     } else {
       synRow.textContent = '';
     }
@@ -362,8 +376,8 @@ function endGame(isVictory) {
         isMe: id === mpMyId
       })).sort((a, b) => b.ms - a.ms);
       const fmt = ms => { const s = Math.floor(ms/1000); return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; };
-      rankEl.innerHTML = '<div style="color:#00f0ff;font-size:11px;margin-bottom:4px">🏆 멀티 생존 순위</div>' +
-        allEntries.map((e,i) => `<div style="color:${e.color}">${['🥇','🥈','🥉'][i]||`${i+1}.`} ${e.name}${e.isMe?' (나)':''} — ${fmt(e.ms)}</div>`).join('');
+      rankEl.innerHTML = `<div style="color:#00f0ff;font-size:11px;margin-bottom:4px">🏆 ${LANG === 'en' ? 'Multiplayer Survival Rank' : '멀티 생존 순위'}</div>` +
+        allEntries.map((e,i) => `<div style="color:${e.color}">${['🥇','🥈','🥉'][i]||`${i+1}.`} ${e.name}${e.isMe ? (LANG === 'en' ? ' (me)' : ' (나)') : ''} — ${fmt(e.ms)}</div>`).join('');
       rankEl.style.display = 'block';
     }
   }
@@ -381,7 +395,11 @@ function endGame(isVictory) {
     }
     setTimeout(() => {
       _newCodecLogs.forEach(({ idx }) => {
-        _showAchievementToast({ icon: '🗃', name: `새 격리 로그 해금`, desc: `${clsInfo.name||player?.classId} LOG-0${idx+1} 해독 가능 — 아카이브에서 확인` });
+        _showAchievementToast({ icon: '🗃',
+          name: LANG === 'en' ? 'New Archive Log Unlocked' : '새 격리 로그 해금',
+          desc: LANG === 'en'
+            ? `${clsInfo.nameEn || clsInfo.name||player?.classId} LOG-0${idx+1} Decrypted — Check Archive`
+            : `${clsInfo.name||player?.classId} LOG-0${idx+1} 해독 가능 — 아카이브에서 확인` });
       });
     }, 1800);
   } else {
@@ -390,7 +408,9 @@ function endGame(isVictory) {
   }
   const coresEarned = earnDataCores();
   const coresEl = document.getElementById('cores-earned-row');
-  if (coresEl) coresEl.textContent = `💾 데이터 코어 획득: +${coresEarned}  (보유: ${saveData.dataCores})`;
+  if (coresEl) coresEl.textContent = LANG === 'en'
+    ? `💾 Data Cores: +${coresEarned}  (Total: ${saveData.dataCores})`
+    : `💾 데이터 코어 획득: +${coresEarned}  (보유: ${saveData.dataCores})`;
 
   // 최고 기록 갱신 체크
   let isNewRecord = false;
@@ -401,7 +421,9 @@ function endGame(isVictory) {
   const bestEl = document.getElementById('best-record-row');
   if (bestEl) {
     const bm = Math.floor(saveData.bestTime / 60), bs = saveData.bestTime % 60;
-    bestEl.textContent = `🏆 최고 기록 — STAGE ${saveData.bestStage} · ${saveData.bestKills}마리 · ${bm.toString().padStart(2,'0')}:${bs.toString().padStart(2,'0')}`;
+    bestEl.textContent = LANG === 'en'
+      ? `🏆 Best — STAGE ${saveData.bestStage} · ${saveData.bestKills} kills · ${bm.toString().padStart(2,'0')}:${bs.toString().padStart(2,'0')}`
+      : `🏆 최고 기록 — STAGE ${saveData.bestStage} · ${saveData.bestKills}마리 · ${bm.toString().padStart(2,'0')}:${bs.toString().padStart(2,'0')}`;
     bestEl.style.color = isNewRecord ? '#ffe600' : '#94a3b8';
   }
 
@@ -430,7 +452,7 @@ function buildWeaponContributionList() {
     c.appendChild(item);
   }
 
-  if (c.innerHTML === '') c.innerHTML = '<p style="color:#64748b;font-size:0.9rem">기록된 공격 이력이 없습니다.</p>';
+  if (c.innerHTML === '') c.innerHTML = `<p style="color:#64748b;font-size:0.9rem">${LANG === 'en' ? 'No attack history recorded.' : '기록된 공격 이력이 없습니다.'}</p>`;
 }
 
 // ============================================================
@@ -462,28 +484,37 @@ function shareResult() {
   const stageStr  = `${currentStage}${isEndlessMode ? ' ∞' : ''}`;
   const clsInfo   = CLASS_DEFS[player?.classId || selectedClass];
   const diffLabel = DIFFICULTY_SETTINGS[gameDifficulty]?.label || 'NORMAL';
+  const clsName = LANG === 'en' ? (clsInfo?.nameEn || clsInfo?.name || '') : (clsInfo?.name || '');
   const synergyStr = activeSynergies.size > 0
-    ? [...activeSynergies].map(id => { const s = SYNERGY_DEFS.find(d => d.id === id); return s ? `${s.icon}${s.name}` : id; }).join(', ')
-    : '없음';
-  const text =
-    `⚡ AntiSurge β v0.10\n` +
-    `👤 ${name} [${clsInfo?.icon || ''}${clsInfo?.name || ''}] [${diffLabel}]\n` +
-    `🏆 STAGE ${stageStr} 도달\n` +
-    `💀 ${killCount}마리 제거  ⭐ Lv.${player?.level ?? '?'}\n` +
-    `⏱ ${timeStr}  💥 최대콤보 ${maxCombo}\n` +
-    `🔗 시너지: ${synergyStr}\n` +
-    (ascensionLevel > 0 ? `✨ 승천 Lv.${ascensionLevel}\n` : '') +
-    `\n#AntiSurge #사이버펑크서바이벌`;
+    ? [...activeSynergies].map(id => { const s = SYNERGY_DEFS.find(d => d.id === id); return s ? `${s.icon}${LANG === 'en' ? (s.nameEn || s.name) : s.name}` : id; }).join(', ')
+    : (LANG === 'en' ? 'None' : '없음');
+  const text = LANG === 'en'
+    ? (`⚡ AntiSurge β v0.11\n` +
+       `👤 ${name} [${clsInfo?.icon || ''}${clsName}] [${diffLabel}]\n` +
+       `🏆 Reached STAGE ${stageStr}\n` +
+       `💀 ${killCount} kills  ⭐ Lv.${player?.level ?? '?'}\n` +
+       `⏱ ${timeStr}  💥 Max Combo ${maxCombo}\n` +
+       `🔗 Synergies: ${synergyStr}\n` +
+       (ascensionLevel > 0 ? `✨ Ascension Lv.${ascensionLevel}\n` : '') +
+       `#AntiSurge #CyberpunkSurvival`)
+    : (`⚡ AntiSurge β v0.11\n` +
+       `👤 ${name} [${clsInfo?.icon || ''}${clsInfo?.name || ''}] [${diffLabel}]\n` +
+       `🏆 STAGE ${stageStr} 도달\n` +
+       `💀 ${killCount}마리 제거  ⭐ Lv.${player?.level ?? '?'}\n` +
+       `⏱ ${timeStr}  💥 최대콤보 ${maxCombo}\n` +
+       `🔗 시너지: ${synergyStr}\n` +
+       (ascensionLevel > 0 ? `✨ 승천 Lv.${ascensionLevel}\n` : '') +
+       `\n#AntiSurge #사이버펑크서바이벌`);
 
   const btn = document.getElementById('share-btn');
   if (navigator.share) {
-    navigator.share({ title: 'AntiSurge β v0.10', text }).catch(() => {});
+    navigator.share({ title: 'AntiSurge β v0.11', text }).catch(() => {});
   } else if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(text).then(() => {
-      if (btn) { btn.textContent = '✓ 클립보드 복사!'; setTimeout(() => { btn.textContent = '📤 결과 공유'; }, 2500); }
-    }).catch(() => { showGameConfirm('', null, null, { title: '결과 공유', icon: '📤', noCancel: true, okLabel: '닫기', copyText: text }); });
+      if (btn) { btn.textContent = LANG === 'en' ? '✓ Copied!' : '✓ 클립보드 복사!'; setTimeout(() => { btn.textContent = LANG === 'en' ? '📤 Share Result' : '📤 결과 공유'; }, 2500); }
+    }).catch(() => { showGameConfirm('', null, null, { title: LANG === 'en' ? 'Share Result' : '결과 공유', icon: '📤', noCancel: true, okLabel: LANG === 'en' ? 'Close' : '닫기', copyText: text }); });
   } else {
-    showGameConfirm('', null, null, { title: '결과 공유', icon: '📤', noCancel: true, okLabel: '닫기', copyText: text });
+    showGameConfirm('', null, null, { title: LANG === 'en' ? 'Share Result' : '결과 공유', icon: '📤', noCancel: true, okLabel: LANG === 'en' ? 'Close' : '닫기', copyText: text });
   }
 }
 

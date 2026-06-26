@@ -83,7 +83,7 @@ function mpCreateRoom(mode) {
 
 function mpJoinFromInput() {
   const code = (document.getElementById('invite-code-input')?.value || '').trim().toUpperCase();
-  if (code.length !== 6) { showGameToast('⚠ 초대 코드는 6자리입니다'); return; }
+  if (code.length !== 6) { showGameToast(LANG === 'en' ? '⚠ Invite code must be 6 characters' : '⚠ 초대 코드는 6자리입니다'); return; }
   if (FIREBASE_CONFIG && typeof firebase !== 'undefined') {
     if (!_fbDb) _mpInitFirebase();
     if (_fbDb) {
@@ -91,7 +91,7 @@ function mpJoinFromInput() {
       roomRef.once('value', snap => {
         const room = snap.val() || {};
         const playerCount = room.players ? Object.keys(room.players).length : 0;
-        if (playerCount >= MP_MAX_PLAYERS) { showGameToast(`⚠ 방이 가득 찼습니다 (최대 ${MP_MAX_PLAYERS}명)`); return; }
+        if (playerCount >= MP_MAX_PLAYERS) { showGameToast(LANG === 'en' ? `⚠ Room is full (max ${MP_MAX_PLAYERS})` : `⚠ 방이 가득 찼습니다 (최대 ${MP_MAX_PLAYERS}명)`); return; }
         mpGameMode = room.mode || 'coop';
         mpJoinRoom(code);
       });
@@ -159,7 +159,7 @@ function _mpHandleEvent(msg) {
     }
   } else if (msg.type === 'battle_win') {
     addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 80,
-      `🏆 ${msg.name || '?'} 최후 생존자!`, '#ffe600', 20);
+      LANG === 'en' ? `🏆 ${msg.name || '?'} Last Survivor!` : `🏆 ${msg.name || '?'} 최후 생존자!`, '#ffe600', 20);
   }
 }
 
@@ -180,10 +180,12 @@ function _mpShowRoom() {
   document.getElementById('invite-room').style.display  = 'block';
   document.getElementById('room-code-text').textContent = mpRoomCode;
   const desc = document.getElementById('mp-room-desc');
-  const modeLabel = mpGameMode === 'battle' ? '⚔ 경쟁 (배틀로얄)' : '🤝 협동';
+  const modeLabel = LANG === 'en'
+    ? (mpGameMode === 'battle' ? '⚔ Battle Royale' : '🤝 Co-op')
+    : (mpGameMode === 'battle' ? '⚔ 경쟁 (배틀로얄)' : '🤝 협동');
   if (desc) desc.textContent = (mpUseFb
-    ? '📱 다른 기기에서 이 코드로 참가하세요.'
-    : '🖥 같은 기기의 다른 탭에서 이 코드로 참가하세요.')
+    ? (LANG === 'en' ? '📱 Join with this code from another device.' : '📱 다른 기기에서 이 코드로 참가하세요.')
+    : (LANG === 'en' ? '🖥 Join with this code from another tab on the same device.' : '🖥 같은 기기의 다른 탭에서 이 코드로 참가하세요.'))
     + `  |  ${modeLabel}`;
   const modeEl = document.getElementById('mp-game-mode-badge');
   if (modeEl) { modeEl.textContent = modeLabel; modeEl.style.color = mpGameMode === 'battle' ? '#ff4466' : '#39ff14'; }
@@ -195,8 +197,8 @@ function mpUpdatePlayerList() {
   if (!list) return;
   const count = Object.keys(mpPlayers).length;
   list.innerHTML = Object.entries(mpPlayers).map(([id, p]) =>
-    `<div class="mp-player-item" style="color:${p.color}">● ${(p.name||'P').slice(0,10)}${id === mpMyId ? ' (나)' : ''}</div>`
-  ).join('') || '<div class="mp-player-item" style="color:#475569">대기 중...</div>';
+    `<div class="mp-player-item" style="color:${p.color}">● ${(p.name||'P').slice(0,10)}${id === mpMyId ? (LANG === 'en' ? ' (me)' : ' (나)') : ''}</div>`
+  ).join('') || `<div class="mp-player-item" style="color:#475569">${LANG === 'en' ? 'Waiting...' : '대기 중...'}</div>`;
   const startBtn = document.getElementById('mp-start-btn');
   if (startBtn) startBtn.disabled = !mpIsHost || count < 2;
   const countEl = document.getElementById('mp-player-count');
@@ -287,7 +289,9 @@ function mpTriggerSabotage() {
   const curseIdx = sabotageType === 'curse' ? Math.floor(Math.random() * CURSE_DEFS.length) : -1;
   mpBroadcast({ type: 'sabotage', sabotageType, curseIdx });
   mpSabotageTimer = MP_SABOTAGE_CD;
-  const label = sabotageType === 'curse' ? '🦠 바이러스 주입!' : '👿 보스 강화 발동!';
+  const label = LANG === 'en'
+    ? (sabotageType === 'curse' ? '🦠 Virus Injected!' : '👿 Boss Buffed!')
+    : (sabotageType === 'curse' ? '🦠 바이러스 주입!' : '👿 보스 강화 발동!');
   addFloatingText(player.x, player.y - 60, label, '#ff4466', 14);
 }
 
@@ -297,7 +301,7 @@ function _mpApplySabotage(sabotageType, curseIdx) {
     const curse = CURSE_DEFS[curseIdx ?? 0];
     if (curse) {
       curse.debuffFn(player);
-      addFloatingText(player.x, player.y - 60, `🦠 감염: ${curse.debuff}!`, '#ff4466', 14);
+      addFloatingText(player.x, player.y - 60, LANG === 'en' ? `🦠 Infected: ${curse.debuffEn || curse.debuff}!` : `🦠 감염: ${curse.debuff}!`, '#ff4466', 14);
     }
   } else if (sabotageType === 'boss_buff') {
     if (activeBoss) {
@@ -305,7 +309,7 @@ function _mpApplySabotage(sabotageType, curseIdx) {
       if (activeBoss.speed) activeBoss.speed *= 1.15;
       addFloatingText(activeBoss.x, activeBoss.y - 60, '👿 BOSS BUFFED!', '#ff4466', 16);
     } else {
-      addFloatingText(player.x, player.y - 60, '👿 보스 강화 예약됨!', '#ff8800', 14);
+      addFloatingText(player.x, player.y - 60, LANG === 'en' ? '👿 Boss buff queued!' : '👿 보스 강화 예약됨!', '#ff8800', 14);
     }
   }
 }
@@ -315,7 +319,7 @@ function _mpShowBattleWin() {
   mpBroadcast({ type: 'battle_win', name: myName });
   _statAdd('mpBattleWins', 1);
   addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 80,
-    '🏆 최후 생존자!', '#ffe600', 24);
+    LANG === 'en' ? '🏆 Last Survivor!' : '🏆 최후 생존자!', '#ffe600', 24);
   setTimeout(() => endGame(true), 3000);
 }
 
@@ -328,10 +332,10 @@ function mpEnterSpectator() {
   if (mpGameMode === 'battle') {
     mpRespawnTimer = -1; // 부활 없음
     mpBroadcast({ type: 'eliminated', id: mpMyId });
-    addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 50, '💀 탈락!', '#ff4466', 20);
+    addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 50, LANG === 'en' ? '💀 ELIMINATED!' : '💀 탈락!', '#ff4466', 20);
   } else {
     mpRespawnTimer = MP_RESPAWN_DELAY;
-    addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 50, '💀 스펙테이터 모드', '#ff4466', 16);
+    addFloatingText(player?.x ?? MAP_WIDTH/2, (player?.y ?? MAP_HEIGHT/2) - 50, LANG === 'en' ? '💀 SPECTATOR MODE' : '💀 스펙테이터 모드', '#ff4466', 16);
   }
 }
 
@@ -346,7 +350,7 @@ function mpDoRespawn() {
   player.hp = Math.ceil(player.maxHp * 0.5);
   if (_fbDb) _fbDb.ref(`${_mpFbRoomPath()}/players/${mpMyId}`).update({ alive: true });
   _statAdd('mpRevives', 1);
-  addFloatingText(player.x, player.y - 50, '🔄 부활!', '#39ff14', 20);
+  addFloatingText(player.x, player.y - 50, LANG === 'en' ? '🔄 RESPAWNED!' : '🔄 부활!', '#39ff14', 20);
   createExplosionParticles(player.x, player.y, '#39ff14', 15);
 }
 
@@ -389,9 +393,9 @@ function _initAuth() {
 }
 
 function signInGoogle() {
-  if (typeof firebase === 'undefined' || !firebase.auth) { showGameToast('⚠ Firebase가 설정되지 않았습니다'); return; }
+  if (typeof firebase === 'undefined' || !firebase.auth) { showGameToast(LANG === 'en' ? '⚠ Firebase not configured' : '⚠ Firebase가 설정되지 않았습니다'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
-  firebase.auth().signInWithPopup(provider).catch(e => { console.error('[AUTH]', e.message); showGameToast('⚠ 로그인 실패: ' + e.message); });
+  firebase.auth().signInWithPopup(provider).catch(e => { console.error('[AUTH]', e.message); showGameToast((LANG === 'en' ? '⚠ Login failed: ' : '⚠ 로그인 실패: ') + e.message); });
 }
 
 function signOutUser() {
@@ -404,13 +408,13 @@ function _updateAuthUI() {
   const info = document.getElementById('auth-user-info');
   if (!btn) return;
   if (_authUser) {
-    btn.textContent = '🚪 로그아웃';
+    btn.textContent = LANG === 'en' ? '🚪 Sign Out' : '🚪 로그아웃';
     btn.onclick = signOutUser;
-    if (info) info.textContent = `☁ ${_authUser.displayName || _authUser.email} (클라우드 동기화 중)`;
+    if (info) info.textContent = LANG === 'en' ? `☁ ${_authUser.displayName || _authUser.email} (Cloud syncing)` : `☁ ${_authUser.displayName || _authUser.email} (클라우드 동기화 중)`;
   } else {
-    btn.textContent = '🔑 Google 로그인';
+    btn.textContent = LANG === 'en' ? '🔑 Sign in with Google' : '🔑 Google 로그인';
     btn.onclick = signInGoogle;
-    if (info) info.textContent = '로컬 저장 중 (로그인 시 클라우드 동기화)';
+    if (info) info.textContent = LANG === 'en' ? 'Saving locally (login for cloud sync)' : '로컬 저장 중 (로그인 시 클라우드 동기화)';
   }
 }
 
@@ -456,7 +460,9 @@ function _showAchievementToast(ach) {
   const displayName = ach.realName || ach.name;
   const el = document.createElement('div');
   el.className = 'cloud-ach-toast';
-  el.innerHTML = `<div class="ach-toast-icon">${ach.icon}</div><div><div class="ach-toast-name">업적 달성: ${displayName}</div><div class="ach-toast-desc">${ach.desc}</div></div>`;
+  const achDispName = LANG === 'en' ? (ach.realNameEn || ach.nameEn || displayName) : displayName;
+  const achDispDesc = LANG === 'en' ? (ach.descEn || ach.desc) : ach.desc;
+  el.innerHTML = `<div class="ach-toast-icon">${ach.icon}</div><div><div class="ach-toast-name">${LANG === 'en' ? 'Achievement: ' : '업적 달성: '}${achDispName}</div><div class="ach-toast-desc">${achDispDesc}</div></div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 4000);
@@ -531,9 +537,8 @@ function closeAchievementModal() {
 function switchAchTab(tab) {
   _currentAchTab = tab;
   document.querySelectorAll('.ach-tab').forEach(el => {
-    const match = (tab === 'basic' && el.textContent.includes('기본')) ||
-                  (tab === 'cloud' && el.textContent.includes('도전')) ||
-                  (tab === 'stats' && el.textContent.includes('통계'));
+    const fn = el.getAttribute('onclick') || '';
+    const match = fn.includes(`'${tab}'`) || fn.includes(`"${tab}"`);
     el.classList.toggle('active', match);
   });
   renderAchievements();
@@ -544,16 +549,10 @@ function renderAchievements() {
   if (!list) return;
   if (_currentAchTab === 'stats') {
     const s = _getStats();
-    list.innerHTML = `<div class="stats-grid">${[
-      ['총 킬 수', (s.totalKills||0).toLocaleString()],
-      ['보스 처치', (s.totalBossKills||0).toLocaleString()],
-      ['최고 스테이지', s.maxStage||0],
-      ['최장 생존', _fmtTime(s.maxSurviveTime||0)],
-      ['무기 진화', s.totalEvolutions||0],
-      ['총 플레이', s.totalGamesPlayed||0],
-      ['멀티 게임', s.mpGamesPlayed||0],
-      ['배틀 우승', s.mpBattleWins||0],
-    ].map(([l,v]) => `<div class="stat-card"><div class="stat-label">${l}</div><div class="stat-value">${v}</div></div>`).join('')}</div>`;
+    const statLabels = LANG === 'en'
+      ? [['Total Kills', (s.totalKills||0).toLocaleString()], ['Boss Kills', (s.totalBossKills||0).toLocaleString()], ['Best Stage', s.maxStage||0], ['Longest Run', _fmtTime(s.maxSurviveTime||0)], ['Evolutions', s.totalEvolutions||0], ['Total Plays', s.totalGamesPlayed||0], ['MP Games', s.mpGamesPlayed||0], ['Battle Wins', s.mpBattleWins||0]]
+      : [['총 킬 수', (s.totalKills||0).toLocaleString()], ['보스 처치', (s.totalBossKills||0).toLocaleString()], ['최고 스테이지', s.maxStage||0], ['최장 생존', _fmtTime(s.maxSurviveTime||0)], ['무기 진화', s.totalEvolutions||0], ['총 플레이', s.totalGamesPlayed||0], ['멀티 게임', s.mpGamesPlayed||0], ['배틀 우승', s.mpBattleWins||0]];
+    list.innerHTML = `<div class="stats-grid">${statLabels.map(([l,v]) => `<div class="stat-card"><div class="stat-label">${l}</div><div class="stat-value">${v}</div></div>`).join('')}</div>`;
     return;
   }
   const defs = _currentAchTab === 'basic' ? ACHIEVEMENTS : CLOUD_ACHIEVEMENTS;
@@ -561,8 +560,8 @@ function renderAchievements() {
   list.innerHTML = defs.map(def => {
     const isDone = _currentAchTab === 'basic' ? done.includes(def.id) : !!done[def.id];
     const isHidden = def.hidden && !isDone;
-    const displayName = isDone ? (def.realName || def.name) : (isHidden ? '???' : def.name);
-    const displayDesc = isHidden ? '🔒 비밀 업적 — 조건을 찾아보세요' : (def.desc + (def.reward ? ` (+${def.reward} 코어)` : ''));
+    const displayName = isDone ? (LANG === 'en' ? (def.realNameEn || def.realName || def.nameEn || def.name) : (def.realName || def.name)) : (isHidden ? '???' : (LANG === 'en' ? (def.nameEn || def.name) : def.name));
+    const displayDesc = isHidden ? (LANG === 'en' ? '🔒 Secret achievement — discover the condition' : '🔒 비밀 업적 — 조건을 찾아보세요') : ((LANG === 'en' ? (def.descEn || def.desc) : def.desc) + (def.reward ? (LANG === 'en' ? ` (+${def.reward} cores)` : ` (+${def.reward} 코어)`) : ''));
     const s = _getStats();
     const cur = def.stat === '__allBasic__' ? (saveData.achievements||[]).length : (s[def.stat]||0);
     const prog = (_currentAchTab === 'cloud' && !isHidden)
@@ -687,7 +686,7 @@ function submitLeaderboard(isVictory) {
   if (!_fbDb) return;
   const uid  = _authUser ? _authUser.uid : ('anon_' + (localStorage.getItem('ns_anon_id') || (() => { const id = Math.random().toString(36).slice(2); localStorage.setItem('ns_anon_id', id); return id; })()));
   const name = (document.getElementById('player-name-input')?.value.trim()) ||
-               (_authUser?.displayName) || '익명';
+               (_authUser?.displayName) || (LANG === 'en' ? 'Anonymous' : '익명');
   _fbDb.ref(`antisurge_lb/${uid}`).transaction(cur => {
     if (!cur || currentStage >= (cur.stage || 0)) {
       return { name: name.slice(0, 12), stage: currentStage, kills: killCount,
@@ -703,10 +702,10 @@ function openLeaderboardModal() {
   if (!modal) return;
   modal.classList.add('active');
   const list = document.getElementById('lb-list');
-  list.innerHTML = '<div style="color:#64748b;padding:16px 0">불러오는 중...</div>';
+  list.innerHTML = `<div style="color:#64748b;padding:16px 0">${LANG === 'en' ? 'Loading...' : '불러오는 중...'}</div>`;
 
   if (!_fbDb && !_mpInitFirebase()) {
-    list.innerHTML = '<div style="color:#64748b;padding:16px 0">Firebase 미연결 — 로그인 후 이용 가능합니다.</div>';
+    list.innerHTML = `<div style="color:#64748b;padding:16px 0">${LANG === 'en' ? 'Firebase not connected — login required.' : 'Firebase 미연결 — 로그인 후 이용 가능합니다.'}</div>`;
     return;
   }
   _fbDb.ref('antisurge_lb').orderByChild('stage').limitToLast(10).once('value', snap => {
@@ -714,7 +713,7 @@ function openLeaderboardModal() {
     snap.forEach(c => rows.push(c.val()));
     rows.sort((a, b) => b.stage - a.stage || b.kills - a.kills);
     if (rows.length === 0) {
-      list.innerHTML = '<div style="color:#64748b;padding:16px 0">아직 기록이 없습니다. 첫 주인공이 되세요!</div>';
+      list.innerHTML = `<div style="color:#64748b;padding:16px 0">${LANG === 'en' ? 'No records yet. Be the first!' : '아직 기록이 없습니다. 첫 주인공이 되세요!'}</div>`;
       return;
     }
     const medals = ['🥇', '🥈', '🥉'];
@@ -723,14 +722,14 @@ function openLeaderboardModal() {
     list.innerHTML = rows.map((r, i) => `
       <div class="lb-row">
         <span class="lb-rank">${medals[i] || `#${i+1}`}</span>
-        <span class="lb-name">${(clsIcons[r.cls] || '?')} ${r.name || '익명'}</span>
+        <span class="lb-name">${(clsIcons[r.cls] || '?')} ${r.name || (LANG === 'en' ? 'Anonymous' : '익명')}</span>
         <span class="lb-stage">S${r.stage}${r.victory ? ' ★' : ''}</span>
-        <span class="lb-kills">${(r.kills||0).toLocaleString()}킬</span>
+        <span class="lb-kills">${(r.kills||0).toLocaleString()}${LANG === 'en' ? ' kills' : '킬'}</span>
         <span class="lb-time">${fmtTime(r.time||0)}</span>
         ${r.asc > 0 ? `<span class="lb-asc">✨${r.asc}</span>` : ''}
       </div>`).join('');
   }).catch(() => {
-    list.innerHTML = '<div style="color:#64748b;padding:16px 0">기록 로드 실패</div>';
+    list.innerHTML = `<div style="color:#64748b;padding:16px 0">${LANG === 'en' ? 'Failed to load records' : '기록 로드 실패'}</div>`;
   });
 }
 

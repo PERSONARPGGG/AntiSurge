@@ -124,8 +124,8 @@ class Enemy {
         createExplosionParticles(this.x, this.y, '#ff4466', 22);
         createExplosionParticles(this.x, this.y, '#ff8800', 12);
         const explDmg = Math.ceil(this.damage * 3.5);
-        if (player) { player.hp -= explDmg; player.flashTimer = 120; lastDamageSource = '자폭 바이러스'; if (player.hp <= 0) endGame(false); }
-        addFloatingText(this.x, this.y - 30, `💥 자폭! -${explDmg}`, '#ff4466', 15);
+        if (player) { player.hp -= explDmg; player.flashTimer = 120; lastDamageSource = LANG === 'en' ? 'Explosive Virus' : '자폭 바이러스'; if (player.hp <= 0) endGame(false); }
+        addFloatingText(this.x, this.y - 30, LANG === 'en' ? `💥 SELF-DESTRUCT! -${explDmg}` : `💥 자폭! -${explDmg}`, '#ff4466', 15);
         playSynthSound([300, 150, 80], 0.35, 'sawtooth', 0.1);
         triggerScreenShake(8, 350);
         for (const e of enemies) {
@@ -233,7 +233,7 @@ class Enemy {
               const ct = chain.reduce((a, b) => dist(this.x, this.y, a.x, a.y) <= dist(this.x, this.y, b.x, b.y) ? a : b);
               ct._hacked = true; ct._hackTimer = 4000; ct._hackDmgTimer = 0;
               ct._hackExplosion = 0; ct._hackEvolved = !!(player?.fusions?.virus_takeover);
-              addFloatingText(ct.x, ct.y - 40, '🔗 연쇄 해킹!', '#ff6600', 12);
+              addFloatingText(ct.x, ct.y - 40, LANG === 'en' ? '🔗 Chain Hack!' : '🔗 연쇄 해킹!', '#ff6600', 12);
             }
           }
         }
@@ -454,7 +454,7 @@ class Enemy {
     if (this._shieldActive && sourceKey !== 'thorns' && sourceKey !== 'boss_proj') {
       this._shieldActive = false;
       this.flashTimer = 120;
-      addFloatingText(this.x, this.y - this.radius - 10, '🛡 방어막!', '#00f0ff', 13);
+      addFloatingText(this.x, this.y - this.radius - 10, LANG === 'en' ? '🛡 Shield!' : '🛡 방어막!', '#00f0ff', 13);
       playSynthSound([600, 400], 0.12, 'square', 0.06);
       createExplosionParticles(this.x, this.y, '#00f0ff', 6);
       return false;
@@ -488,7 +488,7 @@ class Enemy {
         const mult   = [4, 4, 5, 5, 6][player.weapons.resonance.level - 1] ?? 4;
         const resDmg = Math.floor(amount * mult);
         createExplosionParticles(this.x, this.y, '#ffaa00', Math.min(14, MAX_PARTICLES - particles.length));
-        addFloatingText(this.x, this.y - 50, `공명! ×${mult}`, '#ffaa00', 14);
+        addFloatingText(this.x, this.y - 50, LANG === 'en' ? `Resonance! ×${mult}` : `공명! ×${mult}`, '#ffaa00', 14);
         playSynthSound([800, 1200, 600], 0.15, 'triangle', 0.07);
         this.hp -= resDmg;
         if (this.hp <= 0) { this.die(sourceKey); return true; }
@@ -531,7 +531,7 @@ class Enemy {
         child._mutation = null;
         enemies.push(child);
       }
-      addFloatingText(this.x, this.y - 28, '🔱 분열!', '#ffe600', 14);
+      addFloatingText(this.x, this.y - 28, LANG === 'en' ? '🔱 Split!' : '🔱 분열!', '#ffe600', 14);
       playSynthSound([400, 200], 0.1, 'square', 0.06);
     }
     // 미션 트래킹
@@ -619,7 +619,7 @@ class Enemy {
       if (near) {
         near._infected = true; near._infectTimer = 4000;
         near._infectChain = 0; near._infectDmg = Math.floor(120 * (player.damageMultiplier || 1));
-        addFloatingText(near.x, near.y - 35, '🦠 감염 이식!', '#33ff33', 13);
+        addFloatingText(near.x, near.y - 35, LANG === 'en' ? '🦠 Infection Transfer!' : '🦠 감염 이식!', '#33ff33', 13);
       }
     }
     let idx = enemies.indexOf(this);
@@ -857,7 +857,7 @@ class Boss {
       this.shieldTimer -= dt;
       if (this.shieldTimer <= 0) {
         this.shieldActive = false;
-        addFloatingText(this.x, this.y - 70, '🛡 방어막 해제!', '#b026ff', 13);
+        addFloatingText(this.x, this.y - 70, LANG === 'en' ? '🛡 Shield Broken!' : '🛡 방어막 해제!', '#b026ff', 13);
       }
       // 방어막 중에도 이동은 함
     }
@@ -991,7 +991,7 @@ class Boss {
     const spd = 6.5;
     const dmg = this.damage * 0.85;
     if (bossProjectiles.length >= MAX_BOSS_PROJ) return;
-    addFloatingText(this.x, this.y - 60, '🔵 궤도 사격!', this.patternType.glowColor, 12);
+    addFloatingText(this.x, this.y - 60, LANG === 'en' ? '🔵 Orbital Shot!' : '🔵 궤도 사격!', this.patternType.glowColor, 12);
     playSynthSound([500, 300, 700], 0.12, 'triangle', 0.07);
     for (let i = 0; i < shotCount; i++) {
       const angle = (i / shotCount) * Math.PI * 2;
@@ -1008,7 +1008,7 @@ class Boss {
     const count = this.phase >= 3 ? 4 : (this.phase >= 2 ? 3 : 2);
     const dmg = this.damage * 1.1;
     if (bossProjectiles.length >= MAX_BOSS_PROJ) return;
-    addFloatingText(this.x, this.y - 60, '🎯 유도탄!', '#ff8800', 12);
+    addFloatingText(this.x, this.y - 60, LANG === 'en' ? '🎯 Homing Missile!' : '🎯 유도탄!', '#ff8800', 12);
     playSynthSound([150, 400], 0.15, 'sawtooth', 0.08);
     for (let i = 0; i < count; i++) {
       const spread = (i - (count - 1) / 2) * 0.28;
@@ -1024,7 +1024,7 @@ class Boss {
   activateShield() {
     this.shieldActive = true;
     this.shieldTimer  = 5000;
-    addFloatingText(this.x, this.y - 70, '🛡 방어막 발동!', '#b026ff', 14);
+    addFloatingText(this.x, this.y - 70, LANG === 'en' ? '🛡 Shield Up!' : '🛡 방어막 발동!', '#b026ff', 14);
     createExplosionParticles(this.x, this.y, '#b026ff', 20);
     playSynthSound([400, 800, 1200], 0.15, 'triangle', 0.08);
   }
@@ -1055,7 +1055,7 @@ class Boss {
       let ey = Math.max(20, Math.min(MAP_HEIGHT - 20, this.y + Math.sin(angle) * r));
       enemies.push(new Enemy(ex, ey, minionType));
     }
-    addFloatingText(this.x, this.y - 60, '▶ 소환!', '#ff0044', 12);
+    addFloatingText(this.x, this.y - 60, LANG === 'en' ? '▶ Summon!' : '▶ 소환!', '#ff0044', 12);
   }
 
   draw(ctx, camera) {
@@ -1192,7 +1192,7 @@ class Boss {
         gems.push(new Gem(this.x + Math.cos(ang) * 50, this.y + Math.sin(ang) * 50, this.xpValue * 2));
       }
       spawnGoldCoins(this.x, this.y, 8 + Math.floor(Math.random() * 5));
-      addFloatingText(this.x, this.y - 80, '⚡ MINI BOSS 처치!', '#ffe600', 16);
+      addFloatingText(this.x, this.y - 80, LANG === 'en' ? '⚡ MINI BOSS DOWN!' : '⚡ MINI BOSS 처치!', '#ffe600', 16);
     }
     triggerStageClear();
   }
@@ -1342,7 +1342,7 @@ class DailyHeroEnemy {
     if (activeBoss && dist(this.x, this.y, activeBoss.x, activeBoss.y) < R + activeBoss.radius)
       activeBoss.takeDamage(16, 'rival_burst');
     if (player && dist(this.x, this.y, player.x, player.y) < R + player.radius) {
-      player.takeDamage(26); lastDamageSource = '영웅 폭발';
+      player.takeDamage(26); lastDamageSource = LANG === 'en' ? 'Hero Explosion' : '영웅 폭발';
     }
     // 시각 이펙트: 링 + 파티클
     heroBullets.push({ x:this.x, y:this.y, vx:0, vy:0, damage:0, radius:0, life:380, isBurstRing:true, maxR:R, r:0 });
@@ -1372,7 +1372,7 @@ class DailyHeroEnemy {
       if (this.level >= 5) {
         this._passive = false;
         this.speed = 2.4;
-        addFloatingText(this.x, this.y - 55, '👁 추격자 각성!', '#ff4466', 14);
+        addFloatingText(this.x, this.y - 55, LANG === 'en' ? '👁 Pursuer Awakened!' : '👁 추격자 각성!', '#ff4466', 14);
         createExplosionParticles(this.x, this.y, '#ff4466', 18);
         triggerScreenShake(6, 350);
         playSynthSound([200, 300, 500], 0.18, 'triangle', 0.08);
@@ -1427,7 +1427,7 @@ class DailyHeroEnemy {
         this.isAlly = true;
         this._alliancePending = false;
         this._allianceTimer = 35000;
-        addFloatingText(this.x, this.y - 55, '🤝 동맹 체결!', '#39ff14', 15);
+        addFloatingText(this.x, this.y - 55, LANG === 'en' ? '🤝 Alliance Formed!' : '🤝 동맹 체결!', '#39ff14', 15);
         playSynthSound([400, 600, 800, 600], 0.15, 'sine', 0.07);
       }
     }
@@ -1436,7 +1436,7 @@ class DailyHeroEnemy {
       // 마지막 5초: 경고 플래시
       if (this._allianceTimer <= 5000 && this._allianceTimer > 0) {
         if (Math.floor(this._allianceTimer / 400) % 2 === 0)
-          addFloatingText(this.x, this.y - 50, '⚠ 배신 임박!', '#ff8800', 11);
+          addFloatingText(this.x, this.y - 50, LANG === 'en' ? '⚠ Betrayal Imminent!' : '⚠ 배신 임박!', '#ff8800', 11);
       }
       if (this._allianceTimer <= 0) {
         // 배신!
@@ -1446,11 +1446,11 @@ class DailyHeroEnemy {
         this.maxHp = Math.floor(this.maxHp * 1.25);
         this.hp    = Math.min(this.hp + 130, this.maxHp);
         this._lastPlayerHitTime = Date.now(); // 재제안 방지
-        showStageOverlay('💀 배신!', `${this.heroLabel}이(가) 배신했습니다!`, '#ff4466');
+        showStageOverlay('💀 ' + (LANG === 'en' ? 'BETRAYAL!' : '배신!'), LANG === 'en' ? `${this.heroLabel} has betrayed you!` : `${this.heroLabel}이(가) 배신했습니다!`, '#ff4466');
         setTimeout(hideStageOverlay, 2800);
         triggerScreenShake(9, 450);
         createExplosionParticles(this.x, this.y, '#ff4466', 20);
-        addFloatingText(this.x, this.y - 60, '💀 배신!', '#ff4466', 18);
+        addFloatingText(this.x, this.y - 60, LANG === 'en' ? '💀 BETRAYAL!' : '💀 배신!', '#ff4466', 18);
         playSynthSound([120, 80, 60], 0.28, 'sawtooth', 0.13);
       }
     }
@@ -1504,7 +1504,7 @@ class DailyHeroEnemy {
       this.x += this._dashVx * (dt/16.66);
       this.y += this._dashVy * (dt/16.66);
       if (player && dist(this.x, this.y, player.x, player.y) < this.radius + player.radius) {
-        player.takeDamage(24); lastDamageSource = '영웅 돌진';
+        player.takeDamage(24); lastDamageSource = LANG === 'en' ? 'Hero Charge' : '영웅 돌진';
         this._isDashing = false;
       }
       for (const e of enemies) {
@@ -1651,7 +1651,7 @@ class DailyHeroEnemy {
     if (this.isAlly && fromPlayer) {
       this.isAlly = false;
       this._allianceTimer = 0;
-      addFloatingText(this.x, this.y - 42, '⚡ 동맹 파기!', '#ff8800', 13);
+      addFloatingText(this.x, this.y - 42, LANG === 'en' ? '⚡ Alliance Broken!' : '⚡ 동맹 파기!', '#ff8800', 13);
       this._lastPlayerHitTime = Date.now();
       return; // 피해 없이 동맹만 해제
     }
@@ -1869,7 +1869,7 @@ class DailyRivalSniper {
           this.xp -= this.xpToNext; this.level++;
           this.xpToNext = Math.floor(this.xpToNext*1.28);
           this.maxHp += 45; this.hp = Math.min(this.hp+60, this.maxHp);
-          addFloatingText(this.x, this.y-36, `🎯 저격수 LV.${this.level}!`, '#00ccff', 11);
+          addFloatingText(this.x, this.y-36, LANG === 'en' ? `🎯 SNIPER LV.${this.level}!` : `🎯 저격수 LV.${this.level}!`, '#00ccff', 11);
         }
       }
     }
@@ -1884,7 +1884,7 @@ class DailyRivalSniper {
     if (this.hp <= 0) {
       for (let i=0; i<10; i++) { const a = Math.random()*Math.PI*2; gems.push(new Gem(this.x+Math.cos(a)*36, this.y+Math.sin(a)*36, 5)); }
       createExplosionParticles(this.x, this.y, '#00ccff', 18);
-      addFloatingText(this.x, this.y-46, '🎯 저격수 격파!', '#00ccff', 16);
+      addFloatingText(this.x, this.y-46, LANG === 'en' ? '🎯 SNIPER DOWN!' : '🎯 저격수 격파!', '#00ccff', 16);
       triggerScreenShake(4, 250);
       if (this.isStageBoss) {
         spawnGoldCoins(this.x, this.y, 8 + _bountyLevel * 2);
@@ -1951,7 +1951,7 @@ class DailyRivalBerserker {
     if (activeBoss && dist(cx, cy, activeBoss.x, activeBoss.y) < radius+activeBoss.radius)
       activeBoss.takeDamage(Math.floor(dmgEnemy*0.25), 'rival_melee');
     if (player && dist(cx, cy, player.x, player.y) < radius+player.radius) {
-      player.takeDamage(dmgPlayer); lastDamageSource = '광전사 공격';
+      player.takeDamage(dmgPlayer); lastDamageSource = LANG === 'en' ? 'Berserker Attack' : '광전사 공격';
     }
   }
   update(dt) {
@@ -2022,7 +2022,7 @@ class DailyRivalBerserker {
           this.xp -= this.xpToNext; this.level++;
           this.xpToNext = Math.floor(this.xpToNext*1.28);
           this.maxHp += 80; this.hp = Math.min(this.hp+100, this.maxHp);
-          addFloatingText(this.x, this.y-38, `💀 광전사 LV.${this.level}!`, '#ff2255', 11);
+          addFloatingText(this.x, this.y-38, LANG === 'en' ? `💀 BERSERKER LV.${this.level}!` : `💀 광전사 LV.${this.level}!`, '#ff2255', 11);
         }
       }
     }
@@ -2037,7 +2037,7 @@ class DailyRivalBerserker {
     if (this.hp <= 0) {
       for (let i=0; i<14; i++) { const a = Math.random()*Math.PI*2; gems.push(new Gem(this.x+Math.cos(a)*48, this.y+Math.sin(a)*48, 6)); }
       createExplosionParticles(this.x, this.y, '#ff2255', 26);
-      addFloatingText(this.x, this.y-50, '💀 광전사 격파!', '#ff2255', 17);
+      addFloatingText(this.x, this.y-50, LANG === 'en' ? '💀 BERSERKER DOWN!' : '💀 광전사 격파!', '#ff2255', 17);
       triggerScreenShake(8, 400);
       playSynthSound([200, 100, 50], 0.3, 'sawtooth', 0.14);
       if (this.isStageBoss) {

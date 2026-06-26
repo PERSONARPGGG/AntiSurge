@@ -2,19 +2,19 @@
 // 일일도전 변이 시스템
 // ============================================================
 const DAILY_CURSES = [
-  { id:'slow',          name:'데이터 지연',   desc:'이동속도 -25%',          icon:'🐢' },
-  { id:'glass',         name:'취약 코드',     desc:'최대 HP -35%',           icon:'💔' },
-  { id:'enemy_speed',   name:'바이러스 과부하', desc:'적 이동속도 +40%',     icon:'⚡' },
-  { id:'enemy_hp',      name:'강화 프로토콜', desc:'적 HP +60%',            icon:'🛡' },
-  { id:'no_heal',       name:'회복 차단',     desc:'필드 아이템 효과 없음',   icon:'⛔' },
-  { id:'double_spawn',  name:'폭발 감염',     desc:'적 스폰 속도 +70%',      icon:'👾' },
+  { id:'slow',          name:'데이터 지연',   nameEn:'Data Lag',        desc:'이동속도 -25%',          descEn:'Move speed -25%',          icon:'🐢' },
+  { id:'glass',         name:'취약 코드',     nameEn:'Glass Code',      desc:'최대 HP -35%',           descEn:'Max HP -35%',              icon:'💔' },
+  { id:'enemy_speed',   name:'바이러스 과부하',nameEn:'Virus Overload',  desc:'적 이동속도 +40%',       descEn:'Enemy speed +40%',         icon:'⚡' },
+  { id:'enemy_hp',      name:'강화 프로토콜', nameEn:'Hardened Protocol',desc:'적 HP +60%',             descEn:'Enemy HP +60%',            icon:'🛡' },
+  { id:'no_heal',       name:'회복 차단',     nameEn:'Heal Block',      desc:'필드 아이템 효과 없음',   descEn:'Field items have no effect',icon:'⛔' },
+  { id:'double_spawn',  name:'폭발 감염',     nameEn:'Viral Surge',     desc:'적 스폰 속도 +70%',      descEn:'Enemy spawn rate +70%',    icon:'👾' },
 ];
 const DAILY_BUFFS = [
-  { id:'double_gold',   name:'골드 채굴기',   desc:'골드 획득 2배',          icon:'💰' },
-  { id:'xp_boost',      name:'경험치 가속',   desc:'경험치 +60%',            icon:'⬆' },
-  { id:'extra_hp',      name:'강화 방어막',   desc:'최대 HP +60%',           icon:'❤' },
-  { id:'speed_boost',   name:'오버클럭',      desc:'이동속도 +25%',          icon:'🚀' },
-  { id:'pierce',        name:'관통 탄환',     desc:'모든 투사체 관통+1',      icon:'➡' },
+  { id:'double_gold',   name:'골드 채굴기',   nameEn:'Gold Miner',      desc:'골드 획득 2배',          descEn:'2× gold pickup',           icon:'💰' },
+  { id:'xp_boost',      name:'경험치 가속',   nameEn:'XP Boost',        desc:'경험치 +60%',            descEn:'XP +60%',                  icon:'⬆' },
+  { id:'extra_hp',      name:'강화 방어막',   nameEn:'Hardened Shield', desc:'최대 HP +60%',           descEn:'Max HP +60%',              icon:'❤' },
+  { id:'speed_boost',   name:'오버클럭',      nameEn:'Overclock',       desc:'이동속도 +25%',          descEn:'Move speed +25%',          icon:'🚀' },
+  { id:'pierce',        name:'관통 탄환',     nameEn:'Pierce Rounds',   desc:'모든 투사체 관통+1',      descEn:'All projectiles pierce +1', icon:'➡' },
 ];
 const DAILY_EVENTS = ['gold_rush','blizzard','swarm','elite_wave','dark'];
 
@@ -81,8 +81,8 @@ function triggerStageClear() {
   const isEntry = currentStage === 100;
   showStageOverlay(
     isEntry             ? '🏆 PROTOCOL COMPLETE' : `STAGE ${currentStage} CLEAR!`,
-    currentStage > 100  ? '∞ 다음 파동으로 진입!' :
-    isEntry             ? '★ 최종 바이러스 코어 격리 완료! ★' : '보너스 보상을 선택하세요!',
+    currentStage > 100  ? (LANG === 'en' ? '∞ Entering next wave!' : '∞ 다음 파동으로 진입!') :
+    isEntry             ? (LANG === 'en' ? '★ Final virus core isolated! ★' : '★ 최종 바이러스 코어 격리 완료! ★') : (LANG === 'en' ? 'Choose a bonus reward!' : '보너스 보상을 선택하세요!'),
     currentStage >= 100 ? '#ffe600' : '#39ff14'
   );
   playStageClearSound();
@@ -203,11 +203,11 @@ function advanceToNextStage() {
         hero = new DailyHeroEnemy(hx, hy);
       }
       hero.isStageBoss = true;
-      hero.heroLabel = '스테이지 라이벌';
+      hero.heroLabel = LANG === 'en' ? 'Stage Rival' : '스테이지 라이벌';
       hero.hp = Math.floor(hero.maxHp * 2.2);
       hero.maxHp = hero.hp;
       dailyHeroes.push(hero);
-      showStageOverlay('⚔ RIVAL BOSS', '라이벌이 보스로 등장했습니다!', '#ff4466');
+      showStageOverlay('⚔ RIVAL BOSS', LANG === 'en' ? 'Rival has become a boss!' : '라이벌이 보스로 등장했습니다!', '#ff4466');
       triggerScreenShake(12, 600);
       createExplosionParticles(hx, hy, '#ff4466', 28);
       playSynthSound([300, 500, 700, 500], 0.22, 'sawtooth', 0.10);
@@ -249,12 +249,12 @@ function advanceToNextStage() {
         const hx = Math.max(150, Math.min(MAP_WIDTH-150, player.x + Math.cos(angle)*650));
         const hy = Math.max(150, Math.min(MAP_HEIGHT-150, player.y + Math.sin(angle)*650));
         const pursuer = new DailyHeroEnemy(hx, hy);
-        pursuer.heroLabel = '추격자';
+        pursuer.heroLabel = LANG === 'en' ? 'Pursuer' : '추격자';
         pursuer._passive  = true;
         pursuer.speed     = 1.0;
         pursuer.hp = 380; pursuer.maxHp = 380;
         dailyHeroes.push(pursuer);
-        showStageOverlay('👁 추격자 출현', '정체불명의 추격자가 나타났습니다...', '#888888');
+        showStageOverlay(LANG === 'en' ? '👁 PURSUER DETECTED' : '👁 추격자 출현', LANG === 'en' ? 'Unknown pursuer appears...' : '정체불명의 추격자가 나타났습니다...', '#888888');
         createExplosionParticles(hx, hy, '#888888', 16);
         setTimeout(hideStageOverlay, 2800);
       }, 3000);
@@ -269,7 +269,7 @@ function spawnEliteEnemy() {
   const ex = Math.max(50, Math.min(MAP_WIDTH - 50, player.x + Math.cos(angle) * 420));
   const ey = Math.max(50, Math.min(MAP_HEIGHT - 50, player.y + Math.sin(angle) * 420));
   enemies.push(new Enemy(ex, ey, 'elite'));
-  showStageOverlay('⚠ ELITE VIRUS!', '정예 바이러스 침투!', '#ff6600');
+  showStageOverlay('⚠ ELITE VIRUS!', LANG === 'en' ? 'Elite virus incoming!' : '정예 바이러스 침투!', '#ff6600');
   setTimeout(hideStageOverlay, 2000);
 }
 
@@ -285,11 +285,11 @@ function spawnDailyRival(type) {
   let hero, label, color, sound;
   if (type === 'sniper') {
     hero = new DailyRivalSniper(hx, hy);
-    label = '🎯 저격수 난입!'; color = '#00ccff';
+    label = LANG === 'en' ? '🎯 SNIPER INTRUSION!' : '🎯 저격수 난입!'; color = '#00ccff';
     sound = [800, 1100, 900, 600];
   } else if (type === 'berserker') {
     hero = new DailyRivalBerserker(hx, hy);
-    label = '💀 광전사 난입!'; color = '#ff2255';
+    label = LANG === 'en' ? '💀 BERSERKER INTRUSION!' : '💀 광전사 난입!'; color = '#ff2255';
     sound = [300, 200, 150, 100];
   } else {
     hero = new DailyHeroEnemy(hx, hy);
@@ -298,7 +298,7 @@ function spawnDailyRival(type) {
   }
   dailyHeroes.push(hero);
 
-  showStageOverlay(label, '새로운 라이벌이 난입했습니다!', color);
+  showStageOverlay(label, LANG === 'en' ? 'New rival has appeared!' : '새로운 라이벌이 난입했습니다!', color);
   triggerScreenShake(13, 650);
   createExplosionParticles(hx, hy, color, 32);
   playSynthSound(sound, 0.22, 'triangle', 0.10);
@@ -316,27 +316,27 @@ function spawnBountyRival() {
   let hero, label, color, sound;
   if (_bountyLevel <= 2) {
     hero = new DailyHeroEnemy(hx, hy);
-    hero.heroLabel = '현상금 라이벌';
-    label = `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#ffe600';
+    hero.heroLabel = LANG === 'en' ? 'Bounty Rival' : '현상금 라이벌';
+    label = LANG === 'en' ? `⚠ BOUNTY Lv.${_bountyLevel + 1}` : `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#ffe600';
     sound = [500, 700, 600, 400];
   } else if (_bountyLevel <= 5) {
     hero = new DailyRivalSniper(hx, hy);
-    hero.heroLabel = '현상금 저격수';
+    hero.heroLabel = LANG === 'en' ? 'Bounty Sniper' : '현상금 저격수';
     hero.hp = Math.floor(hero.hp * (1 + (_bountyLevel - 2) * 0.18));
     hero.maxHp = hero.hp;
-    label = `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#00ccff';
+    label = LANG === 'en' ? `⚠ BOUNTY Lv.${_bountyLevel + 1}` : `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#00ccff';
     sound = [800, 1100, 900];
   } else {
     hero = new DailyRivalBerserker(hx, hy);
-    hero.heroLabel = '현상금 광전사';
+    hero.heroLabel = LANG === 'en' ? 'Bounty Berserker' : '현상금 광전사';
     hero.hp = Math.floor(hero.hp * (1 + (_bountyLevel - 5) * 0.22));
     hero.maxHp = hero.hp;
-    label = `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#ff2255';
+    label = LANG === 'en' ? `⚠ BOUNTY Lv.${_bountyLevel + 1}` : `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#ff2255';
     sound = [200, 140, 90];
   }
   dailyHeroes.push(hero);
 
-  showStageOverlay(label, '현상금 라이벌이 등장했습니다!', color);
+  showStageOverlay(label, LANG === 'en' ? 'Bounty rival appeared!' : '현상금 라이벌이 등장했습니다!', color);
   triggerScreenShake(10, 500);
   createExplosionParticles(hx, hy, color, 24);
   playSynthSound(sound, 0.20, 'triangle', 0.09);
@@ -347,14 +347,20 @@ function spawnBountyRival() {
 }
 
 function _showDailyEventOverlay(type) {
-  const info = {
+  const info = LANG === 'en' ? {
+    gold_rush:  ['🏆 GOLD RUSH',     'This stage: 3× gold drop!',          '#ffd700'],
+    blizzard:   ['❄ ICE AGE',        'Enemy speed ↓ / Enemy HP ↑',         '#88ddff'],
+    swarm:      ['🦠 SWARM',         'Enemy count ×2! But low HP.',        '#00ff88'],
+    elite_wave: ['⚡ ELITE WAVE',    'Elite enemies only!',                 '#ff8800'],
+    dark:       ['🌑 DARK PROTOCOL', 'Vision limited. Be cautious!',        '#aa88ff'],
+  } : {
     gold_rush:  ['🏆 골드 러시',   '이번 스테이지: 골드 3배 드롭!',     '#ffd700'],
     blizzard:   ['❄ 빙하기',       '적 이동속도 ↓ / 적 체력 ↑',         '#88ddff'],
     swarm:      ['🦠 대군 침공',    '적 수가 2배! 단, HP가 낮습니다.',    '#00ff88'],
     elite_wave: ['⚡ 정예 침공',    '엘리트 등급 적만 등장!',             '#ff8800'],
     dark:       ['🌑 암흑 프로토콜','시야가 제한됩니다. 조심하세요!',     '#aa88ff'],
   };
-  const [title, desc, col] = info[type] || ['이벤트', '', '#ffffff'];
+  const [title, desc, col] = info[type] || (LANG === 'en' ? ['EVENT', '', '#ffffff'] : ['이벤트', '', '#ffffff']);
   showStageOverlay(title, desc, col);
   setTimeout(hideStageOverlay, 3000);
 }
@@ -420,9 +426,9 @@ function spawnStageObstacles() {
 // 스테이지 클리어 보너스 선택
 // ============================================================
 const STAGE_BONUSES = [
-  { id: 'repair',  icon: '💊', name: '응급 수리',   desc: 'HP를 최대치의 40% 즉시 회복' },
-  { id: 'surge',   icon: '⚡', name: '데이터 서지', desc: '20초간 모든 무기 피해량 ×1.8' },
-  { id: 'supply',  icon: '📦', name: '비상 보급',   desc: '랜덤 필드 아이템 3개 즉시 생성' }
+  { id: 'repair',  icon: '💊', name: '응급 수리',   nameEn: 'Emergency Repair', desc: 'HP를 최대치의 40% 즉시 회복', descEn: 'Instantly restore 40% max HP' },
+  { id: 'surge',   icon: '⚡', name: '데이터 서지', nameEn: 'Data Surge',       desc: '20초간 모든 무기 피해량 ×1.8', descEn: 'All weapon damage ×1.8 for 20s' },
+  { id: 'supply',  icon: '📦', name: '비상 보급',   nameEn: 'Emergency Supply', desc: '랜덤 필드 아이템 3개 즉시 생성', descEn: 'Spawn 3 random field items instantly' }
 ];
 
 function showStageBonusModal() {
@@ -440,7 +446,7 @@ function showStageBonusModal() {
   STAGE_BONUSES.forEach(b => {
     let btn = document.createElement('button');
     btn.className = 'bonus-card';
-    btn.innerHTML = `<span class="bonus-icon">${b.icon}</span><span class="bonus-name">${b.name}</span><span class="bonus-desc">${b.desc}</span>`;
+    btn.innerHTML = `<span class="bonus-icon">${b.icon}</span><span class="bonus-name">${LANG === 'en' ? (b.nameEn || b.name) : b.name}</span><span class="bonus-desc">${LANG === 'en' ? (b.descEn || b.desc) : b.desc}</span>`;
     btn.addEventListener('click', () => applyStageClearBonus(b.id));
     list.appendChild(btn);
   });
@@ -461,7 +467,7 @@ function applyStageClearBonus(id) {
   if (id === 'repair') {
     let heal = Math.floor(player.maxHp * 0.4);
     player.hp = Math.min(player.hp + heal, player.maxHp);
-    addFloatingText(player.x, player.y - 40, `+${heal} HP 회복`, '#ff4466', 18);
+    addFloatingText(player.x, player.y - 40, LANG === 'en' ? `+${heal} HP Restored` : `+${heal} HP 회복`, '#ff4466', 18);
     playSynthSound([600, 1200], 0.15, 'sine', 0.08);
 
   } else if (id === 'surge') {
@@ -470,13 +476,13 @@ function applyStageClearBonus(id) {
       player.damageMultiplier *= 1.8;
     }
     player.attackSurgeTimer = 20000;
-    addFloatingText(player.x, player.y - 40, '⚡ 데이터 서지 20초!', '#ffe600', 16);
+    addFloatingText(player.x, player.y - 40, LANG === 'en' ? '⚡ Data Surge 20s!' : '⚡ 데이터 서지 20초!', '#ffe600', 16);
     playSynthSound([300, 800], 0.2, 'sawtooth', 0.08);
     triggerScreenShake(5, 300);
 
   } else if (id === 'supply') {
     for (let i = 0; i < 3; i++) spawnRandomFieldItem();
-    addFloatingText(player.x, player.y - 40, '📦 보급 도착!', '#39ff14', 16);
+    addFloatingText(player.x, player.y - 40, LANG === 'en' ? '📦 Supply Drop!' : '📦 보급 도착!', '#39ff14', 16);
     playSynthSound([800, 1000], 0.12, 'triangle', 0.06);
   }
 
@@ -572,7 +578,7 @@ function checkComboMilestone(count) {
     showComboMilestoneBanner('🔥 KILLING SPREE! x10', '#ff8800');
     player.damageMultiplier *= 1.25;
     setTimeout(() => { if (player) player.damageMultiplier /= 1.25; }, 5000);
-    addFloatingText(player.x, player.y - 60, '🔥 피해 +25% (5초)!', '#ff8800', 14);
+    addFloatingText(player.x, player.y - 60, LANG === 'en' ? '🔥 DMG +25% (5s)!' : '🔥 피해 +25% (5초)!', '#ff8800', 14);
     playSynthSound([400, 800, 1200], 0.18, 'sawtooth', 0.07);
   } else if (count === 25) {
     showComboMilestoneBanner('💀 MASSACRE! x25', '#ff4466');
@@ -580,7 +586,7 @@ function checkComboMilestone(count) {
     createExplosionParticles(player.x, player.y, '#ff4466', 25);
     player.damageMultiplier *= 1.4;
     setTimeout(() => { if (player) player.damageMultiplier /= 1.4; }, 7000);
-    addFloatingText(player.x, player.y - 60, '💀 피해 +40% (7초)!', '#ff4466', 16);
+    addFloatingText(player.x, player.y - 60, LANG === 'en' ? '💀 DMG +40% (7s)!' : '💀 피해 +40% (7초)!', '#ff4466', 16);
     playSynthSound([200, 600, 1400], 0.22, 'sawtooth', 0.09);
   } else if (count === 50) {
     showComboMilestoneBanner('☢ CYBER RAMPAGE! x50', '#ffe600');
@@ -588,7 +594,7 @@ function checkComboMilestone(count) {
     // 화면 내 모든 적 50 피해
     for (let e of [...enemies]) { if (e.takeDamage(50, 'combo')) killCount++; }
     createExplosionParticles(player.x, player.y, '#ffe600', 35);
-    addFloatingText(player.x, player.y - 70, '☢ 전체 폭발!', '#ffe600', 20);
+    addFloatingText(player.x, player.y - 70, LANG === 'en' ? '☢ Full Detonation!' : '☢ 전체 폭발!', '#ffe600', 20);
     playSynthSound([100, 300, 800, 1600], 0.28, 'sawtooth', 0.12);
   }
 }
@@ -781,8 +787,8 @@ function showAchievementPopup(ach) {
   const el = document.getElementById('achievement-popup');
   if (!el) return;
   el.querySelector('.ach-icon-el').textContent  = ach.icon;
-  el.querySelector('.ach-name').textContent      = ach.name;
-  el.querySelector('.ach-desc-el').textContent   = ach.desc;
+  el.querySelector('.ach-name').textContent      = LANG === 'en' ? (ach.nameEn || ach.name) : ach.name;
+  el.querySelector('.ach-desc-el').textContent   = LANG === 'en' ? (ach.descEn || ach.desc) : ach.desc;
   el.querySelector('.ach-reward').textContent    = `+${ach.reward}💾`;
   el.classList.add('active');
   clearTimeout(el._timer);
@@ -799,7 +805,7 @@ function updateMenuMetaBadge() {
   const killsEl = document.getElementById('mrp-kills');
   const timeEl  = document.getElementById('mrp-time');
   if (stageEl) stageEl.textContent = saveData.bestStage ? `S ${saveData.bestStage}` : 'S —';
-  if (killsEl) killsEl.textContent = saveData.bestKills ? `${saveData.bestKills.toLocaleString()} 킬` : '— 킬';
+  if (killsEl) killsEl.textContent = saveData.bestKills ? `${saveData.bestKills.toLocaleString()} ${LANG === 'en' ? 'kills' : '킬'}` : (LANG === 'en' ? '— kills' : '— 킬');
   if (timeEl)  timeEl.textContent  = saveData.bestStage
     ? `${bm.toString().padStart(2, '0')}:${bs.toString().padStart(2, '0')}` : '—:——';
 }
@@ -1032,7 +1038,7 @@ function checkCollisions() {
     for (let i = bossProjectiles.length - 1; i >= 0; i--) {
       const bp = bossProjectiles[i];
       if (dist(bp.x, bp.y, player.x, player.y) < player.radius + bp.radius) {
-        lastDamageSource = '보스 발사체';
+        lastDamageSource = LANG === 'en' ? 'Boss Projectile' : '보스 발사체';
         player.takeDamage(bp.damage);
         createExplosionParticles(bp.x, bp.y, bp.color, 8);
         bossProjectiles.splice(i, 1);
@@ -1051,7 +1057,7 @@ function checkCollisions() {
     for (let e of allTargets) {
       if (e._hacked) continue; // 해킹 아군은 플레이어와 충돌 피해 없음
       if (dist(player.x, player.y, e.x, e.y) < player.radius + e.radius) {
-        lastDamageSource = e === activeBoss ? '보스 충돌' : '바이러스 충돌';
+        lastDamageSource = LANG === 'en' ? (e === activeBoss ? 'Boss Collision' : 'Virus Collision') : (e === activeBoss ? '보스 충돌' : '바이러스 충돌');
         player.takeDamage(e.damage);
         player.lastHitTime = now;
         break;
@@ -1077,7 +1083,7 @@ function checkCollisions() {
     if (dailyHeroes.includes(hero) && now - player.lastHitTime > 250 &&
         dist(player.x, player.y, hero.x, hero.y) < player.radius + hero.radius) {
       player.takeDamage(hero instanceof DailyRivalBerserker ? 28 : 20);
-      lastDamageSource = `${hero.heroLabel} 충돌`;
+      lastDamageSource = LANG === 'en' ? `${hero.heroLabel} Collision` : `${hero.heroLabel} 충돌`;
       player.lastHitTime = now;
     }
   }

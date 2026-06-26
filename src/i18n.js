@@ -648,6 +648,19 @@ const EN_GAME = {
     shop_reroll: { name: 'Reroll Supply',     desc: 'Gain 2 extra rerolls' },
     shop_maxhp:  { name: 'HP Expansion',      desc: 'Max HP +30 and restore 30 HP' },
   },
+
+  classes: {
+    hacker:        { name: 'Hacker',        skillName: 'EMP Pulse',       desc: 'Infiltration class. Fast leveling, 3 rerolls. EMP stuns enemy clusters.' },
+    cyborg:        { name: 'Firewall',       skillName: 'Shield Burst',    desc: 'Defense class. Highest HP, damage shield. Close combat specialist.' },
+    ghost:         { name: 'Rootkit',        skillName: 'Phase Shift',     desc: 'Mobility class. Fastest speed, invincible dash across the battlefield.' },
+    engineer:      { name: 'Drone.exe',      skillName: 'Drone Burst',     desc: 'Automation class. Drones auto-target. Q skill repels nearby foes.' },
+    sniper:        { name: 'Scanner',        skillName: 'Precision Scan',  desc: 'Ranged class. Highest damage. Snipes cores from afar. Weak at close range.' },
+    support:       { name: 'Patchbot',       skillName: 'Emergency Patch', desc: 'Survival class. HP regen specialist, XP +15%, 3 rerolls. Never die.' },
+    cracker:       { name: 'Cracker',        skillName: 'Virus Inject',    desc: 'Control class. Hack enemies to ally. Q instantly hacks 2 units.' },
+    glitch_dancer: { name: 'Glitch Dancer',  skillName: 'Improv Dance',    desc: 'Rhythm class. Command Dance specialist. Q triggers instant dance burst.' },
+    parasite:      { name: 'Parasite',       skillName: 'Pattern Release', desc: 'Absorption class. Absorb enemy patterns (max 3). Q: burst scales with stacks.' },
+    jammer:        { name: 'Jammer',         skillName: 'Focus Jamwave',   desc: 'Disruption class. Move=pulse, still=charge. Charge-scaled jamming pulse.' },
+  },
 };
 
 // Auto-apply translations on DOM ready
