@@ -52,7 +52,6 @@ function update(dt) {
   if (timeAccumulator >= 1000) {
     gameTime++;
     timeAccumulator -= 1000;
-    if (isEndlessMode) endlessModeStartTime; // 무한모드는 별도로 gameTime을 표시
   }
 
   player.update(dt);
@@ -426,7 +425,7 @@ function draw(dt) {
   ctx.globalAlpha = 1.0;
   ctx.restore();
 
-  updateAndDrawLasers(ctx, camera, 16.66);
+  updateAndDrawLasers(ctx, camera, dt);
 
   for (let p of projectiles) p.draw(ctx, camera);
   for (let bp of bossProjectiles) bp.draw(ctx, camera);
@@ -590,6 +589,7 @@ function draw(dt) {
   }
 
   if (player) drawMinimap(ctx);
+  drawWeaponLevelPanel(ctx);
 
   // MP 스코어보드
   if (mpMode) drawMpScoreboard(ctx, canvas.width, canvas.height);

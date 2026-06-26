@@ -15,6 +15,13 @@ resizeCanvas();
 
 // 키보드
 window.addEventListener('keydown', e => {
+  // 엔딩 화면 중 아무 키 — 건너뛰기
+  const endingEl = document.getElementById('parasite-ending-screen');
+  if (endingEl && endingEl.classList.contains('active')) {
+    const _bm = Math.floor(gameTime/60000), _bs = Math.floor((gameTime%60000)/1000);
+    _showParasiteVictoryModal(`${String(_bm).padStart(2,'0')}:${String(_bs).padStart(2,'0')}`);
+    return;
+  }
   // ESC / P: 일시정지 토글
   if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
     if (gameState === STATE_PLAYING || gameState === STATE_STAGE_CLEAR || gameState === STATE_PAUSED) {
@@ -161,11 +168,39 @@ homeBtn.addEventListener('click',  () => {
 });
 document.getElementById('mute-btn').addEventListener('click', () => toggleBGM());
 
+// ── 클래스 진행 단계별 가시성 판정 ──────────────────────────
+// 0게임: 해커만 / 1게임~: 방화벽·루트킷 / 방화벽 or 루트킷 플레이 후: 드론·스캐너·패치봇
+// 히든: 기본 6종 모두 보인 후 isClassUnlocked 조건이 충족될 때
+function _isClassVisible(cls) {
+  const stats = _getStats();
+  const totalGames   = stats.totalGamesPlayed || 0;
+  const cyborgGames  = stats.cls_cyborg_games  || 0;
+  const ghostGames   = stats.cls_ghost_games   || 0;
+  switch (cls) {
+    case 'hacker':  return true;
+    case 'cyborg':
+    case 'ghost':   return totalGames >= 1;
+    case 'engineer':
+    case 'sniper':
+    case 'support': return (cyborgGames + ghostGames) >= 1;
+    // 히든: 기본 6종 모두 열린 후 + 기존 해금 조건
+    default: {
+      const baseAllVisible = (cyborgGames + ghostGames) >= 1; // 3단계(기본 6종) 이미 조건 내포
+      if (!baseAllVisible) return false;
+      return isClassUnlocked(cls);
+    }
+  }
+}
+
 // 클래스 선택 카드 이벤트 (2단계 선택 흐름)
 function refreshClassCardLockState() {
-  document.querySelectorAll('.class-card').forEach(card => {
+  // ── 기본 클래스 (6종) ──
+  document.querySelectorAll('.class-card:not(.hidden-class)').forEach(card => {
     const cls = card.dataset.class;
     if (!cls) return;
+    const visible  = _isClassVisible(cls);
+    card.style.display = visible ? '' : 'none';
+    if (!visible) return;
     const unlocked = isClassUnlocked(cls);
     card.classList.toggle('class-locked', !unlocked);
     let badge = card.querySelector('.class-lock-badge');
@@ -176,9 +211,44 @@ function refreshClassCardLockState() {
         card.appendChild(badge);
       }
       const def = CLASS_UNLOCK_DEFS[cls];
-      badge.innerHTML = `🔒 <span>${def.label}</span>`;
+      badge.innerHTML = `🔒 <span>${def?.label || ''}</span>`;
     } else if (badge) {
       badge.remove();
+    }
+  });
+
+  // ── 히든 클래스 구역 전체 표시 여부 ──
+  const hiddenDivider = document.querySelector('.hidden-class-divider');
+  const hiddenGrid    = document.getElementById('hidden-class-grid');
+  const stats = _getStats();
+  const allBaseVisible = (stats.cls_cyborg_games||0) + (stats.cls_ghost_games||0) >= 1;
+  const anyHiddenUnlocked = ['jammer','cracker','glitch_dancer','parasite'].some(c => isClassUnlocked(c));
+  const showHiddenSection = allBaseVisible && anyHiddenUnlocked;
+  if (hiddenDivider) hiddenDivider.style.display = showHiddenSection ? '' : 'none';
+  if (hiddenGrid)    hiddenGrid.style.display    = showHiddenSection ? '' : 'none';
+
+  // ── 히든 클래스 카드 개별 ──
+  document.querySelectorAll('.class-card.hidden-class').forEach(card => {
+    const cls      = card.dataset.class;
+    const visible  = _isClassVisible(cls);
+    card.style.display = visible ? '' : 'none';
+    if (!visible) return;
+    const unlocked = isClassUnlocked(cls);
+    const def = CLASS_DEFS[cls];
+    card.classList.toggle('class-locked', !unlocked);
+    if (unlocked && def) {
+      const speedLabel = def.speed >= 4.5 ? '극빠름' : def.speed >= 3.8 ? '빠름' : def.speed >= 3.3 ? '약빠름' : '보통';
+      card.querySelector('.cls-preview').textContent = def.desc.split('. ').slice(0,2).join(' · ');
+      const statsEl = card.querySelector('.cls-stats');
+      statsEl.innerHTML = `
+        <li>HP ${def.hp} / 속도 ${speedLabel}</li>
+        <li>시작 무기: ${def.startWeapon}</li>
+        <li>피해량 ${def.damageMult > 1 ? '+' : ''}${Math.round((def.damageMult-1)*100)}%</li>
+        <li>✨ 히든 클래스 해금!</li>
+        <li class="cls-skill">[Q] ${def.activeSkill.name} (${def.activeSkill.cd/1000}초)</li>
+      `;
+      const badge = card.querySelector('.class-lock-badge');
+      if (badge) badge.remove();
     }
   });
 }
@@ -186,13 +256,27 @@ function refreshClassCardLockState() {
 document.querySelectorAll('.class-card').forEach(card => {
   card.addEventListener('click', () => {
     const cls = card.dataset.class;
-    if (!isClassUnlocked(cls)) return; // 잠긴 클래스 선택 차단
+    if (!isClassUnlocked(cls)) {
+      // 잠긴 히든 직업: 힌트 팝업 표시
+      const popup = document.getElementById('hidden-hint-popup');
+      const unlockDef = CLASS_UNLOCK_DEFS[cls];
+      if (popup && unlockDef) {
+        popup.textContent = `🔒 해금 조건: ${unlockDef.label}`;
+        const rect = card.getBoundingClientRect();
+        popup.style.display = 'block';
+        popup.style.top = (rect.top - 44 + window.scrollY) + 'px';
+        popup.style.left = (rect.left + window.scrollX) + 'px';
+        clearTimeout(popup._hideTimer);
+        popup._hideTimer = setTimeout(() => { popup.style.display = 'none'; }, 2000);
+      }
+      return;
+    }
     document.querySelectorAll('.class-card').forEach(c => c.classList.remove('class-selected'));
     card.classList.add('class-selected');
     selectedClass = cls;
     const hint = document.getElementById('class-selected-hint');
     const confirmBtn = document.getElementById('class-confirm-btn');
-    const names = { hacker:'해커', cyborg:'방화벽', ghost:'루트킷', engineer:'드론.exe', sniper:'스캐너', support:'패치봇' };
+    const names = { hacker:'해커', cyborg:'방화벽', ghost:'루트킷', engineer:'드론.exe', sniper:'스캐너', support:'패치봇', cracker:'크래커', glitch_dancer:'글리치 댄서', parasite:'패러사이트', jammer:'재머' };
     if (hint) { hint.textContent = `✓ ${names[selectedClass] || selectedClass} 선택됨`; hint.classList.add('has-selection'); }
     if (confirmBtn) confirmBtn.disabled = false;
   });
@@ -223,7 +307,7 @@ function showScreen(state) {
   gameOverModal.classList.remove('active');
   document.getElementById('stage-bonus-modal').classList.remove('active');
   document.getElementById('shop-modal').classList.remove('active');
-  if (state === STATE_MENU) { menuScreen.classList.add('active'); menuBgmStarted = false; stopBGM(); updateMenuMetaBadge(); }
+  if (state === STATE_MENU) { menuScreen.classList.add('active'); menuBgmStarted = false; stopBGM(); updateMenuMetaBadge(); updateArchiveNewBadge(); }
   else if (state === STATE_PLAYING || state === STATE_STAGE_CLEAR || state === STATE_STAGE_BONUS) {
     gameScreen.classList.add('active');
   }
@@ -297,7 +381,11 @@ function startGame() {
   enemies = []; projectiles = []; gems = []; particles = [];
   activeLasersArr = []; fieldItems = []; floatingTexts = [];
   bossProjectiles = [];
-  activeBoss  = null;
+  activeBoss      = null;
+  dailyHeroes.length = 0;
+  heroBullets.length = 0;
+  dailyEventStage = '';
+  bountyKills = 0; _bountyThreshold = 400; _bountyLevel = 0;
   if (_gemMagnetTimer) { clearTimeout(_gemMagnetTimer); _gemMagnetTimer = null; }
   stageGemMagnet = false;
   currentStage = 1;
@@ -316,7 +404,9 @@ function startGame() {
   screenShake       = { x: 0, y: 0, intensity: 0, duration: 0 };
   comboCount = 0; comboTimer = 0; maxCombo = 0;
   evolutionCount = 0; activeSynergies = new Set(); pendingBossCurse = false; pendingNearDeathCurse = false;
-  mines = []; blackHoles = [];
+  mines = []; blackHoles = []; jammerPulses.length = 0;
+  isFinalStage = false; finalStageWave = 0; finalWave1Kills = 0; finalWave1SpawnTimer = 0;
+  finalWaveVirusCore = null; finalWaveVirusOrigin = null;
   fieldItemTimer    = 0;
   shopTimer         = 0;
   goldCoins         = [];
@@ -359,6 +449,30 @@ function startGame() {
     rerollUses   += Math.floor(ascensionLevel / 2);
     if (ascensionLevel >= 3) player.passiveXpMult *= 1.10;
     addFloatingText(player.x, player.y - 50, `✨ 승천 Lv.${ascensionLevel} 보너스 적용!`, '#ffe600', 13);
+  }
+
+  // 일일 변이 적용
+  if (isDailyRun) {
+    selectDailyMutations();
+    const { curses, buff } = dailyMutations;
+    // 저주 적용
+    if (curses.find(c => c.id === 'glass'))      { player.maxHp = Math.floor(player.maxHp * 0.65); player.hp = player.maxHp; }
+    if (curses.find(c => c.id === 'slow'))       { player.speed = Math.max(0.8, player.speed * 0.75); }
+    // 버프 적용
+    if (buff?.id === 'extra_hp')   { player.maxHp = Math.floor(player.maxHp * 1.60); player.hp = player.maxHp; }
+    if (buff?.id === 'speed_boost'){ player.speed *= 1.25; }
+    if (buff?.id === 'pierce')     { player.pierceMod = (player.pierceMod || 0) + 1; }
+    if (buff?.id === 'xp_boost')   { player.passiveXpMult *= 1.60; }
+    // 변이 공개
+    const c1 = curses[0], c2 = curses[1];
+    setTimeout(() => {
+      showStageOverlay(
+        '⚡ 오늘의 변이',
+        `${c1.icon}${c1.name}  ${c2.icon}${c2.name}  |  ${buff.icon}${buff.name}`,
+        '#ff4466'
+      );
+      setTimeout(hideStageOverlay, 4500);
+    }, 800);
   }
 
   if (!isDailyRun) bgmTrackId = Math.floor(Math.random() * 3); // 일일 도전은 bgmTrackId=3 유지
@@ -422,6 +536,77 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); gcOk(); }
   if (e.key === 'Escape') { e.preventDefault(); gcCancel(); }
 }, true);
+
+// ============================================================
+// 격리 로그 아카이브
+// ============================================================
+const _ARCHIVE_CLASS_ORDER = [
+  'hacker','cyborg','ghost','engineer','sniper','support',
+  'jammer','cracker','glitch_dancer','parasite'
+];
+
+function openArchiveModal() {
+  if (!saveData._codec) saveData._codec = {};
+  const modal = document.getElementById('archive-modal');
+  if (!modal) return;
+  _renderArchiveTabs('hacker');
+  modal.classList.add('active');
+  // 새 로그 배지 숨김 (본 것으로 처리)
+  const badge = document.getElementById('archive-new-badge');
+  if (badge) badge.style.display = 'none';
+}
+
+function closeArchiveModal() {
+  document.getElementById('archive-modal')?.classList.remove('active');
+}
+
+function _renderArchiveTabs(activeCls) {
+  const tabsEl  = document.getElementById('archive-tabs');
+  const viewEl  = document.getElementById('archive-log-viewer');
+  if (!tabsEl || !viewEl) return;
+
+  tabsEl.innerHTML = _ARCHIVE_CLASS_ORDER.map(cls => {
+    const def = CLASS_DEFS[cls];
+    const logs = CLASS_CODEC[cls] || [];
+    const unlocked = logs.filter((_, i) => saveData._codec[`${cls}_${i}`]).length;
+    const isActive = cls === activeCls;
+    return `<button class="archive-tab${isActive?' active':''}" onclick="_renderArchiveTabs('${cls}')">
+      <span>${def?.icon||'?'}</span>
+      <span style="font-size:9px">${def?.name||cls}</span>
+      <span class="archive-tab-count">${unlocked}/${logs.length}</span>
+    </button>`;
+  }).join('');
+
+  const clsDef = CLASS_DEFS[activeCls] || {};
+  const logs   = CLASS_CODEC[activeCls] || [];
+  viewEl.innerHTML = logs.map((log, i) => {
+    const key      = `${activeCls}_${i}`;
+    const unlocked = !!saveData._codec[key];
+    if (unlocked) {
+      return `<div class="archive-log-entry unlocked">
+        <div class="archive-log-title">${log.title}</div>
+        <pre class="archive-log-text">${log.text}</pre>
+      </div>`;
+    } else {
+      return `<div class="archive-log-entry locked">
+        <div class="archive-log-title">[CLASSIFIED] LOG-0${i+1}</div>
+        <div class="archive-log-locked-hint">해금 조건: ${log.condLabel}</div>
+        <div class="archive-log-text" style="color:#334155;letter-spacing:2px">
+          ██ ████ ██████ ████ ██ ██████ ████ ██</div>
+      </div>`;
+    }
+  }).join('');
+}
+
+function updateArchiveNewBadge() {
+  if (!saveData._codec) return;
+  const badge = document.getElementById('archive-new-badge');
+  if (!badge) return;
+  const hasAny = _ARCHIVE_CLASS_ORDER.some(cls =>
+    (CLASS_CODEC[cls]||[]).some((_, i) => saveData._codec[`${cls}_${i}`])
+  );
+  badge.style.display = hasAny ? 'inline-block' : 'none';
+}
 
 // ============================================================
 // 22. 메인 게임 루프

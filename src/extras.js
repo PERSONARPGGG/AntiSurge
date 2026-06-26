@@ -97,6 +97,76 @@ function devJumpStage() {
   if (player) addFloatingText(player.x, player.y - 50, `⚡ DEV JUMP → STAGE ${target}`, '#39ff14', 16);
 }
 
+function devMaxWeapons() {
+  if (!player || gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
+  for (const key in player.weapons) {
+    player.weapons[key].level = 5;
+    weaponStats[key].level = 5;
+  }
+  if (player) addFloatingText(player.x, player.y-50, '⚔ DEV: 전무기 MAX', '#ffe600', 14);
+}
+
+function devToggleInvincible() {
+  devGodMode = !devGodMode;
+  if (player) {
+    player._devInvincible = devGodMode;
+    addFloatingText(player.x, player.y-40, `DEV 무적 ${devGodMode?'ON':'OFF'}`, '#39ff14', 14);
+  }
+  const btn = document.getElementById('dev-godmode-btn');
+  if (btn) { btn.textContent = `🛡 무적: ${devGodMode ? 'ON ✓' : 'OFF'}`; btn.style.color = devGodMode ? '#39ff14' : ''; }
+}
+
+function devSwitchClass() {
+  if (!player || gameState === STATE_MENU || gameState === STATE_GAME_OVER) return;
+  const sel = document.getElementById('dev-class-select');
+  const cls = sel?.value;
+  if (!cls || !CLASS_DEFS[cls]) { if (player) addFloatingText(player.x, player.y-40, '직업을 선택하세요', '#ff4466', 12); return; }
+  player.classId = cls;
+  const def = CLASS_DEFS[cls];
+  player.damageMultiplier = def.damageMult || 1.0;
+  player.speed = def.speed || 3.4;
+  player.color = def.color || '#00f0ff';
+  player.classPassives = {};
+  addFloatingText(player.x, player.y-50, `DEV: ${def.name} 전환!`, def.color||'#00f0ff', 16);
+}
+
+// ---- 파이널 스테이지 DEV ----
+function devFinalStageUnlock() {
+  if (!player) { showGameToast('게임 플레이 중에만 사용 가능'); return; }
+  player.classId = 'parasite';
+  player._totalAbsorptions = 50;
+  if (!saveData._hiddenClassClears) saveData._hiddenClassClears = {};
+  saveData._hiddenClassClears.jammer        = true;
+  saveData._hiddenClassClears.cracker       = true;
+  saveData._hiddenClassClears.glitch_dancer = true;
+  saveSaveData();
+  showGameToast('🧬 파이널 스테이지 조건 강제 충족 완료');
+  if (player) addFloatingText(player.x, player.y-60, '파이널 조건 OK!', '#88ff44', 16);
+}
+
+function devFinalStageStart() {
+  if (gameState === STATE_MENU || gameState === STATE_GAME_OVER) { showGameToast('게임 플레이 중에만 사용 가능'); return; }
+  devFinalStageUnlock();
+  setTimeout(() => triggerParasiteFinalStage(), 200);
+}
+
+function devFinalWave(wave) {
+  if (!isFinalStage) {
+    devFinalStageStart();
+    setTimeout(() => advanceFinalStageWave(wave), 500);
+    return;
+  }
+  advanceFinalStageWave(wave);
+  addFloatingText(player?.x||MAP_WIDTH/2, (player?.y||MAP_HEIGHT/2)-60, `DEV → WAVE ${wave}`, '#ffe600', 16);
+}
+
+function devPlayEnding() {
+  gameState = STATE_GAME_OVER;
+  isFinalStage = false;
+  if (!saveData._parasiteEnding) { saveData._parasiteEnding = true; saveSaveData(); }
+  showParasiteEnding();
+}
+
 function devResetSave() {
   showGameConfirm(
     '모든 저장 데이터를 초기화합니다.\n메타 업그레이드, 업적, 최고기록이 전부 삭제됩니다.',

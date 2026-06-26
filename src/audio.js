@@ -382,6 +382,107 @@ function useActiveSkill() {
       playSynthSound([500, 900, 1400], 0.2, 'triangle', 0.08);
       break;
     }
+    case 'cracker': {
+      const zombieLvl = player.classPassives?.ck_zombie || 0;
+      const blastLvl  = player.classPassives?.ck_blast  || 0;
+      const dur  = 8000 + (zombieLvl >= 2 ? 5000 : zombieLvl >= 1 ? 3000 : 0);
+      const expl = blastLvl >= 2 ? 280 : blastLvl >= 1 ? 150 : 0;
+      const targets = [...enemies]
+        .filter(e => !e._hacked)
+        .sort((a, b) => dist(player.x, player.y, a.x, a.y) - dist(player.x, player.y, b.x, b.y))
+        .slice(0, 2);
+      let hackCount = 0;
+      for (const t of targets) {
+        t._hacked = true; t._hackTimer = dur; t._hackDmgTimer = 0;
+        t._hackExplosion = expl; t._hackEvolved = !!(player.fusions?.virus_takeover);
+        addFloatingText(t.x, t.y - 40, '🖥️ 해킹!', '#ff6600', 13);
+        hackCount++;
+      }
+      createExplosionParticles(player.x, player.y, '#ff6600', 20);
+      playSynthSound([1000, 600, 300, 800], 0.22, 'square', 0.08);
+      addFloatingText(player.x, player.y - 60, `🕹️ 바이러스 주입! ×${hackCount || '미스'}`, '#ff6600', 16);
+      break;
+    }
+    case 'glitch_dancer': {
+      const w = player.weapons.command_dance;
+      const lvl = w?.level > 0 ? w.level : 1;
+      const radius = [200,240,270,300,340][lvl-1] ?? 200;
+      const baseDmg = ([350,380,430,470,540][lvl-1] ?? 350) * player.damageMultiplier;
+      const rhythmLvl = player.classPassives?.gd_rhythm || 0;
+      const dmg = baseDmg * (rhythmLvl >= 2 ? 1.6 : rhythmLvl >= 1 ? 1.3 : 1.0);
+      createExplosionParticles(player.x, player.y, '#ff88ff', 30);
+      triggerScreenShake(10, 450);
+      playSynthSound([600,900,1200,800], 0.22, 'triangle', 0.1);
+      addFloatingText(player.x, player.y - 65, '💃 즉흥 댄스!', '#ff88ff', 16);
+      let allGD = [...enemies]; if (activeBoss) allGD.push(activeBoss);
+      for (const e of allGD) {
+        if (dist(player.x, player.y, e.x, e.y) < radius) {
+          if (e === activeBoss) activeBoss.takeDamage(Math.floor(dmg * 0.45), 'command_dance');
+          else if (e.takeDamage(dmg, 'command_dance')) { killCount++; stageKillProgress++; }
+        }
+      }
+      if (player.fusions?.dance_master) {
+        for (let i = 0; i < 8; i++) {
+          const a = (i/8)*Math.PI*2;
+          if (projectiles.length < MAX_PROJECTILES)
+            projectiles.push(new Projectile(player.x, player.y, Math.cos(a)*7, Math.sin(a)*7, dmg*0.55, 8, '#ff88ff', 2, 'command_dance'));
+        }
+      }
+      const burstDur = player.classPassives?.gd_burst >= 2 ? 5000 : player.classPassives?.gd_burst >= 1 ? 3000 : 0;
+      if (burstDur > 0) player._gdBurstTimer = burstDur;
+      checkStageProgress();
+      break;
+    }
+    case 'parasite': {
+      const stacks = player._parasiteStacks || 0;
+      if (stacks === 0) {
+        addFloatingText(player.x, player.y - 60, '🧬 흡수 없음!', '#88ff44', 14);
+        player.activeSkillCd = 0;
+        break;
+      }
+      const surgeLvl = player.classPassives?.ps_surge || 0;
+      const baseR = 160 + (surgeLvl >= 2 ? 100 : surgeLvl >= 1 ? 50 : 0);
+      const dmgPS = 200 * player.damageMultiplier * stacks;
+      createExplosionParticles(player.x, player.y, '#88ff44', Math.min(25 + stacks*5, MAX_PARTICLES - particles.length));
+      triggerScreenShake(6 + stacks*2, 400);
+      playSynthSound([300, 600, 900, 400*stacks], 0.2, 'sawtooth', 0.09);
+      addFloatingText(player.x, player.y - 65, `🦠 패턴 방출! ×${stacks}`, '#88ff44', 16);
+      let allPS = [...enemies]; if (activeBoss) allPS.push(activeBoss);
+      for (const e of allPS) {
+        if (dist(player.x, player.y, e.x, e.y) < baseR) {
+          if (e === activeBoss) activeBoss.takeDamage(Math.floor(dmgPS * 0.4), 'viral_bomb');
+          else if (e.takeDamage(dmgPS, 'viral_bomb')) { killCount++; stageKillProgress++; }
+        }
+      }
+      player._parasiteStacks = 0;
+      checkStageProgress();
+      break;
+    }
+    case 'jammer': {
+      const faceA = player._moveAngle || 0;
+      const coneHalf = Math.PI / 3;
+      const coneR = 350;
+      let stunCt = 0;
+      for (const e of enemies) {
+        const dx = e.x - player.x, dy = e.y - player.y;
+        if (dx*dx + dy*dy > coneR*coneR) continue;
+        let diff = Math.abs(Math.atan2(dy,dx) - faceA);
+        if (diff > Math.PI) diff = Math.PI*2 - diff;
+        if (diff <= coneHalf) { e.stunTimer = 3000; e._jammed = true; e._jamTimer = 5000; stunCt++; }
+      }
+      if (activeBoss) {
+        const dx = activeBoss.x - player.x, dy = activeBoss.y - player.y;
+        if (dx*dx+dy*dy <= coneR*coneR) {
+          let diff = Math.abs(Math.atan2(dy,dx) - faceA);
+          if (diff > Math.PI) diff = Math.PI*2 - diff;
+          if (diff <= coneHalf) activeBoss.stunTimer = (activeBoss.stunTimer||0) + 1500;
+        }
+      }
+      createExplosionParticles(player.x, player.y, '#aaffff', 20);
+      playSynthSound([800,400,200,100], 0.2, 'sawtooth', 0.09);
+      addFloatingText(player.x, player.y - 60, `📻 집중 방해파! ×${stunCt}`, '#aaffff', 16);
+      break;
+    }
   }
   triggerScreenShake(4, 250);
 }

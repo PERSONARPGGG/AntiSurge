@@ -5,7 +5,7 @@ class Projectile {
   constructor(x, y, vx, vy, damage, radius, color, pierce = 1, weaponKey = '') {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
     this.damage = damage; this.radius = radius; this.color = color;
-    this.pierce = pierce; this.weaponKey = weaponKey;
+    this.pierce = pierce + (player?.pierceMod || 0); this.weaponKey = weaponKey;
     this.life = 3500;
     this.hitEnemies = new Set();
   }
