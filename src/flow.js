@@ -8,7 +8,7 @@ function resizeCanvas() {
   canvas.width  = canvas.parentElement.clientWidth;
   canvas.height = canvas.parentElement.clientHeight;
   // 모바일: ctx.scale(0.75)로 월드 33% 더 표시 → camera는 더 넓은 영역 커버
-  gameZoom      = window.matchMedia('(pointer: coarse)').matches ? 0.65 : 1.0;
+  gameZoom      = window.matchMedia('(pointer: coarse)').matches ? 0.80 : 1.0;
   camera.width  = canvas.width  / gameZoom;
   camera.height = canvas.height / gameZoom;
 }
