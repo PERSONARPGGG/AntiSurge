@@ -2,6 +2,8 @@
 // ============================================================
 function triggerFinalVictory() {
   gameState = STATE_GAME_OVER;
+  clearMidRun();
+  _stopMidRunAutoSave();
   stopBGM();
   const _hudEl = document.getElementById('hud');
   if (_hudEl) _hudEl.style.visibility = 'hidden';
@@ -245,6 +247,8 @@ function _checkCodecUnlocks() {
 
 function endGame(isVictory) {
   gameState = STATE_GAME_OVER;
+  clearMidRun();
+  _stopMidRunAutoSave();
   stopBGM();
   // 캔버스 클리어 (마지막 프레임의 미니맵/스코어보드가 뒤에 비치는 문제 방지)
   if (typeof canvas !== 'undefined' && canvas) {

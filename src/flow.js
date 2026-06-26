@@ -307,7 +307,7 @@ function showScreen(state) {
   gameOverModal.classList.remove('active');
   document.getElementById('stage-bonus-modal').classList.remove('active');
   document.getElementById('shop-modal').classList.remove('active');
-  if (state === STATE_MENU) { menuScreen.classList.add('active'); menuBgmStarted = false; stopBGM(); updateMenuMetaBadge(); updateArchiveNewBadge(); }
+  if (state === STATE_MENU) { menuScreen.classList.add('active'); menuBgmStarted = false; stopBGM(); updateMenuMetaBadge(); updateArchiveNewBadge(); _checkMidRunPrompt(); }
   else if (state === STATE_PLAYING || state === STATE_STAGE_CLEAR || state === STATE_STAGE_BONUS) {
     gameScreen.classList.add('active');
   }
@@ -374,6 +374,7 @@ function startGame() {
   const _sHudEl = document.getElementById('hud');
   if (_sHudEl) _sHudEl.style.visibility = '';
   showScreen(STATE_PLAYING);
+  _startMidRunAutoSave();
 
   // 전체 리셋
   killCount = 0; gameTime = 0; timeAccumulator = 0; lastDamageSource = '';
@@ -482,7 +483,95 @@ function startGame() {
   startBGM();
   lastTime = performance.now();
   gameLoopId = requestAnimationFrame(gameLoop);
+
+  // 중간 저장 복원 (resumeFromMidRun이 설정한 경우만)
+  if (_midRunRestore) {
+    const s = _midRunRestore;
+    _midRunRestore = null;
+    currentStage        = s.stage;
+    gameTime            = s.gameTime;
+    killCount           = s.killCount;
+    rerollUses          = s.rerollUses;
+    evolutionCount      = s.evolutionCount || 0;
+    maxCombo            = s.maxCombo || 0;
+    activeSynergies     = new Set(s.activeSynergies || []);
+    if (s.weaponStats) Object.assign(weaponStats, s.weaponStats);
+    // 플레이어 스탯 덮어쓰기
+    player.hp               = Math.min(s.hp, s.maxHp);
+    player.maxHp            = s.maxHp;
+    player.xp               = s.xp;
+    player.level            = s.level;
+    player.nextLevelXp      = s.nextLevelXp;
+    player.gold             = s.gold;
+    player.speed            = s.speed;
+    player.damageMultiplier = s.damageMultiplier;
+    player.magnetRadius     = s.magnetRadius;
+    player.damageReduction  = s.damageReduction  || 0;
+    player.passiveXpMult    = s.passiveXpMult    || 1;
+    Object.assign(player.passives,      s.passives      || {});
+    Object.assign(player.classPassives, s.classPassives || {});
+    Object.assign(player.fusions,       s.fusions       || {});
+    Object.assign(player.revivals,      s.revivals      || {});
+    player._shopPurchases = { ...(s._shopPurchases || {}) };
+    // 무기 레벨 복원
+    if (s.weaponLevels) {
+      for (const k in s.weaponLevels) {
+        if (player.weapons[k]) {
+          player.weapons[k].level = s.weaponLevels[k];
+          if (weaponStats[k]) weaponStats[k].level = s.weaponLevels[k];
+        }
+      }
+    }
+    // HUD 알림
+    setTimeout(() => showStageOverlay(`▶ STAGE ${s.stage} 재개`, `이전 런 복원됨  ·  Lv.${s.level}  ·  ${Math.floor(s.gameTime/60)}분 경과`, '#00f0ff'), 500);
+    setTimeout(hideStageOverlay, 3000);
+  }
 }
+
+// ── 중간 저장 복원 진입점 ─────────────────────────────────────
+let _midRunRestore = null;
+
+function resumeFromMidRun() {
+  const s = getMidRun();
+  if (!s) return;
+  _midRunRestore = s;
+  selectedClass  = s.classId;
+  gameDifficulty = s.difficulty || 'normal';
+  currentSaveSlot = s.saveSlot ?? currentSaveSlot;
+  document.getElementById('midrun-prompt')?.classList.remove('active');
+  startGame();
+}
+
+function _checkMidRunPrompt() {
+  const s = getMidRun();
+  const el = document.getElementById('midrun-prompt');
+  if (!el) return;
+  if (!s) { el.classList.remove('active'); return; }
+  const mins = Math.floor((Date.now() - s.ts) / 60000);
+  const timeStr = mins < 1 ? '방금 전' : mins < 60 ? `${mins}분 전` : `${Math.floor(mins/60)}시간 전`;
+  const cls = CLASS_DEFS[s.classId];
+  el.querySelector('.midrun-info').textContent =
+    `${cls?.icon || '?'} ${cls?.name || s.classId}  ·  Stage ${s.stage}  ·  Lv.${s.level}  ·  ${timeStr}`;
+  el.classList.add('active');
+}
+
+// ── 자동 저장 이벤트 리스너 (창 닫기/백그라운드) ─────────────
+let _midRunAutoTimer = null;
+
+function _startMidRunAutoSave() {
+  if (_midRunAutoTimer) clearInterval(_midRunAutoTimer);
+  _midRunAutoTimer = setInterval(() => {
+    if (gameState === STATE_PLAYING) saveMidRun();
+  }, 15000);
+}
+
+function _stopMidRunAutoSave() {
+  if (_midRunAutoTimer) { clearInterval(_midRunAutoTimer); _midRunAutoTimer = null; }
+}
+
+window.addEventListener('pagehide',         () => saveMidRun());
+window.addEventListener('beforeunload',     () => saveMidRun());
+window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveMidRun(); });
 
 // ============================================================
 // 22-A. 커스텀 UI 유틸리티 (native confirm/alert/prompt 대체)

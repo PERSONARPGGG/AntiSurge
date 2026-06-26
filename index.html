@@ -66,6 +66,16 @@
             <button class="diff-btn" data-diff="hard"   onclick="setDifficulty('hard')">HARD</button>
           </div>
 
+          <!-- 중간 저장 복원 프롬프트 (이전 런 존재 시 표시) -->
+          <div id="midrun-prompt" class="midrun-prompt">
+            <div class="midrun-label">⚡ 이전 런이 감지됐습니다</div>
+            <div class="midrun-info">—</div>
+            <div class="midrun-btns">
+              <button class="neon-btn font-sm" onclick="resumeFromMidRun()">▶ 이어서 하기</button>
+              <button class="neon-btn font-sm neon-btn-red" style="font-size:0.72rem" onclick="clearMidRun();document.getElementById('midrun-prompt').classList.remove('active')">✕ 새 게임</button>
+            </div>
+          </div>
+
           <button id="start-btn" class="neon-btn menu-start-btn">▶ 게임 시작</button>
 
           <button class="neon-btn neon-btn-purple menu-meta-btn" onclick="openMetaModal()">

@@ -3970,3 +3970,38 @@ body {
   font-size: 0.7rem;
   margin-right: 5px;
 }
+
+/* ── 중간 저장 복원 프롬프트 ── */
+.midrun-prompt {
+  display: none;
+  background: linear-gradient(135deg, rgba(0,240,255,0.08), rgba(176,38,255,0.06));
+  border: 1px solid rgba(0,240,255,0.4);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  text-align: center;
+  animation: midrunPulse 2s ease-in-out infinite;
+}
+.midrun-prompt.active { display: block; }
+.midrun-label {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.78rem;
+  color: #00f0ff;
+  text-shadow: 0 0 8px #00f0ff;
+  margin-bottom: 4px;
+}
+.midrun-info {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+}
+.midrun-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+@keyframes midrunPulse {
+  0%, 100% { border-color: rgba(0,240,255,0.4); box-shadow: 0 0 8px rgba(0,240,255,0.1); }
+  50%       { border-color: rgba(0,240,255,0.75); box-shadow: 0 0 16px rgba(0,240,255,0.25); }
+}

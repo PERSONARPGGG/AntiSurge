@@ -661,6 +661,62 @@ function saveSaveData() {
   try { localStorage.setItem(getSaveKey(currentSaveSlot), JSON.stringify(saveData)); } catch(e) {}
 }
 
+// ── 중간 저장 (강제종료/백그라운드 대응) ─────────────────────
+const MID_RUN_KEY = 'ns_midrun_v1';
+
+function saveMidRun() {
+  if (!player || isDailyRun) return;
+  if (gameState !== STATE_PLAYING && gameState !== STATE_LEVEL_UP &&
+      gameState !== STATE_STAGE_CLEAR && gameState !== STATE_SHOP &&
+      gameState !== STATE_PAUSED) return;
+  try {
+    const weaponLevels = {};
+    for (const k in player.weapons) weaponLevels[k] = player.weapons[k].level || 0;
+    localStorage.setItem(MID_RUN_KEY, JSON.stringify({
+      ts:              Date.now(),
+      classId:         player.classId,
+      difficulty:      gameDifficulty,
+      saveSlot:        currentSaveSlot,
+      stage:           currentStage,
+      gameTime,
+      killCount,
+      rerollUses,
+      evolutionCount,
+      maxCombo,
+      activeSynergies: [...activeSynergies],
+      weaponStats:     JSON.parse(JSON.stringify(weaponStats)),
+      weaponLevels,
+      hp:               player.hp,
+      maxHp:            player.maxHp,
+      xp:               player.xp,
+      level:            player.level,
+      nextLevelXp:      player.nextLevelXp,
+      gold:             player.gold,
+      speed:            player.speed,
+      damageMultiplier: player.damageMultiplier,
+      magnetRadius:     player.magnetRadius,
+      damageReduction:  player.damageReduction,
+      passiveXpMult:    player.passiveXpMult,
+      passives:         { ...player.passives },
+      classPassives:    { ...player.classPassives },
+      fusions:          { ...player.fusions },
+      revivals:         { ...player.revivals },
+      _shopPurchases:   { ...(player._shopPurchases || {}) },
+    }));
+  } catch(e) {}
+}
+
+function clearMidRun() {
+  localStorage.removeItem(MID_RUN_KEY);
+}
+
+function getMidRun() {
+  try {
+    const raw = localStorage.getItem(MID_RUN_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
 // 난이도 로드
 function loadDifficulty() {
   gameDifficulty = localStorage.getItem('ns_difficulty') || 'normal';
