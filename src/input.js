@@ -85,25 +85,31 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 // ============================================================
 // ⚙ 설정 모달
 // ============================================================
-const BGM_TRACK_NAMES = ['🎵 신스웨이브', '🎶 데바 시스템', '⚡ 고스트 프로토콜', '🌑 섀도우 옵스'];
+const BGM_TRACK_NAMES_KO = ['🎵 신스웨이브', '🎶 데바 시스템', '⚡ 고스트 프로토콜', '🌑 섀도우 옵스'];
+const BGM_TRACK_NAMES_EN = ['🎵 SYNTHWAVE', '🎶 DEVA SYSTEM', '⚡ GHOST PROTOCOL', '🌑 SHADOW OPS'];
+function _bgmTrackNames() { return LANG === 'en' ? BGM_TRACK_NAMES_EN : BGM_TRACK_NAMES_KO; }
 
 function openSettingsModal() {
   const modal = document.getElementById('settings-modal');
   if (modal) modal.classList.add('active');
-  const muteBtn = document.getElementById('settings-mute-btn');
-  if (muteBtn) muteBtn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
-  const trackBtn = document.getElementById('settings-bgm-track-btn');
-  if (trackBtn) trackBtn.textContent = BGM_TRACK_NAMES[bgmTrackId] || BGM_TRACK_NAMES[0];
+  _refreshSettingsAudioUI();
   const ia = document.getElementById('settings-ingame-actions');
   if (ia) ia.style.display = gameState === STATE_PAUSED ? 'flex' : 'none';
 }
 
+function _refreshSettingsAudioUI() {
+  const muteBtn = document.getElementById('settings-mute-btn');
+  if (muteBtn) muteBtn.textContent = bgmMuted ? t('settings.toggle.bgm.off') : t('settings.toggle.bgm.on');
+  const trackBtn = document.getElementById('settings-bgm-track-btn');
+  if (trackBtn) trackBtn.textContent = _bgmTrackNames()[bgmTrackId] || _bgmTrackNames()[0];
+}
+
 function settingsToggleBgmTrack() {
-  bgmTrackId = (bgmTrackId + 1) % BGM_TRACK_NAMES.length;
+  bgmTrackId = (bgmTrackId + 1) % BGM_TRACK_NAMES_EN.length;
   bgmTrackCheckTimer = 0;
   if (!bgmMuted && bgmGainNode) { stopBGM(); startBGM(); }
   const btn = document.getElementById('settings-bgm-track-btn');
-  if (btn) btn.textContent = BGM_TRACK_NAMES[bgmTrackId];
+  if (btn) btn.textContent = _bgmTrackNames()[bgmTrackId];
 }
 
 function closeSettingsModal() {
@@ -118,7 +124,7 @@ function closeSettingsModal() {
 function settingsToggleMute() {
   toggleBGM();
   const btn = document.getElementById('settings-mute-btn');
-  if (btn) btn.textContent = bgmMuted ? '🔇 꺼짐' : '🎵 켜짐';
+  if (btn) btn.textContent = bgmMuted ? t('settings.toggle.bgm.off') : t('settings.toggle.bgm.on');
 }
 
 let showFps = false;

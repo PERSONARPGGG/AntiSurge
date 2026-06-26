@@ -22,6 +22,8 @@ function setLang(lang) {
   LANG = lang;
   localStorage.setItem('ns_lang', lang);
   applyI18n();
+  if (typeof refreshClassCardLockState === 'function') refreshClassCardLockState();
+  if (typeof _refreshSettingsAudioUI === 'function') _refreshSettingsAudioUI();
 }
 
 function applyI18n() {
@@ -185,6 +187,7 @@ const STRINGS = {
     'mp.back': '← MAIN MENU',
     'mp.start': '▶ START GAME',
     'mp.leave': 'LEAVE',
+    'mp.roomcode': 'Room Code:',
 
     // Achievements
     'ach.title': '🏆 ACHIEVEMENTS',
@@ -338,6 +341,7 @@ const STRINGS = {
     'mp.back': '← 메인으로',
     'mp.start': '▶ 게임 시작',
     'mp.leave': '나가기',
+    'mp.roomcode': '방 코드:',
 
     'ach.title': '🏆 업적',
     'ach.basic': '기본',

@@ -203,6 +203,7 @@ function refreshClassCardLockState() {
     const visible  = _isClassVisible(cls);
     card.style.display = visible ? '' : 'none';
     if (!visible) return;
+    const def = CLASS_DEFS[cls];
     const unlocked = isClassUnlocked(cls);
     card.classList.toggle('class-locked', !unlocked);
     let badge = card.querySelector('.class-lock-badge');
@@ -212,10 +213,38 @@ function refreshClassCardLockState() {
         badge.className = 'class-lock-badge';
         card.appendChild(badge);
       }
-      const def = CLASS_UNLOCK_DEFS[cls];
-      badge.innerHTML = `🔒 <span>${(LANG === 'en' && def?.labelEn) ? def.labelEn : (def?.label || '')}</span>`;
+      const lockDef = CLASS_UNLOCK_DEFS[cls];
+      badge.innerHTML = `🔒 <span>${(LANG === 'en' && lockDef?.labelEn) ? lockDef.labelEn : (lockDef?.label || '')}</span>`;
     } else if (badge) {
       badge.remove();
+    }
+    // ── 기본 클래스 텍스트 언어 업데이트 ──
+    if (def) {
+      const nameEl = card.querySelector('.cls-name');
+      if (nameEl) nameEl.textContent = LANG === 'en' ? (def.nameEn || def.name) : def.name;
+      const chipEl = card.querySelector('.cls-type-chip');
+      if (chipEl) chipEl.textContent = LANG === 'en' ? (def.typeChipEn || def.typeChip || '') : (def.typeChip || '');
+      const previewEl = card.querySelector('.cls-preview');
+      if (previewEl) {
+        const descSrc = LANG === 'en' ? (def.descEn || def.desc) : def.desc;
+        previewEl.textContent = descSrc.split('. ').slice(0,2).join(' · ');
+      }
+      const statsEl = card.querySelector('.cls-stats');
+      if (statsEl) {
+        const speedLabel = LANG === 'en'
+          ? (def.speed >= 4.5 ? 'Ultra Fast' : def.speed >= 3.8 ? 'Fast' : def.speed >= 3.3 ? 'Agile' : 'Normal')
+          : (def.speed >= 4.5 ? '극빠름'    : def.speed >= 3.8 ? '빠름' : def.speed >= 3.3 ? '약빠름' : '보통');
+        const weaponName = LANG === 'en' ? (def.startWeaponEn || def.startWeapon) : (def.startWeapon);
+        const skillName  = LANG === 'en' ? (def.activeSkill.nameEn || def.activeSkill.name) : def.activeSkill.name;
+        const cdSuffix   = LANG === 'en' ? 's' : '초';
+        const extras     = LANG === 'en' ? (def.statsExtraEn || def.statsExtra || []) : (def.statsExtra || []);
+        const extraLis   = extras.map(e => `<li>${e}</li>`).join('');
+        if (LANG === 'en') {
+          statsEl.innerHTML = `<li>HP ${def.hp} / Speed ${speedLabel}</li><li>Start Weapon: ${weaponName}</li>${extraLis}<li class="cls-skill">[Q] ${skillName} (${def.activeSkill.cd/1000}${cdSuffix})</li>`;
+        } else {
+          statsEl.innerHTML = `<li>HP ${def.hp} / 속도 ${speedLabel}</li><li>시작 무기: ${weaponName}</li>${extraLis}<li class="cls-skill">[Q] ${skillName} (${def.activeSkill.cd/1000}${cdSuffix})</li>`;
+        }
+      }
     }
   });
 
@@ -238,6 +267,12 @@ function refreshClassCardLockState() {
     const unlocked = isClassUnlocked(cls);
     const def = CLASS_DEFS[cls];
     card.classList.toggle('class-locked', !unlocked);
+    if (def) {
+      const nameEl = card.querySelector('.cls-name');
+      if (nameEl) nameEl.textContent = LANG === 'en' ? (def.nameEn || def.name) : def.name;
+      const chipEl = card.querySelector('.cls-type-chip');
+      if (chipEl) chipEl.textContent = LANG === 'en' ? (def.typeChipEn || def.typeChip || '') : (def.typeChip || '');
+    }
     if (unlocked && def) {
       const speedLabel = LANG === 'en'
         ? (def.speed >= 4.5 ? 'Ultra Fast' : def.speed >= 3.8 ? 'Fast' : def.speed >= 3.3 ? 'Agile' : 'Normal')
@@ -247,10 +282,11 @@ function refreshClassCardLockState() {
       const statsEl = card.querySelector('.cls-stats');
       const skillNameDisp = (LANG === 'en' && def.activeSkill.nameEn) ? def.activeSkill.nameEn : def.activeSkill.name;
       const cdSuffix = LANG === 'en' ? 's' : '초';
+      const weaponName = LANG === 'en' ? (def.startWeaponEn || def.startWeapon) : def.startWeapon;
       if (LANG === 'en') {
         statsEl.innerHTML = `
           <li>HP ${def.hp} / Speed ${speedLabel}</li>
-          <li>Start Weapon: ${def.startWeapon}</li>
+          <li>Start Weapon: ${weaponName}</li>
           <li>Damage ${def.damageMult > 1 ? '+' : ''}${Math.round((def.damageMult-1)*100)}%</li>
           <li>✨ Hidden Class Unlocked!</li>
           <li class="cls-skill">[Q] ${skillNameDisp} (${def.activeSkill.cd/1000}${cdSuffix})</li>
@@ -258,7 +294,7 @@ function refreshClassCardLockState() {
       } else {
         statsEl.innerHTML = `
           <li>HP ${def.hp} / 속도 ${speedLabel}</li>
-          <li>시작 무기: ${def.startWeapon}</li>
+          <li>시작 무기: ${weaponName}</li>
           <li>피해량 ${def.damageMult > 1 ? '+' : ''}${Math.round((def.damageMult-1)*100)}%</li>
           <li>✨ 히든 클래스 해금!</li>
           <li class="cls-skill">[Q] ${skillNameDisp} (${def.activeSkill.cd/1000}${cdSuffix})</li>
@@ -392,6 +428,7 @@ function startGame() {
   // HUD 복원 (게임오버에서 hidden 처리한 것 되돌리기)
   const _sHudEl = document.getElementById('hud');
   if (_sHudEl) _sHudEl.style.visibility = '';
+  _initHUDRefs();  // HUD DOM 캐시 갱신
   showScreen(STATE_PLAYING);
   _startMidRunAutoSave();
 
@@ -704,9 +741,11 @@ function _renderArchiveTabs(activeCls) {
     const key      = `${activeCls}_${i}`;
     const unlocked = !!saveData._codec[key];
     if (unlocked) {
+      const logTitle = LANG === 'en' ? (log.titleEn || log.title) : log.title;
+      const logText  = LANG === 'en' ? (log.textEn  || log.text)  : log.text;
       return `<div class="archive-log-entry unlocked">
-        <div class="archive-log-title">${log.title}</div>
-        <pre class="archive-log-text">${log.text}</pre>
+        <div class="archive-log-title">${logTitle}</div>
+        <pre class="archive-log-text">${logText}</pre>
       </div>`;
     } else {
       return `<div class="archive-log-entry locked">

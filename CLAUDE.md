@@ -4,7 +4,7 @@
 뱀파이어 서바이벌 스타일 웹게임. 사이버펑크 네온 테마.
 
 **배포:** https://antisurge-c0463.web.app
-**버전:** v0.10
+**버전:** v0.11
 **레포:** https://github.com/PERSONARPGGG/AntiSurge.git
 
 ## 파일 구조
@@ -20,24 +20,28 @@
 ### src/ 모듈 (로딩 순서 중요)
 | 파일 | 내용 | 규모 |
 |---|---|---|
-| `src/config.js` | 전역 상수 + 상태 선언 (CLASS_DEFS, UPGRADES 등) | ~938줄 |
-| `src/audio.js` | Web Audio, BGM, 스킬/난이도/저장 유틸 | ~507줄 |
-| `src/player.js` | Player 클래스 | ~480줄 |
-| `src/weapons.js` | 모든 무기 클래스 | ~753줄 |
-| `src/projectiles.js` | 투사체, 레이저, 보스 위험물 | ~174줄 |
-| `src/enemies.js` | Enemy, Boss 클래스 | ~885줄 |
-| `src/entities.js` | FieldItem, Gem, Particle 등 | ~260줄 |
-| `src/stage.js` | 스테이지/콤보/저장/스폰/충돌/배경 | ~939줄 |
-| `src/flow.js` | 게임 라이프사이클, showScreen, startGame | ~427줄 |
-| `src/loop.js` | gameLoop, update, draw, HUD, minimap | ~616줄 |
-| `src/upgrades.js` | 레벨업, 상점, 저주, 시너지 | ~669줄 |
-| `src/endgame.js` | 게임 종료, 빅토리, NG+, 전체화면 | ~220줄 |
-| `src/finalstage.js` | 패러사이트 트루 엔딩, VirusCoreEnemy, VirusOriginBoss, 컷씬 | ~380줄 |
-| `src/extras.js` | 개발자 패널, 필드 이벤트 | ~280줄 |
-| `src/input.js` | 터치, 유틸(dist), 설정 | ~176줄 |
-| `src/multiplayer.js` | 멀티플레이어, 리더보드, 초기화 | ~758줄 |
+| `src/i18n.js` | EN/KO 이중 언어 (STRINGS, EN_GAME, t(), tGame(), setLang()) | ~675줄 |
+| `src/config.js` | 전역 상수 + 상태 선언 (CLASS_DEFS 10종, UPGRADES, CLASS_CODEC) | ~1250줄 |
+| `src/audio.js` | Web Audio, BGM 4트랙, 스킬/난이도/저장 유틸 | ~607줄 |
+| `src/player.js` | Player 클래스 | ~540줄 |
+| `src/weapons.js` | 모든 무기 클래스 (11종 + 진화형) | ~1391줄 |
+| `src/projectiles.js` | 투사체, 레이저, 보스 위험물 | ~173줄 |
+| `src/enemies.js` | Enemy, Boss 클래스 (3페이즈 + 5가지 패턴), BossProjectile | ~1239줄 |
+| `src/daily_enemies.js` | DailyHeroEnemy, DailyRivalSniper, DailyRivalBerserker (일일도전 전용) | ~856줄 |
+| `src/entities.js` | FieldItem, Gem, Particle 등 | ~282줄 |
+| `src/stage.js` | 스테이지/콤보/저장/스폰/충돌/배경 | ~1298줄 |
+| `src/flow.js` | 게임 라이프사이클, showScreen, startGame, 아카이브 | ~770줄 |
+| `src/loop.js` | gameLoop, update, draw, HUD(DOM 캐시), minimap | ~1060줄 |
+| `src/upgrades.js` | 레벨업, 상점, 저주, 시너지 | ~775줄 |
+| `src/endgame.js` | 게임 종료, 빅토리, NG+, 전체화면, 코덱 해금 | ~522줄 |
+| `src/finalstage.js` | 패러사이트 트루 엔딩, VirusCoreEnemy, VirusOriginBoss, 컷씬 | ~522줄 |
+| `src/extras.js` | 개발자 패널, 필드 이벤트 | ~281줄 |
+| `src/input.js` | 터치, 유틸(dist), 설정 모달 | ~190줄 |
+| `src/multiplayer.js` | 멀티플레이어, 리더보드, 초기화 | ~756줄 |
 
 > **코드 수정 시:** 해당 기능이 어느 src/ 파일에 있는지 위 표로 확인.
+> **주의:** `src/i18n.js`는 반드시 `src/config.js` **보다 먼저** 로드되어야 함.
+> **주의:** `src/daily_enemies.js`는 반드시 `src/enemies.js` **다음에** 로드되어야 함.
 
 ## 브랜치 전략
 - `master` — 배포 전용 (안정 버전, GitHub Pages)
@@ -47,7 +51,7 @@
 ## 주요 함수 맵
 | 함수 | 역할 |
 |---|---|
-| `startGame()` | 게임 초기화 및 루프 시작 |
+| `startGame()` | 게임 초기화 및 루프 시작 (`_initHUDRefs()` 포함) |
 | `gameLoop(time)` | rAF 루프, update+draw 호출 |
 | `update(dt)` | 게임 로직 업데이트 (dt=ms) |
 | `draw(dt)` | 캔버스 렌더링 |
@@ -64,6 +68,13 @@
 | `selectSaveSlot(n)` | 세이브 슬롯 전환 |
 | `syncMpState(dt)` | 멀티플레이어 상태 동기화 |
 | `mpSetupChannel()` | Firebase/BroadcastChannel 초기화 |
+| `_initHUDRefs()` | HUD DOM 캐시 초기화 (startGame 시 호출) |
+| `markWeaponsDirty()` | 무기 슬롯 재렌더 트리거 |
+| `markPassivesDirty()` | 패시브 슬롯 재렌더 트리거 |
+| `refreshClassCardLockState()` | 클래스 카드 언어/잠금 상태 업데이트 |
+| `t(key)` | UI 문자열 번역 (i18n.js) |
+| `tGame(cat, key, field, idx)` | 게임 데이터 번역 (i18n.js) |
+| `setLang(lang)` | 언어 전환 + DOM 업데이트 |
 
 ## 상태 머신
 ```
@@ -77,14 +88,42 @@ STATE_MENU → STATE_PLAYING
   → STATE_GAME_OVER
 ```
 
-## 클래스 정의 위치
-`CLASS_DEFS` 객체 (game.js 상단) — 6종: hacker, cyborg, ghost, engineer, sniper, support
-각 클래스에 `activeSkill: { name, icon, cd, desc }` 포함.
+## 클래스 시스템
+`CLASS_DEFS` 객체 (src/config.js) — **10종**: hacker, cyborg, ghost, engineer, sniper, support (기본 6종) + jammer, cracker, glitch_dancer, parasite (히든 4종)
+
+각 클래스 필드: `name/nameEn, icon, color, typeChip/typeChipEn, desc/descEn, statsExtra/statsExtraEn, startWeapon/startWeaponEn, hp, speed, damageMult, magnetRadius, rerolls, xpBonus, activeSkill{ name/nameEn, icon, cd, desc/descEn }`
+
+히든 클래스 해금 조건: `CLASS_UNLOCK_DEFS` 객체 (src/config.js)
+
+## 격리 로그 아카이브
+`CLASS_CODEC` 객체 (src/config.js) — 클래스당 3개, 총 30개 로그.
+각 로그 필드: `cond, condLabel/condLabelEn, title/titleEn, text/textEn`
+해금 판정: `src/endgame.js` `_checkCodecUnlocks()`
+렌더링: `src/flow.js` `_renderArchiveTabs()`
+
+## i18n 시스템
+- `LANG` 전역 (localStorage `ns_lang`, 기본 `'en'`)
+- `t(key)` — STRINGS[LANG][key] (UI 문자열)
+- `tGame(cat,key,field,idx)` — EN_GAME[cat][key][field] (게임 데이터)
+- `setLang(lang)` — 언어 변경 + applyI18n() + refreshClassCardLockState() + _refreshSettingsAudioUI()
+- `applyI18n()` — `data-i18n` / `data-i18n-placeholder` 속성 일괄 적용
+
+## HUD 최적화
+- `_hud` 캐시 객체: startGame() 시 `_initHUDRefs()`로 DOM 엘리먼트 한 번만 조회
+- `_weaponsDirty` / `_passivesDirty` 플래그: 레벨업/상점에서만 슬롯 재빌드
+- `markWeaponsDirty()`, `markPassivesDirty()` — upgrades.js 등에서 호출
 
 ## 무기 시스템
 - 11종 무기, 각 레벨 1→5, 레벨 5에서 진화
 - `UPGRADES.weapons` 객체에 name/icon/desc/evolvedName/maxLevel 정의
 - `generateUpgradeChoices()`에서 풀 생성, `applyUpgrade(choice)`에서 적용
+
+## BGM 시스템
+4개 트랙 (src/audio.js, src/input.js):
+- 0: SYNTHWAVE (신스웨이브)
+- 1: DEVA SYSTEM (데바 시스템)
+- 2: GHOST PROTOCOL (고스트 프로토콜)
+- 3: SHADOW OPS (섀도우 옵스, 일일도전 전용)
 
 ## 멀티플레이어
 - `FIREBASE_CONFIG = null` → BroadcastChannel 폴백 (같은 기기)
@@ -116,6 +155,7 @@ STATE_MENU → STATE_PLAYING
 5. `isStageClearAnim` 체크 후 상태 결정
 6. `pendingBossCurse` 플래그로 중복 저주 방지
 7. 배열 루프 중 `triggerStageClear()` 유발 가능 코드 → `.length = 0` + 경계 체크
+8. 무기/패시브 변경 후 `markWeaponsDirty()` / `markPassivesDirty()` 호출 확인
 
 ## 배포
 ```bash

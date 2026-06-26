@@ -23,23 +23,19 @@ function gameLoop(time) {
 
   draw(dt);
 
-  // FPS 카운터
+  // FPS 카운터 (500ms마다 갱신)
   devFpsCount++;
   if (time - devLastFpsTs >= 500) {
     devCurrentFps = Math.round(devFpsCount * 1000 / (time - devLastFpsTs));
     devFpsCount   = 0;
     devLastFpsTs  = time;
-    if (devMode) {
-      const fpsEl = document.getElementById('dev-fps');
-      if (fpsEl) fpsEl.textContent = devCurrentFps;
-      const entEl = document.getElementById('dev-entity-count');
-      if (entEl) entEl.textContent = `E${enemies.length}/P${projectiles.length}/G${gems.length}`;
-      const stEl = document.getElementById('dev-stage-display');
-      if (stEl) stEl.textContent = currentStage ?? '--';
-    }
-    if (showFps) {
-      const hudFps = document.getElementById('hud-fps');
-      if (hudFps) hudFps.textContent = `${devCurrentFps} FPS`;
+    if (_hud) {
+      if (devMode) {
+        if (_hud.devFps)   _hud.devFps.textContent   = devCurrentFps;
+        if (_hud.devEnt)   _hud.devEnt.textContent   = `E${enemies.length}/P${projectiles.length}/G${gems.length}`;
+        if (_hud.devStage) _hud.devStage.textContent = currentStage ?? '--';
+      }
+      if (showFps && _hud.hudFps) _hud.hudFps.textContent = `${devCurrentFps} FPS`;
     }
   }
 
@@ -854,98 +850,141 @@ function drawWeaponLevelPanel(ctx) {
 // ============================================================
 // 24. HUD 업데이트
 // ============================================================
-function updateHUD() {
-  document.getElementById('player-level').innerText = player.level;
-  document.getElementById('kill-count').innerText   = killCount;
-  document.getElementById('stage-number').innerText = currentStage;
-  // 존 배지 (매 HUD 업데이트 시 현재 테마 반영)
-  updateZoneHUDBadge(getCurrentBgTheme());
-  const cls = CLASS_DEFS[player.classId];
-  const clsEl = document.getElementById('class-icon');
-  if (clsEl && cls) { clsEl.textContent = cls.icon; clsEl.style.color = cls.color; clsEl.style.textShadow = `0 0 5px ${cls.color}`; }
 
-  // 무한모드 시 stage-number 색상 변경
-  const stageEl = document.getElementById('stage-number');
-  stageEl.style.color      = isEndlessMode ? '#ffe600' : '';
-  stageEl.style.textShadow = isEndlessMode ? '0 0 5px #ffe600' : '';
+// HUD DOM 캐시 — startGame() 시 초기화, 매 프레임 getElementById 비용 제거
+let _hud = null;
+let _weaponsDirty = true;
+let _passivesDirty = true;
+
+function _initHUDRefs() {
+  _hud = {
+    level:        document.getElementById('player-level'),
+    kills:        document.getElementById('kill-count'),
+    stage:        document.getElementById('stage-number'),
+    classIcon:    document.getElementById('class-icon'),
+    timer:        document.getElementById('game-timer'),
+    xpBar:        document.getElementById('xp-bar'),
+    hpBar:        document.getElementById('hp-bar'),
+    hpText:       document.getElementById('hp-text'),
+    bossHud:      document.getElementById('boss-hud'),
+    stageBar:     document.getElementById('stage-bar'),
+    stageBarText: document.getElementById('stage-bar-text'),
+    bossHpBar:    document.getElementById('boss-hp-bar'),
+    bossName:     document.getElementById('boss-name-text'),
+    bossHpDisp:   document.getElementById('boss-hp-display'),
+    weaponsList:  document.getElementById('weapons-list'),
+    gold:         document.getElementById('gold-count'),
+    passiveList:  document.getElementById('passive-list'),
+    buildHud:     document.getElementById('build-summary-hud'),
+    psi:          document.getElementById('pc-skill-indicator'),
+    psiIcon:      document.getElementById('psi-icon'),
+    psiName:      document.getElementById('psi-name'),
+    psiBar:       document.getElementById('psi-bar'),
+    psiCd:        document.getElementById('psi-cd-text'),
+    devFps:       document.getElementById('dev-fps'),
+    devEnt:       document.getElementById('dev-entity-count'),
+    devStage:     document.getElementById('dev-stage-display'),
+    hudFps:       document.getElementById('hud-fps'),
+  };
+  _weaponsDirty  = true;
+  _passivesDirty = true;
+}
+
+function markWeaponsDirty()  { _weaponsDirty  = true; }
+function markPassivesDirty() { _passivesDirty = true; }
+
+function updateHUD() {
+  if (!_hud) _initHUDRefs();
+  const h = _hud;
+
+  h.level.innerText = player.level;
+  h.kills.innerText = killCount;
+  h.stage.innerText = currentStage;
+  h.stage.style.color      = isEndlessMode ? '#ffe600' : '';
+  h.stage.style.textShadow = isEndlessMode ? '0 0 5px #ffe600' : '';
+
+  updateZoneHUDBadge(getCurrentBgTheme());
+
+  const cls = CLASS_DEFS[player.classId];
+  if (h.classIcon && cls) {
+    h.classIcon.textContent   = cls.icon;
+    h.classIcon.style.color       = cls.color;
+    h.classIcon.style.textShadow  = `0 0 5px ${cls.color}`;
+  }
 
   // 타이머
-  let minutes = Math.floor(gameTime / 60);
-  let seconds = gameTime % 60;
-  document.getElementById('game-timer').innerText =
-    `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+  const mins = Math.floor(gameTime / 60);
+  const secs = gameTime % 60;
+  h.timer.innerText = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
 
-  // XP 바
-  let xpPct = (player.xp / player.nextLevelXp) * 100;
-  document.getElementById('xp-bar').style.width = `${Math.min(xpPct, 100)}%`;
+  // XP / HP 바
+  h.xpBar.style.width = `${Math.min((player.xp / player.nextLevelXp) * 100, 100)}%`;
+  const hpPct = Math.max((player.hp / player.maxHp) * 100, 0);
+  h.hpBar.style.width      = `${hpPct}%`;
+  h.hpBar.style.background = player.shieldTimer > 0 ? '#00f0ff' : '';
+  h.hpText.innerText = `${Math.ceil(player.hp)} / ${player.maxHp}`;
 
-  // HP 바
-  let hpPct = (player.hp / player.maxHp) * 100;
-  document.getElementById('hp-bar').style.width      = `${Math.max(hpPct, 0)}%`;
-  document.getElementById('hp-bar').style.background = player.shieldTimer > 0 ? '#00f0ff' : '';
-  document.getElementById('hp-text').innerText = `${Math.ceil(player.hp)} / ${player.maxHp}`;
-
-  // 스테이지 진행 바
-  const bossHud  = document.getElementById('boss-hud');
-  const stageBar = document.getElementById('stage-bar');
-  const stageBarText = document.getElementById('stage-bar-text');
-
+  // 보스 HUD / 스테이지 진행 바
   if (isBossStage && activeBoss) {
-    bossHud.style.display = 'block';
-    let bossPct = Math.max(activeBoss.hp / activeBoss.maxHp, 0) * 100;
-    document.getElementById('boss-hp-bar').style.width    = `${bossPct}%`;
-    document.getElementById('boss-hp-bar').style.background = bossPct > 50 ? '' : bossPct > 25 ? 'linear-gradient(90deg,#8b3000,#ff6600)' : 'linear-gradient(90deg,#8b0000,#ff2200)';
-    document.getElementById('boss-name-text').innerText   = `⚠ ${activeBoss.name} ⚠`;
-    document.getElementById('boss-hp-display').innerText  = `${Math.ceil(activeBoss.hp)} / ${activeBoss.maxHp}`;
-    stageBar.style.width      = '100%';
-    stageBar.style.background = '#ff0044';
-    stageBarText.innerText    = 'BOSS STAGE';
+    h.bossHud.style.display = 'block';
+    const bPct = Math.max(activeBoss.hp / activeBoss.maxHp, 0) * 100;
+    h.bossHpBar.style.width      = `${bPct}%`;
+    h.bossHpBar.style.background = bPct > 50 ? '' : bPct > 25 ? 'linear-gradient(90deg,#8b3000,#ff6600)' : 'linear-gradient(90deg,#8b0000,#ff2200)';
+    h.bossName.innerText         = `⚠ ${activeBoss.name} ⚠`;
+    h.bossHpDisp.innerText       = `${Math.ceil(activeBoss.hp)} / ${activeBoss.maxHp}`;
+    h.stageBar.style.width       = '100%';
+    h.stageBar.style.background  = '#ff0044';
+    h.stageBarText.innerText     = 'BOSS STAGE';
   } else {
-    bossHud.style.display = 'none';
-    let progPct = stageKillGoal > 0 ? (stageKillProgress / stageKillGoal) * 100 : 100;
-    stageBar.style.width      = `${Math.min(progPct, 100)}%`;
-    stageBar.style.background = isEndlessMode ? 'linear-gradient(90deg,#ffe600,#ff8800)' : '';
-    stageBarText.innerText    = isEndlessMode ? `∞ ${stageKillProgress}/${stageKillGoal}` : `${stageKillProgress} / ${stageKillGoal}`;
+    h.bossHud.style.display = 'none';
+    const pPct = stageKillGoal > 0 ? (stageKillProgress / stageKillGoal) * 100 : 100;
+    h.stageBar.style.width      = `${Math.min(pPct, 100)}%`;
+    h.stageBar.style.background = isEndlessMode ? 'linear-gradient(90deg,#ffe600,#ff8800)' : '';
+    h.stageBarText.innerText    = isEndlessMode ? `∞ ${stageKillProgress}/${stageKillGoal}` : `${stageKillProgress} / ${stageKillGoal}`;
   }
 
-  // 무기 슬롯 (진화 진행도 바 포함)
-  let wc = document.getElementById('weapons-list');
-  wc.innerHTML = '';
-  for (let key in player.weapons) {
-    let w = player.weapons[key];
-    if (w.level > 0) {
-      let slot = document.createElement('div');
-      slot.className = 'weapon-slot active';
-      const maxLvl = UPGRADES.weapons[key].maxLevel;
+  // 무기 슬롯 — dirty 시에만 재빌드
+  if (_weaponsDirty) {
+    _weaponsDirty = false;
+    h.weaponsList.innerHTML = '';
+    for (const key in player.weapons) {
+      const w = player.weapons[key];
+      if (w.level <= 0) continue;
+      const maxLvl    = UPGRADES.weapons[key].maxLevel;
       const isEvolved = w.level >= maxLvl;
-      const pct = (w.level / maxLvl) * 100;
-      const _wName = LANG === 'en' ? (tGame('weapons', key, 'name') || UPGRADES.weapons[key].name) : UPGRADES.weapons[key].name;
-      const _wEvoName = LANG === 'en' ? (tGame('weapons', key, 'evolvedName') || UPGRADES.weapons[key].evolvedName || 'EVOLVED') : (UPGRADES.weapons[key].evolvedName || '진화');
-      slot.title = _wName + (isEvolved ? ` — ${_wEvoName}` : ` Lv.${w.level}`);
+      const pct       = (w.level / maxLvl) * 100;
+      const wName     = LANG === 'en' ? (tGame('weapons', key, 'name') || UPGRADES.weapons[key].name) : UPGRADES.weapons[key].name;
+      const wEvoName  = LANG === 'en' ? (tGame('weapons', key, 'evolvedName') || UPGRADES.weapons[key].evolvedName || 'EVOLVED') : (UPGRADES.weapons[key].evolvedName || '진화');
+      const slot = document.createElement('div');
+      slot.className = 'weapon-slot active';
+      slot.title     = wName + (isEvolved ? ` — ${wEvoName}` : ` Lv.${w.level}`);
       slot.innerHTML = `${UPGRADES.weapons[key].icon}<span class="weapon-level">${isEvolved ? '✨' : `Lv.${w.level}`}</span><div class="weapon-evo-bar"><div class="weapon-evo-fill" style="width:${pct}%;background:${isEvolved ? '#ffe600' : '#00f0ff'}"></div></div>`;
-      wc.appendChild(slot);
+      h.weaponsList.appendChild(slot);
+    }
+    // 액티브 스킬 슬롯
+    if (cls?.activeSkill) {
+      let skillEl = document.getElementById('active-skill-slot');
+      if (!skillEl) {
+        skillEl = document.createElement('div');
+        skillEl.id = 'active-skill-slot';
+        skillEl.className = 'active-skill-slot';
+        h.weaponsList.parentNode.appendChild(skillEl);
+      }
+      const skName = (LANG === 'en' && cls.activeSkill.nameEn) ? cls.activeSkill.nameEn : cls.activeSkill.name;
+      const skDesc = (LANG === 'en' && cls.activeSkill.descEn) ? cls.activeSkill.descEn : cls.activeSkill.desc;
+      skillEl.title = `[Q] ${skName}: ${skDesc}`;
     }
   }
-  // 액티브 스킬 슬롯
-  const actCls = CLASS_DEFS[player.classId];
-  if (actCls?.activeSkill) {
-    let skillEl = document.getElementById('active-skill-slot');
-    if (!skillEl) {
-      skillEl = document.createElement('div');
-      skillEl.id = 'active-skill-slot';
-      skillEl.className = 'active-skill-slot';
-      wc.parentNode.appendChild(skillEl);
-    }
+  // 스킬 CD 표시는 매 프레임 갱신 (쿨다운은 실시간)
+  const skillEl = document.getElementById('active-skill-slot');
+  if (skillEl && cls?.activeSkill) {
     const cdReady = player.activeSkillCd <= 0;
-    skillEl.innerHTML = `<span>${actCls.activeSkill.icon}</span><span class="skill-cd-text">${cdReady ? 'Q' : Math.ceil(player.activeSkillCd / 1000) + 's'}</span>`;
+    skillEl.innerHTML  = `<span>${cls.activeSkill.icon}</span><span class="skill-cd-text">${cdReady ? 'Q' : Math.ceil(player.activeSkillCd / 1000) + 's'}</span>`;
     skillEl.style.opacity = cdReady ? '1' : '0.5';
-    const _skillName = (LANG === 'en' && actCls.activeSkill.nameEn) ? actCls.activeSkill.nameEn : actCls.activeSkill.name;
-    const _skillDesc = (LANG === 'en' && actCls.activeSkill.descEn) ? actCls.activeSkill.descEn : actCls.activeSkill.desc;
-    skillEl.title = `[Q] ${_skillName}: ${_skillDesc}`;
   }
+
   // 빌드 요약 HUD
-  const buildHud = document.getElementById('build-summary-hud');
-  if (buildHud) {
+  if (h.buildHud) {
     const parts = [];
     if (activeSynergies.size > 0) {
       [...activeSynergies].forEach(id => { const s = SYNERGY_DEFS.find(d => d.id === id); if (s) parts.push(`${s.icon}${s.name}`); });
@@ -953,35 +992,36 @@ function updateHUD() {
     if (player._curseDamageMult > 1) parts.push(LANG === 'en' ? '🦠Infected' : '🦠감염');
     if (player.skillShieldActive)    parts.push(LANG === 'en' ? '🛡Shielded' : '🛡강화');
     if (player.skillInvincible)      parts.push(LANG === 'en' ? '👁Phased' : '👁위상');
-    buildHud.style.display = parts.length > 0 ? 'flex' : 'none';
-    buildHud.textContent = parts.join('  ·  ');
+    h.buildHud.style.display = parts.length > 0 ? 'flex' : 'none';
+    h.buildHud.textContent   = parts.join('  ·  ');
   }
 
-  // 골드 표시
-  const goldEl = document.getElementById('gold-count');
-  if (goldEl) goldEl.innerText = player.gold;
+  // 골드
+  if (h.gold) h.gold.innerText = player.gold;
 
-  // 패시브 슬롯
-  const pc = document.getElementById('passive-list');
-  if (pc) {
-    pc.innerHTML = '';
-    for (let key in PASSIVE_DEFS) {
+  // 패시브 슬롯 — dirty 시에만 재빌드
+  if (_passivesDirty && h.passiveList) {
+    _passivesDirty = false;
+    h.passiveList.innerHTML = '';
+    for (const key in PASSIVE_DEFS) {
       const lvl = player.passives[key];
       if (lvl > 0) {
         const slot = document.createElement('div');
         slot.className = 'passive-slot';
         slot.title     = `${PASSIVE_DEFS[key].name} Lv.${lvl}`;
         slot.innerHTML = `${PASSIVE_DEFS[key].icon}<span class="passive-level">${lvl}</span>`;
-        pc.appendChild(slot);
+        h.passiveList.appendChild(slot);
       }
     }
   }
+
   updatePCSkillIndicator();
 }
 
 // PC 전용 Q 스킬 인디케이터 업데이트
 function updatePCSkillIndicator() {
-  const el = document.getElementById('pc-skill-indicator');
+  if (!_hud) return;
+  const el = _hud.psi;
   if (!el || window.innerWidth <= 768) return;
   if (!player || gameState !== STATE_PLAYING) { el.style.opacity = '0'; return; }
   el.style.opacity = '1';
@@ -993,19 +1033,15 @@ function updatePCSkillIndicator() {
   const ready   = cd <= 0;
   const fill    = ready ? 1 : 1 - (cd / totalCd);
 
-  const iconEl = document.getElementById('psi-icon');
-  const nameEl = document.getElementById('psi-name');
-  const barEl  = document.getElementById('psi-bar');
-  const cdEl   = document.getElementById('psi-cd-text');
-  if (iconEl) iconEl.textContent = sk.icon;
-  if (nameEl) nameEl.textContent = sk.name;
-  if (barEl) {
-    barEl.style.width      = `${fill * 100}%`;
-    barEl.style.background = ready ? '#39ff14' : 'linear-gradient(90deg, #00f0ff, #b026ff)';
+  if (_hud.psiIcon) _hud.psiIcon.textContent = sk.icon;
+  if (_hud.psiName) _hud.psiName.textContent = sk.name;
+  if (_hud.psiBar) {
+    _hud.psiBar.style.width      = `${fill * 100}%`;
+    _hud.psiBar.style.background = ready ? '#39ff14' : 'linear-gradient(90deg, #00f0ff, #b026ff)';
   }
-  if (cdEl) {
-    cdEl.textContent = ready ? 'READY' : `${(cd / 1000).toFixed(1)}s`;
-    cdEl.className   = 'psi-cd-text' + (ready ? ' ready' : '');
+  if (_hud.psiCd) {
+    _hud.psiCd.textContent = ready ? 'READY' : `${(cd / 1000).toFixed(1)}s`;
+    _hud.psiCd.className   = 'psi-cd-text' + (ready ? ' ready' : '');
   }
   el.classList.toggle('skill-ready', ready);
 }

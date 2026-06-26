@@ -807,35 +807,35 @@
   <!-- 🎮 멀티플레이어 모달 -->
   <div id="invite-modal" class="modal">
     <div class="modal-content glass-panel invite-panel">
-      <h2 class="neon-title-sm">🎮 멀티플레이어</h2>
+      <h2 class="neon-title-sm" data-i18n="mp.title">🎮 MULTIPLAYER</h2>
       <p id="mp-mode-note" class="modal-desc invite-beta-note"></p>
 
       <div id="invite-lobby" class="invite-lobby">
         <div class="invite-section" style="display:flex;gap:8px;justify-content:center">
-          <button class="neon-btn font-sm" onclick="mpCreateRoom('coop')">🤝 협동 방 만들기</button>
-          <button class="neon-btn font-sm" style="background:rgba(255,68,102,0.12);border-color:#ff4466;color:#ff4466" onclick="mpCreateRoom('battle')">⚔ 경쟁 방 만들기</button>
+          <button class="neon-btn font-sm" onclick="mpCreateRoom('coop')" data-i18n="mp.coop">🤝 CREATE COOP ROOM</button>
+          <button class="neon-btn font-sm" style="background:rgba(255,68,102,0.12);border-color:#ff4466;color:#ff4466" onclick="mpCreateRoom('battle')" data-i18n="mp.battle">⚔ CREATE BATTLE ROOM</button>
         </div>
-        <div class="invite-divider">— 또는 —</div>
+        <div class="invite-divider" data-i18n="mp.or">— OR —</div>
         <div class="invite-section invite-join-row">
-          <input id="invite-code-input" class="name-input invite-code-inp" type="text" placeholder="초대 코드 6자리" maxlength="6" autocomplete="off">
-          <button class="neon-btn font-sm" onclick="mpJoinFromInput()">🚪 참가</button>
+          <input id="invite-code-input" class="name-input invite-code-inp" type="text" placeholder="6-digit invite code" data-i18n-placeholder="mp.code.placeholder" maxlength="6" autocomplete="off">
+          <button class="neon-btn font-sm" onclick="mpJoinFromInput()" data-i18n="mp.join">🚪 JOIN</button>
         </div>
       </div>
 
       <div id="invite-room" class="invite-room" style="display:none">
-        <div class="room-code-box">방 코드: <span id="room-code-text" class="neon-text-pink room-code">------</span></div>
+        <div class="room-code-box"><span data-i18n="mp.roomcode">Room Code:</span> <span id="room-code-text" class="neon-text-pink room-code">------</span></div>
         <div style="text-align:center;margin:2px 0 4px;font-size:11px"><span id="mp-game-mode-badge" style="font-weight:bold"></span></div>
         <p id="mp-room-desc" class="modal-desc"></p>
         <div id="mp-player-list" class="mp-player-list"></div>
         <div id="mp-player-count" style="font-size:10px;color:#475569;text-align:center;margin-top:2px">0/3</div>
         <div class="invite-room-actions">
-          <button id="mp-start-btn" class="neon-btn font-sm" onclick="mpStartGame()">▶ 게임 시작</button>
-          <button class="neon-btn font-sm neon-btn-purple" onclick="mpLeaveRoom()">나가기</button>
+          <button id="mp-start-btn" class="neon-btn font-sm" onclick="mpStartGame()" data-i18n="mp.start">▶ START GAME</button>
+          <button class="neon-btn font-sm neon-btn-purple" onclick="mpLeaveRoom()" data-i18n="mp.leave">LEAVE</button>
         </div>
       </div>
 
       <div style="text-align:center;margin-top:0.8rem">
-        <button class="neon-btn font-sm neon-btn-purple" onclick="closeInviteModal()">← 메인으로</button>
+        <button class="neon-btn font-sm neon-btn-purple" onclick="closeInviteModal()" data-i18n="mp.back">← MAIN MENU</button>
       </div>
     </div>
   </div>
@@ -956,6 +956,7 @@
   <script src="src/weapons.js"></script>
   <script src="src/projectiles.js"></script>
   <script src="src/enemies.js"></script>
+  <script src="src/daily_enemies.js"></script>
   <script src="src/entities.js"></script>
   <script src="src/stage.js"></script>
   <script src="src/flow.js"></script>

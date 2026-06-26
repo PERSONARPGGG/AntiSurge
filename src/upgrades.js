@@ -464,6 +464,7 @@ function applyUpgrade(choice) {
     let weapon = player.weapons[choice.key];
     weapon.level = choice.nextLevel;
     weaponStats[choice.key].level = choice.nextLevel;
+    markWeaponsDirty();
     if (choice.nextLevel === 5) {
       evolutionCount++;
       _statAdd('totalEvolutions', 1);
@@ -489,6 +490,7 @@ function applyUpgrade(choice) {
   } else if (choice.type === 'passive') {
     player.passives[choice.key] = choice.nextLevel;
     applyPassiveEffect(choice.key, choice.nextLevel);
+    markPassivesDirty();
     playSynthSound([500, 900, 1200], 0.12, 'triangle', 0.05);
     checkSynergies();
   } else if (choice.type === 'class_passive') {
