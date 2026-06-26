@@ -59,6 +59,9 @@ class Player {
     this._jamPrevY       = 0;
     this._gdBurstTimer   = 0;
 
+    // 상점 구매 횟수 추적 (가격 스케일링용)
+    this._shopPurchases = {};
+
     // 부활 퍽
     this.revivals     = { restore: false, backup: false, lastStand: 0, counter: false, void: false };
     this.voidActive   = false;

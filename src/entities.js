@@ -50,6 +50,10 @@ class FieldItem {
 
 function applyFieldItemEffect(type, x, y) {
   if (type === 'health') {
+    // 일일 저주: 회복 차단
+    if (isDailyRun && dailyMutations.curses.find(c => c.id === 'no_heal')) {
+      addFloatingText(x, y, '⛔ 회복 차단!', '#ff4466', 13); return;
+    }
     let healAmt = player.classId === 'engineer' ? 60 : 40;
     player.hp = Math.min(player.hp + healAmt, player.maxHp);
     addFloatingText(x, y, `+${healAmt} HP`, '#ff4466', 16);
@@ -85,6 +89,11 @@ function applyFieldItemEffect(type, x, y) {
   } else if (type === 'surge') {
     player.surgeTimer = 8000;
     addFloatingText(x, y, '오버클럭!', '#39ff14', 14);
+
+  } else if (type === 'reflect') {
+    reflectShieldTimer = 10000;
+    addFloatingText(x, y, '🪞 반사 실드!', '#aaddff', 14);
+    playSynthSound([800, 1200, 1600], 0.12, 'sine', 0.05);
   }
 }
 
@@ -171,6 +180,9 @@ class Gem {
 // ============================================================
 // 골드 코인 클래스
 // ============================================================
+const GOLD_COIN_LIFETIME = 14000; // 14초 후 소멸
+const GOLD_COIN_FADE     =  4000; // 마지막 4초 동안 페이드
+
 class GoldCoin {
   constructor(x, y) {
     this.x = x + (Math.random() - 0.5) * 50;
@@ -178,10 +190,15 @@ class GoldCoin {
     this.radius    = 5;
     this.speed     = 0;
     this.collected = false;
+    this.expired   = false;
+    this.lifeTimer = GOLD_COIN_LIFETIME;
     this.bobTimer  = Math.random() * Math.PI * 2;
   }
   update(dt) {
-    if (!player || this.collected) return;
+    if (this.collected || this.expired) return;
+    this.lifeTimer -= dt;
+    if (this.lifeTimer <= 0) { this.expired = true; return; }
+    if (!player) return;
     this.bobTimer += dt * 0.004;
     const d = dist(this.x, this.y, player.x, player.y);
     if (d < player.radius + this.radius) {
@@ -199,14 +216,20 @@ class GoldCoin {
     }
   }
   draw(ctx, camera) {
+    if (this.expired) return;
+    const alpha = this.lifeTimer < GOLD_COIN_FADE
+      ? Math.max(0.08, this.lifeTimer / GOLD_COIN_FADE)
+      : 1;
     const bob = Math.sin(this.bobTimer) * 3;
     const bx  = this.x - camera.x, by = this.y - camera.y + bob;
     ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.shadowBlur = 10; ctx.shadowColor = '#ffd700';
     ctx.fillStyle  = '#ffd700';
     ctx.beginPath(); ctx.arc(bx, by, this.radius, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.beginPath(); ctx.arc(bx - 1.5, by - 1.5, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 }

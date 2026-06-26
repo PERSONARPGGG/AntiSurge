@@ -40,14 +40,27 @@ function triggerLevelUpModal() {
 function generateUpgradeChoices() {
   let pool = [];
 
-  // 무기 풀
+  // 무기 풀 (가중치: 보유 업그레이드 3x, 융합 파트너 2x, 신규 1x)
+  const ownedWeapons = new Set(Object.keys(UPGRADES.weapons).filter(k => player.weapons[k]?.level > 0));
+  const synergyWeapons = new Set();
+  for (const fus of WEAPON_FUSIONS) {
+    for (const w of fus.weapons) {
+      if (!ownedWeapons.has(w) && fus.weapons.some(fw => fw !== w && ownedWeapons.has(fw))) {
+        synergyWeapons.add(w);
+      }
+    }
+  }
   for (let key in UPGRADES.weapons) {
+    if (key === 'command_dance' && player.classId !== 'glitch_dancer') continue;
     let wData = UPGRADES.weapons[key];
     let lvl   = player.weapons[key].level;
     if (lvl === 0) {
-      pool.push({ type:'weapon', key, name:wData.name, icon:wData.icon, desc:wData.desc[0], isUpgrade:false, nextLevel:1 });
+      const entry = { type:'weapon', key, name:wData.name, icon:wData.icon, desc:wData.desc[0], isUpgrade:false, nextLevel:1 };
+      const copies = synergyWeapons.has(key) ? 2 : 1;
+      for (let c = 0; c < copies; c++) pool.push({...entry});
     } else if (lvl < wData.maxLevel) {
-      pool.push({ type:'weapon', key, name:wData.name, icon:wData.icon, desc:wData.desc[lvl], isUpgrade:true, nextLevel:lvl+1 });
+      const entry = { type:'weapon', key, name:wData.name, icon:wData.icon, desc:wData.desc[lvl], isUpgrade:true, nextLevel:lvl+1 };
+      for (let c = 0; c < 3; c++) pool.push({...entry}); // 보유 무기 업그레이드 3x
     }
   }
 
@@ -117,6 +130,10 @@ function generateUpgradeChoices() {
     if (tempPool.length === 0) break;
     let idx    = Math.floor(Math.random() * tempPool.length);
     let choice = { ...tempPool.splice(idx, 1)[0], rarity };
+    // 같은 무기 중복 항목 제거 (가중치 복사본)
+    if (choice.type === 'weapon') {
+      tempPool = tempPool.filter(item => !(item.type === 'weapon' && item.key === choice.key));
+    }
     choice.rarityMult = rarity === 'epic' ? 2.0 : rarity === 'rare' ? 1.5 : 1.0;
     choices.push(choice);
   }
@@ -474,6 +491,30 @@ function applyClassPassiveEffect(key, level) {
     case 'pb_triage':
       addFloatingText(player.x, player.y - 40, `🏥 응급 처치 Lv${level}!`, '#39ff14', 14);
       break;
+    case 'ck_zombie':
+      addFloatingText(player.x, player.y - 40, `🧟 좀비 프로토콜 Lv${level}!`, '#ff6600', 14);
+      break;
+    case 'ck_blast':
+      addFloatingText(player.x, player.y - 40, `💥 자폭 명령 Lv${level}!`, '#ff6600', 14);
+      break;
+    case 'gd_rhythm':
+      addFloatingText(player.x, player.y - 40, `🎵 리듬 강화 Lv${level}!`, '#ff88ff', 14);
+      break;
+    case 'gd_burst':
+      addFloatingText(player.x, player.y - 40, `💫 연속 폭발 Lv${level}!`, '#ff88ff', 14);
+      break;
+    case 'ps_absorb':
+      addFloatingText(player.x, player.y - 40, `💉 강화 흡수 Lv${level}!`, '#88ff44', 14);
+      break;
+    case 'ps_surge':
+      addFloatingText(player.x, player.y - 40, `🌊 방출 급등 Lv${level}!`, '#88ff44', 14);
+      break;
+    case 'jm_wave':
+      addFloatingText(player.x, player.y - 40, `📶 광대역 간섭 Lv${level}!`, '#aaffff', 14);
+      break;
+    case 'jm_static':
+      addFloatingText(player.x, player.y - 40, `⚡ 정전기 누적 Lv${level}!`, '#aaffff', 14);
+      break;
   }
 }
 
@@ -533,8 +574,10 @@ function triggerShopModal() {
 }
 
 function getItemCost(item) {
-  const discount = player?.shopDiscount || 0;
-  return Math.max(1, Math.floor(item.cost * (1 - discount)));
+  const bought    = player?._shopPurchases?.[item.id] || 0;
+  const scaleMult = bought > 0 ? Math.pow(item.scale || 1.0, bought) : 1;
+  const discount  = player?.shopDiscount || 0;
+  return Math.max(1, Math.floor(item.cost * scaleMult * (1 - discount)));
 }
 
 function renderShopItems(items) {
@@ -543,16 +586,21 @@ function renderShopItems(items) {
   if (goldDisp) goldDisp.textContent = `보유 골드: 💰 ${player.gold}G`;
   list.innerHTML = '';
   items.forEach(item => {
-    const cost = getItemCost(item);
-    const canAfford = player.gold >= cost;
+    const cost       = getItemCost(item);
+    const bought     = player?._shopPurchases?.[item.id] || 0;
+    const canAfford  = player.gold >= cost;
+    const nextCost   = Math.max(1, Math.floor(item.cost * Math.pow(item.scale || 1.0, bought + 1) * (1 - (player?.shopDiscount || 0))));
     const btn = document.createElement('button');
     btn.className = `shop-item-card${canAfford ? '' : ' shop-cant-afford'}`;
-    const discountTag = (player?.shopDiscount > 0) ? ` <span style="color:#39ff14;font-size:0.7em">(-${Math.round((player.shopDiscount)*100)}%)</span>` : '';
+    const discountTag  = (player?.shopDiscount > 0) ? ` <span style="color:#39ff14;font-size:0.7em">(-${Math.round((player.shopDiscount)*100)}%)</span>` : '';
+    const purchaseTag  = bought > 0 ? `<span style="color:rgba(255,200,0,0.7);font-size:0.72em;margin-left:4px">×${bought} 구매됨</span>` : '';
+    const nextCostTag  = bought > 0 ? `<div style="font-size:0.68em;color:rgba(255,150,0,0.6);margin-top:2px">다음: ${nextCost}G</div>` : '';
     btn.innerHTML = `
       <div class="shop-item-icon">${item.icon}</div>
       <div class="shop-item-details">
-        <div class="shop-item-name">${item.name}</div>
+        <div class="shop-item-name">${item.name}${purchaseTag}</div>
         <div class="shop-item-desc">${item.desc}</div>
+        ${nextCostTag}
       </div>
       <div class="shop-item-cost ${canAfford ? 'can-afford' : 'cant-afford'}">💰 ${cost}G${discountTag}</div>
     `;
@@ -570,6 +618,8 @@ function applyShopItem(item) {
   const cost = getItemCost(item);
   if (player.gold < cost) return;
   player.gold -= cost;
+  if (!player._shopPurchases) player._shopPurchases = {};
+  player._shopPurchases[item.id] = (player._shopPurchases[item.id] || 0) + 1;
   switch (item.id) {
     case 'shop_hp': {
       const heal = Math.floor(player.maxHp * 0.5);

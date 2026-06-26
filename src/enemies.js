@@ -601,15 +601,15 @@ class Enemy {
       fieldItems.push(new FieldItem(this.x, this.y, dropType));
     }
 
-    // 골드 드롭 (골든 러쉬 이벤트 or 일일 골드러시 이벤트: 3배 + 항상 드롭)
+    // 골드 드롭 — 드롭률 하향 (너무 흔하면 상점 밸런스 붕괴)
     let goldMult = (activeFieldEvent?.id === 'golden_rush' || dailyEventStage === 'gold_rush') ? 3 : 1;
     if (isDailyRun && dailyMutations.buff?.id === 'double_gold') goldMult *= 2;
     let goldAmt = 0;
-    if (this.isElite) goldAmt = 4 + Math.floor(Math.random() * 4);
-    else if (this.type === 'bruiser') goldAmt = 2 + Math.floor(Math.random() * 3);
-    else if (activeFieldEvent?.id === 'golden_rush') goldAmt = 1;
-    else if (this.type === 'rusher'  && Math.random() < 0.4) goldAmt = 1 + (Math.random() < 0.3 ? 1 : 0);
-    else if (this.type === 'swarm'   && Math.random() < 0.2) goldAmt = 1;
+    if (this.isElite)                                              goldAmt = 2 + Math.floor(Math.random() * 2);  // 2-3 (이전 4-7)
+    else if (this.type === 'bruiser' && Math.random() < 0.35)     goldAmt = 1 + (Math.random() < 0.4 ? 1 : 0); // 35% → 1-2 (이전 100% 2-4)
+    else if (activeFieldEvent?.id === 'golden_rush')               goldAmt = 1;
+    else if (this.type === 'rusher'  && Math.random() < 0.12)     goldAmt = 1;                                  // 12% (이전 40%)
+    else if (this.type === 'swarm'   && Math.random() < 0.05)     goldAmt = 1;                                  // 5% (이전 20%)
     if (goldAmt > 0) spawnGoldCoins(this.x, this.y, Math.ceil(goldAmt * goldMult));
 
     // 바이러스 장악 진화: 해킹된 적 사망 시 주변 1체 즉시 감염
