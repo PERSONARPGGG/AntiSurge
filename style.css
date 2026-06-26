@@ -2219,66 +2219,100 @@ body {
 /* ===== 세로 모드 모바일 (600px 이하 portrait) — 전면 최적화 ===== */
 @media screen and (max-width: 600px) and (orientation: portrait) {
 
-  /* ── HUD 상단: PC 박스 스타일 모바일 적응 ── */
+  /* ── HUD 상단: PC 박스 레이아웃 — 6등분 flex ── */
   #hud {
     padding: max(env(safe-area-inset-top), 5px) max(env(safe-area-inset-right), 5px) 2px max(env(safe-area-inset-left), 5px);
     gap: 3px;
   }
   .hud-top {
+    display: flex;
     flex-wrap: nowrap;
-    gap: 3px;
+    gap: 2px;
     align-items: stretch;
-    height: auto;
-    overflow: visible;
   }
 
-  /* PC처럼 박스 스타일 복원 — 더 작게 */
-  .level-container, .stage-container, .kills-container, .gold-container {
+  /* 모든 stat 박스: flex: 1로 균등 배분 + base min-width:100px 재정의 */
+  .level-container, .stage-container, .kills-container {
+    flex: 1 1 0;
+    min-width: 0 !important;
+    width: 0;
     background: rgba(10, 10, 20, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 5px;
-    padding: 3px 6px;
-    min-width: 0;
-    flex-shrink: 1;
+    padding: 4px 2px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 1px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .gold-container {
+    display: flex !important;
+    flex: 1 1 0;
+    min-width: 0 !important;
+    width: 0;
+    background: rgba(10, 10, 20, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 5px;
+    padding: 4px 2px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    overflow: hidden;
   }
 
-  /* 레이블: PC처럼 작게 보이게 */
+  /* 타이머: flex:2 (시간 + 버튼 2개 → 2배 너비) */
+  .timer-container {
+    flex: 2 0 auto;
+    min-width: 0;
+    margin-left: 0;
+    font-size: 0.95rem;
+    gap: 3px;
+    align-items: center;
+    justify-content: center;
+  }
+  #game-timer { font-size: 0.95rem; line-height: 1; }
+
+  /* 레이블: PC처럼 위에 작게 */
   .hud-label {
     display: block !important;
-    font-size: 0.5rem;
-    letter-spacing: 1px;
+    font-size: 0.44rem;
+    letter-spacing: 0.5px;
     color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    max-width: 100%;
+  }
+  /* "VIRUS KILLED" → "KILLS" 축약 */
+  .kills-container .hud-label { font-size: 0; }
+  .kills-container .hud-label::after {
+    content: 'KILLS';
+    font-size: 0.44rem;
+    color: #64748b;
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 0.5px;
   }
   .zone-hud-badge { display: none !important; }
 
-  /* 수치: PC보다 작지만 명확하게 */
+  /* 수치 */
   #player-level, #stage-number, #kill-count, #class-icon {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 700;
+    line-height: 1;
   }
-  #gold-count { font-size: 0.95rem; }
-  .gold-container { display: flex !important; }
-
-  /* 타이머: 가운데 정렬, 크게 */
-  .timer-container {
-    margin-left: auto;
-    flex-shrink: 0;
-    font-size: 1.0rem;
-    gap: 4px;
-    align-items: center;
-  }
-  #game-timer { font-size: 1.0rem; }
+  #gold-count { font-size: 1.0rem; font-weight: 700; line-height: 1; }
+  .neon-text-yellow { font-size: 1.0rem; }
 
   /* 뮤트/설정 버튼 */
   .mute-btn {
-    padding: 2px 5px;
-    font-size: 0.82rem;
-    min-width: 32px;
-    min-height: 32px;
+    padding: 2px 4px;
+    font-size: 0.8rem;
+    min-width: 28px;
+    min-height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2288,19 +2322,18 @@ body {
   .xp-bar-container { height: 4px; margin: 0; }
   .stage-bar-row { gap: 4px; }
   .stage-bar-text { font-size: 0.6rem; display: block; }
-  .hud-label[style*="nowrap"] { font-size: 0.58rem; }
 
-  /* ── HUD 하단: HP + 무기 — PC처럼 두껍고 선명하게 ── */
+  /* ── HUD 하단: HP 바 + 무기 슬롯 ── */
   .hud-bottom {
     padding: 3px max(env(safe-area-inset-right), 5px) max(env(safe-area-inset-bottom), 5px) max(env(safe-area-inset-left), 5px);
     align-items: flex-end;
     gap: 6px;
   }
-  .hp-container { width: calc(100% - 140px); min-width: 120px; }
+  .hp-container { flex: 1; min-width: 0; width: auto; }
   .hp-bar-outer { height: 22px; }
   #hp-text { font-size: 0.75rem; }
   .weapon-slot  { width: 32px; height: 32px; font-size: 0.9rem; }
-  .weapon-level { font-size: 0.58rem; padding: 1px 3px; }
+  .weapon-level { font-size: 0.56rem; padding: 1px 3px; }
   .passive-slot { width: 24px; height: 24px; font-size: 0.68rem; }
   .boss-name-text { font-size: 0.62rem; }
   .boss-hp-display { font-size: 0.58rem; }
