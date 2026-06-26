@@ -4,7 +4,7 @@
 뱀파이어 서바이벌 스타일 웹게임. 사이버펑크 네온 테마.
 
 **배포:** https://antisurge-c0463.web.app
-**버전:** v0.09
+**버전:** v0.10
 **레포:** https://github.com/PERSONARPGGG/AntiSurge.git
 
 ## 파일 구조
@@ -31,8 +31,9 @@
 | `src/flow.js` | 게임 라이프사이클, showScreen, startGame | ~427줄 |
 | `src/loop.js` | gameLoop, update, draw, HUD, minimap | ~616줄 |
 | `src/upgrades.js` | 레벨업, 상점, 저주, 시너지 | ~669줄 |
-| `src/endgame.js` | 게임 종료, 빅토리, NG+, 전체화면 | ~357줄 |
-| `src/extras.js` | 개발자 패널, 필드 이벤트 | ~212줄 |
+| `src/endgame.js` | 게임 종료, 빅토리, NG+, 전체화면 | ~220줄 |
+| `src/finalstage.js` | 패러사이트 트루 엔딩, VirusCoreEnemy, VirusOriginBoss, 컷씬 | ~380줄 |
+| `src/extras.js` | 개발자 패널, 필드 이벤트 | ~280줄 |
 | `src/input.js` | 터치, 유틸(dist), 설정 | ~176줄 |
 | `src/multiplayer.js` | 멀티플레이어, 리더보드, 초기화 | ~758줄 |
 

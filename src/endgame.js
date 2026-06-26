@@ -21,6 +21,8 @@ function triggerFinalVictory() {
     _statAdd(`cls_${cls}_kills`, killCount);
     _checkCloudAchievements();
     _checkClassUnlocks();
+    _checkClassDiscovery();
+    _checkHiddenClassClears();
     _syncToCloud();
     submitLeaderboard(true);
   }
@@ -119,18 +121,126 @@ function _checkClassUnlocks() {
   for (const [cls, def] of Object.entries(CLASS_UNLOCK_DEFS)) {
     if (!def) continue;
     if (saveData._unlockedClasses && saveData._unlockedClasses[cls]) continue;
-    const s = _getStats();
-    const val = s[def.stat] || saveData[def.stat] || 0;
-    if (val >= def.goal) {
+    if (isClassUnlocked(cls)) {
       if (!saveData._unlockedClasses) saveData._unlockedClasses = {};
       saveData._unlockedClasses[cls] = true;
       saveSaveData();
       const info = CLASS_DEFS[cls];
       setTimeout(() => {
-        _showAchievementToast({ icon: info.icon, name: `${info.name} 해금!`, desc: `${def.label} 달성으로 새 백신 클래스 개방!` });
+        _showAchievementToast({ icon: info.icon, name: `${info.name} 해금!`, desc: `${def.label} 달성으로 새 히든 클래스 개방!` });
       }, 1200);
     }
   }
+}
+
+function _checkHiddenClassClears() {
+  if (isDailyRun || !player) return;
+  const cls = player.classId;
+  if (['jammer','cracker','glitch_dancer'].includes(cls) && currentStage >= 100) {
+    if (!saveData._hiddenClassClears) saveData._hiddenClassClears = {};
+    if (!saveData._hiddenClassClears[cls]) {
+      saveData._hiddenClassClears[cls] = true;
+      saveSaveData();
+      const info = CLASS_DEFS[cls];
+      setTimeout(() => {
+        _showAchievementToast({ icon: info?.icon||'🏆', name: `${info?.name||cls} 마스터!`, desc: `히든 클래스로 스테이지 100 클리어 — 패러사이트 해금 조건 진행!` });
+      }, 2000);
+    }
+  }
+}
+
+// 아래 파이널 스테이지 함수들은 src/finalstage.js 에 정의됨
+// checkFinalStageConditions, triggerParasiteFinalStage, advanceFinalStageWave
+// showParasiteEnding, _runEndingCutscene, _showParasiteVictoryModal
+
+// ============================================================
+// 클래스 코덱 해금 체크
+// ============================================================
+// ── 새 클래스 발견 알림 (진행 시스템) ──────────────────────
+function _checkClassDiscovery() {
+  if (isDailyRun) return;
+  if (!saveData._classDiscovered) saveData._classDiscovered = {};
+  const stats = _getStats();
+
+  const tiers = [
+    {
+      key: 'tier2',
+      condition: (stats.totalGamesPlayed || 0) >= 1,
+      classes: ['cyborg','ghost'],
+      msg: '방화벽 · 루트킷 해금!'
+    },
+    {
+      key: 'tier3',
+      condition: ((stats.cls_cyborg_games||0) + (stats.cls_ghost_games||0)) >= 1,
+      classes: ['engineer','sniper','support'],
+      msg: '드론.exe · 스캐너 · 패치봇 해금!'
+    }
+  ];
+
+  tiers.forEach(tier => {
+    if (saveData._classDiscovered[tier.key]) return;
+    if (!tier.condition) return;
+    saveData._classDiscovered[tier.key] = true;
+    setTimeout(() => {
+      _showAchievementToast({ icon: '🔓', name: '새 직업 해금', desc: tier.msg });
+    }, 2400);
+  });
+
+  // 히든 클래스 개별 발견 알림
+  const hiddenClasses = ['jammer','cracker','glitch_dancer','parasite'];
+  hiddenClasses.forEach(cls => {
+    const key = `hidden_${cls}`;
+    if (saveData._classDiscovered[key]) return;
+    if (!isClassUnlocked(cls)) return;
+    saveData._classDiscovered[key] = true;
+    const info = CLASS_DEFS[cls];
+    setTimeout(() => {
+      _showAchievementToast({ icon: info?.icon||'🔓', name: `히든 클래스 해금`, desc: `${info?.name||cls} — 선택 화면에서 확인하세요!` });
+    }, 3200);
+  });
+}
+
+function _checkCodecUnlocks() {
+  if (isDailyRun || !player) return [];
+  if (!saveData._codec) saveData._codec = {};
+  const cls = player.classId;
+  if (!CLASS_CODEC[cls]) return [];
+
+  const wStats  = weaponStats;
+  const newLogs = [];
+
+  CLASS_CODEC[cls].forEach((log, i) => {
+    const key = `${cls}_${i}`;
+    if (saveData._codec[key]) return;
+
+    let met = false;
+    switch (log.cond) {
+      case 'first_play':    met = true; break;
+      case 'stage_30':      met = currentStage >= 30; break;
+      case 'stage_50':      met = currentStage >= 50; break;
+      case 'stage_60':      met = currentStage >= 60; break;
+      case 'stage_70':      met = currentStage >= 70; break;
+      case 'stage_80':      met = currentStage >= 80; break;
+      case 'hack_50kills':  met = (wStats.hack_gun?.kills || 0) >= 50; break;
+      case 'drone_100kills':met = (wStats.drone?.kills || 0) >= 100; break;
+      case 'laser_lv5':     met = (player.weapons?.laser?.level || 0) >= 5; break;
+      case 'evolved3': {
+        const fused = Object.values(player.fusions || {}).filter(Boolean).length;
+        met = fused >= 3;
+        break;
+      }
+      case 'dance_100kills':met = (wStats.command_dance?.kills || 0) >= 100; break;
+      case 'absorb_50':     met = (player._totalAbsorptions || 0) >= 50; break;
+    }
+
+    if (met) {
+      saveData._codec[key] = true;
+      newLogs.push({ cls, idx: i, log });
+    }
+  });
+
+  if (newLogs.length > 0) saveSaveData();
+  return newLogs;
 }
 
 function endGame(isVictory) {
@@ -163,6 +273,8 @@ function endGame(isVictory) {
     }
     _checkCloudAchievements();
     _checkClassUnlocks();
+    _checkClassDiscovery();
+    _checkHiddenClassClears();
     _syncToCloud();
     submitLeaderboard(isVictory);
   }
@@ -253,6 +365,25 @@ function endGame(isVictory) {
   }
 
   checkAchievements();
+  const _newCodecLogs = _checkCodecUnlocks();
+  if (_newCodecLogs.length > 0) {
+    const clsInfo = CLASS_DEFS[player?.classId] || {};
+    const logEl = document.getElementById('codec-unlock-row');
+    if (logEl) {
+      logEl.innerHTML = _newCodecLogs.map(({ idx, log }) =>
+        `<span class="codec-new-badge">[LOG-0${idx+1}]</span> ${log.title}`
+      ).join('<br>');
+      logEl.style.display = 'block';
+    }
+    setTimeout(() => {
+      _newCodecLogs.forEach(({ idx }) => {
+        _showAchievementToast({ icon: '🗃', name: `새 격리 로그 해금`, desc: `${clsInfo.name||player?.classId} LOG-0${idx+1} 해독 가능 — 아카이브에서 확인` });
+      });
+    }, 1800);
+  } else {
+    const logEl = document.getElementById('codec-unlock-row');
+    if (logEl) logEl.style.display = 'none';
+  }
   const coresEarned = earnDataCores();
   const coresEl = document.getElementById('cores-earned-row');
   if (coresEl) coresEl.textContent = `💾 데이터 코어 획득: +${coresEarned}  (보유: ${saveData.dataCores})`;
@@ -331,7 +462,7 @@ function shareResult() {
     ? [...activeSynergies].map(id => { const s = SYNERGY_DEFS.find(d => d.id === id); return s ? `${s.icon}${s.name}` : id; }).join(', ')
     : '없음';
   const text =
-    `⚡ AntiSurge β v0.09\n` +
+    `⚡ AntiSurge β v0.10\n` +
     `👤 ${name} [${clsInfo?.icon || ''}${clsInfo?.name || ''}] [${diffLabel}]\n` +
     `🏆 STAGE ${stageStr} 도달\n` +
     `💀 ${killCount}마리 제거  ⭐ Lv.${player?.level ?? '?'}\n` +
@@ -342,7 +473,7 @@ function shareResult() {
 
   const btn = document.getElementById('share-btn');
   if (navigator.share) {
-    navigator.share({ title: 'AntiSurge β v0.09', text }).catch(() => {});
+    navigator.share({ title: 'AntiSurge β v0.10', text }).catch(() => {});
   } else if (navigator.clipboard?.writeText) {
     navigator.clipboard.writeText(text).then(() => {
       if (btn) { btn.textContent = '✓ 클립보드 복사!'; setTimeout(() => { btn.textContent = '📤 결과 공유'; }, 2500); }

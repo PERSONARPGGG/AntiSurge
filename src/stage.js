@@ -1,4 +1,47 @@
 // ============================================================
+// 일일도전 변이 시스템
+// ============================================================
+const DAILY_CURSES = [
+  { id:'slow',          name:'데이터 지연',   desc:'이동속도 -25%',          icon:'🐢' },
+  { id:'glass',         name:'취약 코드',     desc:'최대 HP -35%',           icon:'💔' },
+  { id:'enemy_speed',   name:'바이러스 과부하', desc:'적 이동속도 +40%',     icon:'⚡' },
+  { id:'enemy_hp',      name:'강화 프로토콜', desc:'적 HP +60%',            icon:'🛡' },
+  { id:'no_heal',       name:'회복 차단',     desc:'필드 아이템 효과 없음',   icon:'⛔' },
+  { id:'double_spawn',  name:'폭발 감염',     desc:'적 스폰 속도 +70%',      icon:'👾' },
+];
+const DAILY_BUFFS = [
+  { id:'double_gold',   name:'골드 채굴기',   desc:'골드 획득 2배',          icon:'💰' },
+  { id:'xp_boost',      name:'경험치 가속',   desc:'경험치 +60%',            icon:'⬆' },
+  { id:'extra_hp',      name:'강화 방어막',   desc:'최대 HP +60%',           icon:'❤' },
+  { id:'speed_boost',   name:'오버클럭',      desc:'이동속도 +25%',          icon:'🚀' },
+  { id:'pierce',        name:'관통 탄환',     desc:'모든 투사체 관통+1',      icon:'➡' },
+];
+const DAILY_EVENTS = ['gold_rush','blizzard','swarm','elite_wave','dark'];
+
+function _dailySeed() {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate();
+}
+function _seededNext(s) { return Math.abs((Math.imul(s, 1664525) + 1013904223) | 0); }
+
+function selectDailyMutations() {
+  let s = _dailySeed();
+  const cursePick = [];
+  let ci = _seededNext(s) % DAILY_CURSES.length; cursePick.push(ci);
+  s = _seededNext(s+1); let ci2 = s % DAILY_CURSES.length;
+  while (ci2 === ci) { s = _seededNext(s+1); ci2 = s % DAILY_CURSES.length; }
+  cursePick.push(ci2);
+  s = _seededNext(s+2);
+  const bi = s % DAILY_BUFFS.length;
+  dailyMutations = { curses: [DAILY_CURSES[cursePick[0]], DAILY_CURSES[cursePick[1]]], buff: DAILY_BUFFS[bi] };
+}
+
+function getDailyEventForStage(stage) {
+  const s = _seededNext(_dailySeed() + stage * 97);
+  return DAILY_EVENTS[s % DAILY_EVENTS.length];
+}
+
+// ============================================================
 function getStageKillGoal(stage) {
   if (stage % 10 === 0) return 0;
   if (stage > 100) {
@@ -73,15 +116,69 @@ function advanceToNextStage() {
   currentStage++;
   checkZoneTransition();
 
-  // 스테이지 100 클리어 → 빅토리 시퀀스 (엔들리스 모드로 가지 않음)
+  // 스테이지 100 클리어 → 파이널 or 빅토리
   if (currentStage === 101) {
-    triggerFinalVictory();
+    if (checkFinalStageConditions()) {
+      triggerParasiteFinalStage();
+    } else {
+      triggerFinalVictory();
+    }
     return;
   }
 
   if (currentStage > 101 && !isEndlessMode) {
     isEndlessMode = true;
     endlessModeStartTime = gameTime;
+  }
+
+  // ── 일일도전 15스테이지: 광전사 (보스 체크보다 먼저) ──
+  if (isDailyRun && currentStage === 15) {
+    isBossStage = false; isMiniBossStage = false;
+    stageKillProgress = 0; stageKillGoal = getStageKillGoal(15);
+    gameState = STATE_PLAYING;
+    setTimeout(() => spawnDailyRival('berserker'), 2500);
+    spawnStageObstacles(); return;
+  }
+
+  // ── 일일도전: 3스테이지마다 보스 ──
+  if (isDailyRun && currentStage % 3 === 0) {
+    isBossStage      = true;
+    stageKillGoal    = 0;
+    stageKillProgress = 0;
+    bossStageStartMs  = Date.now();
+    gameState = STATE_PLAYING;
+    dailyEventStage  = '';
+    if (currentStage % 6 === 0) {
+      // 짝수 배수(6·12·18…): 정규 보스
+      isMiniBossStage = false;
+      showBossWarning();
+    } else {
+      // 홀수 배수(3·9·15…): 미니보스
+      isMiniBossStage = true;
+      setTimeout(() => spawnMiniBoss(), 1500);
+    }
+    return;
+  }
+
+  // ── 일일도전 10스테이지: 저격수 ──
+  if (isDailyRun && currentStage === 10) {
+    isBossStage = false; isMiniBossStage = false;
+    stageKillProgress = 0; stageKillGoal = getStageKillGoal(10);
+    gameState = STATE_PLAYING;
+    setTimeout(() => spawnDailyRival('sniper'), 2200);
+    spawnStageObstacles(); return;
+  }
+
+  // ── 일일도전 스테이지 5: 영웅 난입 (미니보스 대신) ──
+  if (isDailyRun && currentStage === 5) {
+    isBossStage       = false;
+    isMiniBossStage   = false;
+    stageKillProgress = 0;
+    stageKillGoal     = getStageKillGoal(5);
+    gameState = STATE_PLAYING;
+    setTimeout(() => spawnDailyHero(), 2200);
+    spawnStageObstacles();
+    return;
   }
 
   if (currentStage % 10 === 0) {
@@ -91,7 +188,33 @@ function advanceToNextStage() {
     stageKillProgress = 0;
     bossStageStartMs  = Date.now();
     gameState = STATE_PLAYING;
-    showBossWarning();
+    dailyEventStage  = '';
+    // 일반 모드에서 50% 확률로 라이벌이 보스 대체
+    if (!isDailyRun && Math.random() < 0.5) {
+      const angle = Math.random() * Math.PI * 2;
+      const hx = Math.max(150, Math.min(MAP_WIDTH-150, player.x + Math.cos(angle)*550));
+      const hy = Math.max(150, Math.min(MAP_HEIGHT-150, player.y + Math.sin(angle)*550));
+      let hero;
+      if (currentStage >= 30) {
+        hero = new DailyRivalBerserker(hx, hy);
+      } else if (currentStage >= 20) {
+        hero = new DailyRivalSniper(hx, hy);
+      } else {
+        hero = new DailyHeroEnemy(hx, hy);
+      }
+      hero.isStageBoss = true;
+      hero.heroLabel = '스테이지 라이벌';
+      hero.hp = Math.floor(hero.maxHp * 2.2);
+      hero.maxHp = hero.hp;
+      dailyHeroes.push(hero);
+      showStageOverlay('⚔ RIVAL BOSS', '라이벌이 보스로 등장했습니다!', '#ff4466');
+      triggerScreenShake(12, 600);
+      createExplosionParticles(hx, hy, '#ff4466', 28);
+      playSynthSound([300, 500, 700, 500], 0.22, 'sawtooth', 0.10);
+      setTimeout(hideStageOverlay, 3000);
+    } else {
+      showBossWarning();
+    }
   } else if (currentStage % 10 === 5) {
     isBossStage      = true;
     isMiniBossStage  = true;
@@ -99,6 +222,7 @@ function advanceToNextStage() {
     stageKillProgress = 0;
     bossStageStartMs  = Date.now();
     gameState = STATE_PLAYING;
+    dailyEventStage  = '';
     setTimeout(() => spawnMiniBoss(), 1500);
   } else {
     isBossStage       = false;
@@ -106,9 +230,34 @@ function advanceToNextStage() {
     stageKillProgress = 0;
     stageKillGoal     = getStageKillGoal(currentStage);
     gameState = STATE_PLAYING;
-    // 3스테이지마다 (보스 스테이지 제외) 특별 엘리트 소환
     if (currentStage % 3 === 0 && currentStage > 3) {
       setTimeout(() => spawnEliteEnemy(), 2000);
+    }
+    // ── 일일도전 이벤트 스테이지 (짝수, 보스 없는 스테이지) ──
+    if (isDailyRun && currentStage > 1 && currentStage % 2 === 0 &&
+        currentStage !== 10 && currentStage !== 15) {
+      dailyEventStage = getDailyEventForStage(currentStage);
+      _showDailyEventOverlay(dailyEventStage);
+    } else if (isDailyRun) {
+      dailyEventStage = '';
+    }
+    // 일반 모드 8스테이지: 성장하는 추격자 등장
+    if (!isDailyRun && currentStage === 8) {
+      setTimeout(() => {
+        if (!player || gameState !== STATE_PLAYING) return;
+        const angle = Math.random() * Math.PI * 2;
+        const hx = Math.max(150, Math.min(MAP_WIDTH-150, player.x + Math.cos(angle)*650));
+        const hy = Math.max(150, Math.min(MAP_HEIGHT-150, player.y + Math.sin(angle)*650));
+        const pursuer = new DailyHeroEnemy(hx, hy);
+        pursuer.heroLabel = '추격자';
+        pursuer._passive  = true;
+        pursuer.speed     = 1.0;
+        pursuer.hp = 380; pursuer.maxHp = 380;
+        dailyHeroes.push(pursuer);
+        showStageOverlay('👁 추격자 출현', '정체불명의 추격자가 나타났습니다...', '#888888');
+        createExplosionParticles(hx, hy, '#888888', 16);
+        setTimeout(hideStageOverlay, 2800);
+      }, 3000);
     }
     spawnStageObstacles();
   }
@@ -122,6 +271,92 @@ function spawnEliteEnemy() {
   enemies.push(new Enemy(ex, ey, 'elite'));
   showStageOverlay('⚠ ELITE VIRUS!', '정예 바이러스 침투!', '#ff6600');
   setTimeout(hideStageOverlay, 2000);
+}
+
+function spawnDailyHero() { spawnDailyRival('hero'); }
+
+function spawnDailyRival(type) {
+  if (!player || !isDailyRun) return;
+  if (gameState !== STATE_PLAYING) { setTimeout(() => spawnDailyRival(type), 600); return; }
+  const angle = Math.random() * Math.PI * 2;
+  const hx = Math.max(120, Math.min(MAP_WIDTH  - 120, player.x + Math.cos(angle) * 580));
+  const hy = Math.max(120, Math.min(MAP_HEIGHT - 120, player.y + Math.sin(angle) * 580));
+
+  let hero, label, color, sound;
+  if (type === 'sniper') {
+    hero = new DailyRivalSniper(hx, hy);
+    label = '🎯 저격수 난입!'; color = '#00ccff';
+    sound = [800, 1100, 900, 600];
+  } else if (type === 'berserker') {
+    hero = new DailyRivalBerserker(hx, hy);
+    label = '💀 광전사 난입!'; color = '#ff2255';
+    sound = [300, 200, 150, 100];
+  } else {
+    hero = new DailyHeroEnemy(hx, hy);
+    label = '⚔ RIVAL INTRUSION'; color = '#ffe600';
+    sound = [600, 900, 750, 500];
+  }
+  dailyHeroes.push(hero);
+
+  showStageOverlay(label, '새로운 라이벌이 난입했습니다!', color);
+  triggerScreenShake(13, 650);
+  createExplosionParticles(hx, hy, color, 32);
+  playSynthSound(sound, 0.22, 'triangle', 0.10);
+  setTimeout(() => createExplosionParticles(hx, hy, '#ffffff', 16), 350);
+  setTimeout(hideStageOverlay, 3200);
+}
+
+function spawnBountyRival() {
+  if (!player || gameState !== STATE_PLAYING) return;
+  if (dailyHeroes.length >= 3) return;
+  const angle = Math.random() * Math.PI * 2;
+  const hx = Math.max(120, Math.min(MAP_WIDTH  - 120, player.x + Math.cos(angle) * 600));
+  const hy = Math.max(120, Math.min(MAP_HEIGHT - 120, player.y + Math.sin(angle) * 600));
+
+  let hero, label, color, sound;
+  if (_bountyLevel <= 2) {
+    hero = new DailyHeroEnemy(hx, hy);
+    hero.heroLabel = '현상금 라이벌';
+    label = `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#ffe600';
+    sound = [500, 700, 600, 400];
+  } else if (_bountyLevel <= 5) {
+    hero = new DailyRivalSniper(hx, hy);
+    hero.heroLabel = '현상금 저격수';
+    hero.hp = Math.floor(hero.hp * (1 + (_bountyLevel - 2) * 0.18));
+    hero.maxHp = hero.hp;
+    label = `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#00ccff';
+    sound = [800, 1100, 900];
+  } else {
+    hero = new DailyRivalBerserker(hx, hy);
+    hero.heroLabel = '현상금 광전사';
+    hero.hp = Math.floor(hero.hp * (1 + (_bountyLevel - 5) * 0.22));
+    hero.maxHp = hero.hp;
+    label = `⚠ 현상금 Lv.${_bountyLevel + 1}`; color = '#ff2255';
+    sound = [200, 140, 90];
+  }
+  dailyHeroes.push(hero);
+
+  showStageOverlay(label, '현상금 라이벌이 등장했습니다!', color);
+  triggerScreenShake(10, 500);
+  createExplosionParticles(hx, hy, color, 24);
+  playSynthSound(sound, 0.20, 'triangle', 0.09);
+  setTimeout(hideStageOverlay, 2800);
+
+  _bountyThreshold += 150;
+  _bountyLevel++;
+}
+
+function _showDailyEventOverlay(type) {
+  const info = {
+    gold_rush:  ['🏆 골드 러시',   '이번 스테이지: 골드 3배 드롭!',     '#ffd700'],
+    blizzard:   ['❄ 빙하기',       '적 이동속도 ↓ / 적 체력 ↑',         '#88ddff'],
+    swarm:      ['🦠 대군 침공',    '적 수가 2배! 단, HP가 낮습니다.',    '#00ff88'],
+    elite_wave: ['⚡ 정예 침공',    '엘리트 등급 적만 등장!',             '#ff8800'],
+    dark:       ['🌑 암흑 프로토콜','시야가 제한됩니다. 조심하세요!',     '#aa88ff'],
+  };
+  const [title, desc, col] = info[type] || ['이벤트', '', '#ffffff'];
+  showStageOverlay(title, desc, col);
+  setTimeout(hideStageOverlay, 3000);
 }
 
 function spawnMiniBoss() {
@@ -312,6 +547,22 @@ function onEnemyKilled() {
     triggerScreenShake(5, 300);
     playSynthSound([600, 800, 1000], 0.15, 'triangle', 0.08);
   }
+  // 현상금 라이벌 체크 (일반 모드 + 멀티 모드)
+  if (!isDailyRun && player) {
+    bountyKills++;
+    if (bountyKills >= _bountyThreshold) {
+      bountyKills = 0;
+      setTimeout(() => spawnBountyRival(), 1200);
+    }
+    // 멀티: 킬 격차 80 이상이면 균형추 라이벌 추가 소환
+    if (mpMode && dailyHeroes.length === 0) {
+      const partners = Object.entries(mpPlayers).filter(([id]) => id !== mpMyId);
+      const maxPartnerKills = partners.length > 0 ? Math.max(...partners.map(([,p]) => p.kills || 0)) : 0;
+      if (killCount - maxPartnerKills === 80) {
+        setTimeout(() => spawnBountyRival(), 2000);
+      }
+    }
+  }
 }
 
 function checkComboMilestone(count) {
@@ -445,15 +696,19 @@ function earnDataCores() {
 function checkAchievements() {
   if (!player) return;
   const done = saveData.achievements;
+  const clears = saveData._hiddenClassClears || {};
   const conds = {
-    ach_first:    () => killCount >= 1,
-    ach_hunter:   () => killCount >= 100,
-    ach_survivor: () => currentStage >= 5,
-    ach_stage10:  () => currentStage >= 10,
-    ach_evolved:  () => Object.values(player.weapons).some(w => w.level >= 5),
-    ach_combo:    () => comboCount >= 25,
-    ach_gold:     () => player.gold >= 50,
-    ach_endless:  () => isEndlessMode
+    ach_first:       () => killCount >= 1,
+    ach_hunter:      () => killCount >= 100,
+    ach_survivor:    () => currentStage >= 5,
+    ach_stage10:     () => currentStage >= 10,
+    ach_evolved:     () => Object.values(player.weapons).some(w => w.level >= 5),
+    ach_combo:       () => comboCount >= 25,
+    ach_gold:        () => player.gold >= 50,
+    ach_endless:     () => isEndlessMode,
+    ach_absorb30:    () => player.classId === 'parasite' && (player._totalAbsorptions||0) >= 30,
+    ach_hidden_trio: () => !!(clears.jammer && clears.cracker && clears.glitch_dancer),
+    ach_true_ending: () => !!saveData._parasiteEnding
   };
   for (const ach of ACHIEVEMENTS) {
     if (done.includes(ach.id)) continue;
@@ -599,8 +854,11 @@ function updateFieldItems(dt) {
 
 function spawnRandomFieldItem() {
   if (!player) return;
-  let types = Object.keys(FIELD_ITEM_TYPES);
-  let type  = types[Math.floor(Math.random() * types.length)];
+  // 가중치 기반 선택: nuke는 희귀하게, health는 자주
+  const itemWeights = { health: 3, magnet: 2, nuke: 1, shield: 2, surge: 2, reflect: 1 };
+  let roll = Math.random() * 11;
+  let type = 'health';
+  for (const [t, w] of Object.entries(itemWeights)) { roll -= w; if (roll <= 0) { type = t; break; } }
   let angle = Math.random() * Math.PI * 2;
   let r     = 150 + Math.random() * 200;
   let ix = Math.max(30, Math.min(MAP_WIDTH  - 30, player.x + Math.cos(angle) * r));
@@ -633,6 +891,11 @@ function spawnEnemyPack() {
   let count = 1 + Math.floor(Math.random() * 2);
   if (gameTime > 120 || currentStage > 5)  count += 1;
   if (gameTime > 240 || currentStage > 15) count += 2;
+  // 이벤트 스테이지 스폰 수 조정
+  if (isDailyRun && dailyEventStage === 'swarm')     count = Math.floor(count * 2.2);
+  if (isDailyRun && dailyEventStage === 'gold_rush') count = Math.floor(count * 1.6);
+  // 일일 저주: 대량 스폰
+  if (isDailyRun && dailyMutations.curses.find(c => c.id === 'double_spawn')) count = Math.floor(count * 1.7);
   count = Math.min(count, MAX_ENEMIES - enemies.length);
 
   for (let i = 0; i < count; i++) {
@@ -644,18 +907,22 @@ function spawnEnemyPack() {
     let type = 'swarm';
     let rand = Math.random();
 
-    // 엘리트 몬스터: 스테이지 8+ 부터 등장, 스테이지 높을수록 빈도 증가
-    const eliteChance = Math.min((currentStage - 8) * 0.007, 0.15);
-    if (currentStage >= 8 && Math.random() < eliteChance) {
+    // 정예 침공 이벤트: 모두 엘리트
+    if (isDailyRun && dailyEventStage === 'elite_wave') {
       type = 'elite';
-    } else if (gameTime > 180 || currentStage > 10) {
-      if (rand < 0.25) type = 'bruiser';
-      else if (rand < 0.55) type = 'rusher';
-    } else if (gameTime > 60 || currentStage > 3) {
-      if (rand < 0.12) type = 'bruiser';
-      else if (rand < 0.35) type = 'rusher';
     } else {
-      if (rand < 0.15) type = 'rusher';
+      const eliteChance = Math.min((currentStage - 8) * 0.007, 0.15);
+      if (currentStage >= 8 && Math.random() < eliteChance) {
+        type = 'elite';
+      } else if (gameTime > 180 || currentStage > 10) {
+        if (rand < 0.25) type = 'bruiser';
+        else if (rand < 0.55) type = 'rusher';
+      } else if (gameTime > 60 || currentStage > 3) {
+        if (rand < 0.12) type = 'bruiser';
+        else if (rand < 0.35) type = 'rusher';
+      } else {
+        if (rand < 0.15) type = 'rusher';
+      }
     }
     enemies.push(new Enemy(sx, sy, type));
   }
@@ -674,6 +941,8 @@ function checkCollisions() {
     if (!p) continue;
     let allTargets = [...enemies];
     if (activeBoss) allTargets.push(activeBoss);
+    if (finalWaveVirusCore)   allTargets.push(finalWaveVirusCore);
+    if (finalWaveVirusOrigin) allTargets.push(finalWaveVirusOrigin);
 
     for (let e of allTargets) {
       if (p.hitEnemies.has(e)) continue;
@@ -718,13 +987,39 @@ function checkCollisions() {
   if (now - player.lastHitTime > 250) {
     let allTargets = [...enemies];
     if (activeBoss) allTargets.push(activeBoss);
+    if (finalWaveVirusCore)   allTargets.push(finalWaveVirusCore);
+    if (finalWaveVirusOrigin) allTargets.push(finalWaveVirusOrigin);
     for (let e of allTargets) {
+      if (e._hacked) continue; // 해킹 아군은 플레이어와 충돌 피해 없음
       if (dist(player.x, player.y, e.x, e.y) < player.radius + e.radius) {
         lastDamageSource = e === activeBoss ? '보스 충돌' : '바이러스 충돌';
         player.takeDamage(e.damage);
         player.lastHitTime = now;
         break;
       }
+    }
+  }
+
+  // 플레이어 투사체 vs 라이벌 영웅들
+  for (const hero of [...dailyHeroes]) {
+    if (hero.isAlly) continue; // 동맹 중엔 피해 없음
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      if (!dailyHeroes.includes(hero)) break; // 루프 중 사망 시 중단
+      const p = projectiles[i];
+      if (!p || p.hitEnemies.has(hero)) continue;
+      if (dist(p.x, p.y, hero.x, hero.y) < p.radius + hero.radius) {
+        hero.takeDamage(p.damage, true);
+        if (!dailyHeroes.includes(hero)) { projectiles.splice(i, 1); break; }
+        p.hitEnemies.add(hero);
+        p.pierce--;
+        if (p.pierce <= 0) { projectiles.splice(i, 1); }
+      }
+    }
+    if (dailyHeroes.includes(hero) && now - player.lastHitTime > 250 &&
+        dist(player.x, player.y, hero.x, hero.y) < player.radius + hero.radius) {
+      player.takeDamage(hero instanceof DailyRivalBerserker ? 28 : 20);
+      lastDamageSource = `${hero.heroLabel} 충돌`;
+      player.lastHitTime = now;
     }
   }
 }

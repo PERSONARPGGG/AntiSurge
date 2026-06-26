@@ -51,7 +51,7 @@
           <div class="menu-title-sub">사이버펑크 바이러스 서바이벌</div>
         </div>
         <div class="menu-header-meta">
-          <span class="version-badge version-beta">β v0.09 BETA</span>
+          <span class="version-badge version-beta">β v0.10 BETA</span>
         </div>
       </div>
 
@@ -123,6 +123,11 @@
             <button class="menu-action-btn" onclick="openAchievementModal()">
               <span class="mab-icon">🏆</span>
               <span class="mab-label">업적</span>
+            </button>
+            <button class="menu-action-btn" onclick="openArchiveModal()">
+              <span class="mab-icon">🗃</span>
+              <span class="mab-label">격리 로그</span>
+              <span id="archive-new-badge" class="mab-badge mab-beta" style="display:none">NEW</span>
             </button>
             <button class="menu-action-btn menu-action-settings" onclick="openSettingsModal()">
               <span class="mab-icon">⚙</span>
@@ -238,6 +243,50 @@
           </ul>
         </button>
       </div>
+
+      <div class="hidden-class-divider">
+        <span class="hidden-chip">??? 히든 직업</span>
+      </div>
+      <div class="class-card-grid" id="hidden-class-grid">
+        <button class="class-card hidden-class class-locked" data-class="jammer" style="--cls-color:#aaffff">
+          <div class="cls-header">
+            <span class="cls-icon hidden-locked-icon">📡</span>
+            <span class="cls-name">재머</span>
+            <span class="cls-type-chip hidden-chip">히든</span>
+          </div>
+          <div class="cls-preview">??? 해금 후 공개</div>
+          <ul class="cls-stats"><li>???</li><li>???</li><li>???</li><li>???</li><li class="cls-skill">??? (??초)</li></ul>
+        </button>
+        <button class="class-card hidden-class class-locked" data-class="cracker" style="--cls-color:#ff6600">
+          <div class="cls-header">
+            <span class="cls-icon hidden-locked-icon">🕹️</span>
+            <span class="cls-name">크래커</span>
+            <span class="cls-type-chip hidden-chip">히든</span>
+          </div>
+          <div class="cls-preview">??? 해금 후 공개</div>
+          <ul class="cls-stats"><li>???</li><li>???</li><li>???</li><li>???</li><li class="cls-skill">??? (??초)</li></ul>
+        </button>
+        <button class="class-card hidden-class class-locked" data-class="glitch_dancer" style="--cls-color:#ff88ff">
+          <div class="cls-header">
+            <span class="cls-icon hidden-locked-icon">🕺</span>
+            <span class="cls-name">글리치 댄서</span>
+            <span class="cls-type-chip hidden-chip">히든</span>
+          </div>
+          <div class="cls-preview">??? 해금 후 공개</div>
+          <ul class="cls-stats"><li>???</li><li>???</li><li>???</li><li>???</li><li class="cls-skill">??? (??초)</li></ul>
+        </button>
+        <button class="class-card hidden-class class-locked" data-class="parasite" style="--cls-color:#88ff44">
+          <div class="cls-header">
+            <span class="cls-icon hidden-locked-icon">🧬</span>
+            <span class="cls-name">패러사이트</span>
+            <span class="cls-type-chip hidden-chip">히든</span>
+          </div>
+          <div class="cls-preview">??? 해금 후 공개</div>
+          <ul class="cls-stats"><li>???</li><li>???</li><li>???</li><li>???</li><li class="cls-skill">??? (??초)</li></ul>
+        </button>
+      </div>
+      <div id="hidden-hint-popup" style="display:none;position:fixed;background:rgba(0,0,0,0.88);color:#ffe600;border:1px solid #ffe600;border-radius:8px;padding:8px 14px;font-size:12px;z-index:9999;pointer-events:none;"></div>
+
       <div class="class-confirm-footer">
         <span id="class-selected-hint" class="class-selected-hint">백신 선택</span>
         <div class="class-confirm-btns">
@@ -335,6 +384,19 @@
     <div id="mission-panel" class="mission-panel" style="display:none">
       <div class="mission-panel-title">📋 MISSION</div>
       <div id="mission-list"></div>
+    </div>
+
+    <!-- PC 전용 스킬 단축키 인디케이터 (좌하단) -->
+    <div id="pc-skill-indicator" class="pc-skill-indicator">
+      <div class="psi-key">[Q]</div>
+      <div class="psi-body">
+        <span class="psi-icon" id="psi-icon">○</span>
+        <span class="psi-name" id="psi-name">—</span>
+      </div>
+      <div class="psi-bar-wrap">
+        <div id="psi-bar" class="psi-bar-fill"></div>
+      </div>
+      <div id="psi-cd-text" class="psi-cd-text">—</div>
     </div>
 
     <!-- 일시정지 오버레이 -->
@@ -459,6 +521,59 @@
     </div>
   </div>
 
+  <!-- 패러사이트 트루 엔딩 컷씬 화면 -->
+  <div id="parasite-ending-screen" class="screen parasite-ending-screen">
+    <div class="ending-bg-overlay"></div>
+
+    <div id="ending-scene-1" class="ending-scene">
+      <div class="ending-scene-inner">
+        <div class="ending-year">2071년</div>
+        <p class="ending-text">글로벌 네트워크가 바이러스에 잠식당한 지<br>7년이 지났다.</p>
+        <p class="ending-text ending-text-delay1">바이러스는 스스로 진화하며 모든 방어 시스템을<br>무력화했다.</p>
+        <p class="ending-text ending-text-delay2">그러나 인류는 마지막 수단을 선택했다.</p>
+      </div>
+    </div>
+
+    <div id="ending-scene-2" class="ending-scene">
+      <div class="ending-scene-inner">
+        <div class="ending-icon-big">🧬</div>
+        <p class="ending-text"><span class="ending-highlight">패러사이트 프로토콜 — 개시</span></p>
+        <p class="ending-text ending-text-delay1">바이러스를 흡수하고,<br>그 패턴을 역이용하는 생존 병기.</p>
+        <p class="ending-text ending-text-delay2">수백 개의 바이러스 코드를 체내에 흡수한 끝에—<br>마침내 바이러스 원점에 도달했다.</p>
+      </div>
+    </div>
+
+    <div id="ending-scene-3" class="ending-scene">
+      <div class="ending-scene-inner">
+        <div class="ending-icon-big ending-pulse">🦠</div>
+        <p class="ending-text"><span class="ending-highlight-red">바이러스 원점 — 감염 역전</span></p>
+        <p class="ending-text ending-text-delay1">흡수된 모든 코드가 역방향으로 방출된다.</p>
+        <p class="ending-text ending-text-delay2">안티 바이러스 신호가 네트워크 전역에<br>전파되기 시작한다...</p>
+        <div class="ending-progress-bar">
+          <div class="ending-progress-fill"></div>
+        </div>
+        <p class="ending-text ending-text-delay3">감염률 0%... 0%... 0.000%</p>
+      </div>
+    </div>
+
+    <div id="ending-scene-4" class="ending-scene ending-final-scene">
+      <div class="ending-scene-inner">
+        <div class="ending-title-final">ANTISURGE</div>
+        <div class="ending-subtitle-final">— TRUE ENDING —</div>
+        <p class="ending-text ending-text-delay1">
+          네트워크 정화 완료.<br>
+          바이러스 원점 소멸 확인.<br>
+          잔존 바이러스 0.000%.
+        </p>
+        <p class="ending-text ending-text-delay2 ending-highlight">
+          생존자: 패러사이트<br>등급: L E G E N D
+        </p>
+        <div id="ending-stats" class="ending-stats-block"></div>
+        <p class="ending-text ending-text-delay3" style="color:#888;font-size:12px">아무 키나 눌러 계속...</p>
+      </div>
+    </div>
+  </div>
+
   <!-- 게임 오버 / 결과 화면 -->
   <div id="game-over-modal" class="modal">
     <div class="modal-content glass-panel result-panel">
@@ -495,6 +610,7 @@
 
       <div id="death-cause-row" class="death-cause-row" style="display:none"></div>
       <div id="mp-survival-rank" style="display:none;background:rgba(0,0,0,0.5);border:1px solid #00f0ff33;border-radius:6px;padding:8px 12px;margin:6px 0;font-size:12px;line-height:1.8"></div>
+      <div id="codec-unlock-row" class="codec-unlock-row" style="display:none"></div>
       <div id="cores-earned-row" class="cores-earned-row"></div>
       <div id="best-record-row" class="best-record-row"></div>
 
@@ -518,6 +634,34 @@
       <div class="result-actions">
         <button id="retry-btn" class="neon-btn font-sm">시스템 재가동</button>
         <button id="home-btn" class="neon-btn font-sm neon-btn-purple">메인 화면으로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 격리 로그 아카이브 모달 -->
+  <div id="archive-modal" class="modal">
+    <div class="modal-content glass-panel archive-panel">
+      <!-- 고정 헤더 (스크롤 안 됨) -->
+      <div class="archive-fixed-header">
+        <div class="archive-header">
+          <span class="archive-title-icon">🗃</span>
+          <h2 class="archive-title">ANTISURGE — 격리 로그 아카이브</h2>
+          <div class="archive-subtitle">각 운영자의 격리 기록 / 분류 불가 데이터</div>
+        </div>
+        <!-- 클래스 탭 -->
+        <div class="archive-tabs" id="archive-tabs"></div>
+      </div>
+
+      <!-- 스크롤 가능 영역 -->
+      <div class="archive-scroll-body">
+        <div class="archive-log-viewer" id="archive-log-viewer">
+          <div class="archive-placeholder">클래스를 선택하세요</div>
+        </div>
+      </div>
+
+      <!-- 고정 푸터 (항상 보임) -->
+      <div class="archive-fixed-footer">
+        <button class="neon-btn font-sm" onclick="closeArchiveModal()">닫기</button>
       </div>
     </div>
   </div>
@@ -732,6 +876,37 @@
       <input id="dev-stage-input" class="dev-input" type="number" value="10" min="1" max="200" placeholder="스테이지">
       <button class="dev-btn dev-btn-green" onclick="devJumpStage()">▶ JUMP</button>
     </div>
+    <div class="dev-section-title">// 무기 / 클래스</div>
+    <div class="dev-row">
+      <button class="dev-btn dev-btn-green" onclick="devMaxWeapons()">⚔ 전무기 MAX</button>
+      <button class="dev-btn" onclick="devToggleInvincible()">💥 무적 토글</button>
+    </div>
+    <div class="dev-row">
+      <select id="dev-class-select" class="dev-input" style="flex:1">
+        <option value="">직업 선택...</option>
+        <option value="hacker">💻 해커</option>
+        <option value="cyborg">🔥 방화벽</option>
+        <option value="ghost">🔓 루트킷</option>
+        <option value="engineer">🤖 드론.exe</option>
+        <option value="sniper">🎯 스나이퍼</option>
+        <option value="support">💊 서포트</option>
+        <option value="jammer">📡 재머</option>
+        <option value="cracker">🕹️ 크래커</option>
+        <option value="glitch_dancer">🕺 글리치 댄서</option>
+        <option value="parasite">🧬 패러사이트</option>
+      </select>
+      <button class="dev-btn dev-btn-green" onclick="devSwitchClass()">↔ 전환</button>
+    </div>
+    <div class="dev-section-title">// 파이널 스테이지</div>
+    <div class="dev-row">
+      <button class="dev-btn" style="color:#88ff44" onclick="devFinalStageUnlock()">🧬 조건 강제 충족</button>
+      <button class="dev-btn" style="color:#88ff44" onclick="devFinalStageStart()">▶ 파이널 시작</button>
+    </div>
+    <div class="dev-row">
+      <button class="dev-btn" style="color:#ff8800" onclick="devFinalWave(2)">W2 코어</button>
+      <button class="dev-btn" style="color:#ffe600" onclick="devFinalWave(3)">W3 원점</button>
+      <button class="dev-btn" style="color:#88ff44" onclick="devPlayEnding()">✨ 엔딩 재생</button>
+    </div>
     <div class="dev-section-title">// 저장 데이터</div>
     <div class="dev-row">
       <button class="dev-btn dev-btn-red" onclick="devResetSave()">🗑 저장 초기화</button>
@@ -739,10 +914,21 @@
     <div class="dev-footer">키보드: 7501 입력 시 토글</div>
   </div>
 
-  <!-- Firebase compat SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <!-- Firebase compat SDK (file:// 프로토콜에서는 Auth iframe 경고 발생 → 스킵) -->
+  <script>
+    (function() {
+      if (location.protocol === 'file:') return;
+      var sdks = [
+        'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+        'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
+        'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'
+      ];
+      sdks.forEach(function(src) {
+        var s = document.createElement('script');
+        s.src = src; document.head.appendChild(s);
+      });
+    })();
+  </script>
   <!-- AntiSurge 모듈 (로딩 순서 중요) -->
   <script src="src/config.js"></script>
   <script src="src/audio.js"></script>
@@ -756,6 +942,7 @@
   <script src="src/loop.js"></script>
   <script src="src/upgrades.js"></script>
   <script src="src/endgame.js"></script>
+  <script src="src/finalstage.js"></script>
   <script src="src/extras.js"></script>
   <script src="src/input.js"></script>
   <script src="src/multiplayer.js"></script>

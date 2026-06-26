@@ -65,27 +65,71 @@ const CLASS_DEFS = {
     hp: 130, speed: 3.0, damageMult: 0.9, magnetRadius: 130,
     startWeapon: 'drone', rerolls: 3, xpBonus: 1.15,
     activeSkill: { name: '비상 패치', icon: '💊', cd: 15000, desc: 'HP 25% 즉시 회복 + 20초간 HP 재생 +3/s' }
+  },
+  cracker: {
+    name: '크래커', icon: '🕹️', color: '#ff6600',
+    desc: '조종형. 적을 해킹해 아군으로 전환. Q스킬로 2기 즉시 해킹. 해킹 강화 특화.',
+    hp: 90, speed: 3.3, damageMult: 0.85, magnetRadius: 85,
+    startWeapon: 'hack_gun', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '바이러스 주입', icon: '🖥️', cd: 18000, desc: '가장 가까운 적 2기를 즉시 8초간 해킹' }
+  },
+  glitch_dancer: {
+    name: '글리치 댄서', icon: '🕺', color: '#ff88ff',
+    desc: '리듬형. command_dance 특화. Q로 즉시 댄스 폭발.',
+    hp: 85, speed: 3.8, damageMult: 1.1, magnetRadius: 80,
+    startWeapon: 'command_dance', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '즉흥 댄스', icon: '💃', cd: 10000, desc: '방향키 콤보 없이 즉시 댄스 폭발 + 댄스 마스터 진화 적용' }
+  },
+  parasite: {
+    name: '패러사이트', icon: '🧬', color: '#88ff44',
+    desc: '흡수형. 적 처치 시 패턴 흡수(최대 3). Q로 스택 비례 전방위 폭발.',
+    hp: 95, speed: 3.2, damageMult: 1.0, magnetRadius: 90,
+    startWeapon: 'viral_bomb', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '패턴 방출', icon: '🦠', cd: 15000, desc: '흡수 스택 전부 소모 → 스택당 피해+200, 전방위 폭발' }
+  },
+  jammer: {
+    name: '재머', icon: '📡', color: '#aaffff',
+    desc: '방해형. 이동=펄스 방출, 정지=충전. 충전량 비례 강력 재밍 펄스.',
+    hp: 100, speed: 3.6, damageMult: 0.9, magnetRadius: 90,
+    startWeapon: 'zone', rerolls: 2, xpBonus: 1.0,
+    activeSkill: { name: '집중 방해파', icon: '📻', cd: 12000, desc: '이동 방향 전방 120° 콘에 집중 방해파 → 3초 스턴' }
   }
 };
 
 // ── 클래스 잠금 해제 조건 ──────────────────────────────────────
 const CLASS_UNLOCK_DEFS = {
-  hacker:   null, // 기본 개방
-  cyborg:   null, // 기본 개방
-  ghost:    null, // 기본 개방
-  engineer: { stat: 'maxStage',      goal: 5,   label: '스테이지 5 이상 도달' },
-  sniper:   { stat: 'totalKills',    goal: 300,  label: '바이러스 300마리 격리' },
-  support:  { stat: 'totalBossKills',goal: 3,   label: '바이러스 코어 3회 파괴' },
+  hacker:   null,
+  cyborg:   null,
+  ghost:    null,
+  engineer:      { stat: 'maxStage',       goal: 5,   label: '스테이지 5 이상 도달' },
+  sniper:        { stat: 'totalKills',     goal: 300, label: '바이러스 300마리 격리' },
+  support:       { stat: 'totalBossKills', goal: 3,   label: '바이러스 코어 3회 파괴' },
+  jammer: {
+    requires: ['hacker','cyborg','ghost','engineer','sniper','support'],
+    stats: [{ stat: 'maxStage', goal: 10 }, { stat: 'totalEliteKills', goal: 200 }],
+    label: '모든 기본 직업 해금 + 스테이지 10 도달 + 엘리트 200 처치'
+  },
+  cracker:       { requires: ['jammer'],        label: '재머 해금' },
+  glitch_dancer: { requires: ['cracker'],       label: '크래커 해금' },
+  parasite:      { requires: ['glitch_dancer'], label: '글리치 댄서 해금' },
 };
 
 function isClassUnlocked(classId) {
   const def = CLASS_UNLOCK_DEFS[classId];
   if (!def) return true;
-  // 이미 한번 해금 저장된 경우
   if (saveData._unlockedClasses && saveData._unlockedClasses[classId]) return true;
-  // 실시간 스탯 체크
-  const s = _getStats();
-  return (s[def.stat] || saveData[def.stat] || 0) >= def.goal;
+  if (def.requires) {
+    const reqs = Array.isArray(def.requires) ? def.requires : [def.requires];
+    if (!reqs.every(r => isClassUnlocked(r))) return false;
+  }
+  if (def.stats) {
+    const s = _getStats();
+    if (!def.stats.every(c => (s[c.stat] || saveData[c.stat] || 0) >= c.goal)) return false;
+  } else if (def.stat) {
+    const s = _getStats();
+    if ((s[def.stat] || saveData[def.stat] || 0) < def.goal) return false;
+  }
+  return true;
 }
 
 let gameState    = STATE_MENU;
@@ -143,9 +187,10 @@ let evolutionCount = 0;
 let activeSynergies = new Set();
 let pendingBossCurse = false;
 
-// 마인/블랙홀 엔티티
+// 마인/블랙홀/재머 엔티티
 let mines = [];
 let blackHoles = [];
+let jammerPulses = [];
 
 // 리롤 잔여 횟수
 let rerollUses = 2;
@@ -182,6 +227,15 @@ const DIFFICULTY_SETTINGS = {
 let isDailyRun = false;
 let dailyRunSeed = 0;
 let dailyRNG = null;
+let dailyHeroes     = [];  // 활성 라이벌 영웅 배열 (최대 3)
+let heroBullets     = [];  // 영웅 탄환 배열 (모든 영웅 공유)
+let dailyMutations  = { curses: [], buff: null }; // 오늘의 변이
+let dailyEventStage = '';  // 현재 이벤트 스테이지 타입
+
+// ─── 현상금 라이벌 (일반/멀티 모드) ───
+let bountyKills      = 0;   // 현상금 킬 카운터
+let _bountyThreshold = 400; // 다음 현상금 라이벌 킬 목표
+let _bountyLevel     = 0;   // 현재 현상금 등급
 
 // ─── 승천 시스템 ───
 let ascensionLevel = 0;
@@ -510,6 +564,41 @@ const WEAPON_FUSIONS = [
     icon: '🌀💣',
     weapons: ['orbiter', 'mine'],
     desc: '오비터가 적 접근 시 마인 자동 투하. 공전 중 폭탄 밭 자동 형성!'
+  },
+  {
+    id: 'dance_master',
+    name: '댄스 마스터',
+    icon: '🕺💥',
+    weapons: ['command_dance', 'orbiter'],
+    desc: '커맨드 성공 시 8방향 투사체 추가 발사. 오비터가 댄스 폭발과 연동!'
+  },
+  {
+    id: 'pandemic',
+    name: '팬데믹',
+    icon: '🦠💀',
+    weapons: ['viral_bomb', 'mine'],
+    desc: '바이러스 폭발 피해 +50%, 감염 반경 +40px. 마인과 감염 공간 제압!'
+  },
+  {
+    id: 'critical_collapse',
+    name: '임계 붕괴',
+    icon: '🔊💥',
+    weapons: ['resonance', 'blackhole'],
+    desc: '공명 폭발이 인접 적에게 2스택 전이. 블랙홀 흡입 + 공명 조합!'
+  },
+  {
+    id: 'virus_takeover',
+    name: '바이러스 장악',
+    icon: '💻🦠',
+    weapons: ['hack_gun', 'viral_bomb'],
+    desc: '해킹된 적 사망 시 주변 1체 즉시 감염. 해킹 + 바이러스 무한 연쇄!'
+  },
+  {
+    id: 'critical_discharge',
+    name: '임계 방전',
+    icon: '⚡🔗',
+    weapons: ['overcharge', 'chain'],
+    desc: '방전 시 전격 연쇄 4체 추가 타격. 오버차지 + 체인 최강 광역!'
   }
 ];
 
@@ -741,6 +830,36 @@ const UPGRADES = {
       desc: ["전방에 중력장 생성, 적을 흡입하며 지속 피해", "중력장 반경 및 지속시간 증가", "붕괴 시 폭발 피해 2배", "블랙홀 2개 동시 생성", "【진화】이벤트 호라이즌 — 2개 동시, 붕괴 시 즉사 판정"],
       evolvedName: "이벤트 호라이즌",
       maxLevel: 5
+    },
+    command_dance: {
+      name: "커맨드 댄서", icon: "🕺",
+      desc: ["2방향 커맨드 성공 시 전방위 폭발 (피해 350)", "폭발 반경 +50px 확대", "성공 시 전격 연쇄 2체 추가", "4방향 커맨드로 확장, 성공 시 HP +5 회복", "【진화】댄스 마스터 — 5방향, 폭발 후 8방향 투사체"],
+      evolvedName: "댄스 마스터", maxLevel: 5
+    },
+    echo_record: {
+      name: "에코 레코더", icon: "🔄",
+      desc: ["이동 경로 3초 기록 후 에코 분신 소환 (쿨 18초)", "분신 공격력 +40%", "기록 시간 4초로 확장, 쿨 14초", "분신 2기 동시 소환", "【진화】카오스 에코 — 3기, 공격력 2배"],
+      evolvedName: "카오스 에코", maxLevel: 5
+    },
+    viral_bomb: {
+      name: "바이러스 증식", icon: "🦠",
+      desc: ["가장 가까운 적 감염, 4초 후 폭발 (피해 130)", "감염 전파 1단계 추가", "폭발 피해 +60 증가", "전파 2단계, 동시 감염 한도 +5", "【진화】팬데믹 — 폭발 피해 +50%, 감염 반경 +40px"],
+      evolvedName: "팬데믹", maxLevel: 5
+    },
+    resonance: {
+      name: "공명 증폭기", icon: "🔊",
+      desc: ["공명 펄스 발사, 같은 적 3회 공격 시 폭발 (피해 ×4)", "공명 스택 유지 시간 +1초", "폭발 피해 배율 ×5로 증가", "보스/엘리트 스택 임계 -1 감소", "【진화】임계 붕괴 — 공명 폭발이 인접 적에게 즉시 공명 2스택 전이"],
+      evolvedName: "임계 붕괴", maxLevel: 5
+    },
+    hack_gun: {
+      name: "해킹 이식기", icon: "💻",
+      desc: ["가장 강한 적 즉시 해킹, 8초간 아군화 (근접 피해 20/s)", "해킹 지속시간 +4초", "동시 해킹 2기 허용", "해킹 종료 시 폭발 피해 200 추가", "【진화】바이러스 장악 — 해킹 적 사망 시 주변 1체 즉시 감염"],
+      evolvedName: "바이러스 장악", maxLevel: 5
+    },
+    overcharge: {
+      name: "오버차지 컨덴서", icon: "⚡",
+      desc: ["자동 충전 후 방전, 충전량 비례 피해 (100%=피해 300)", "충전 속도 +30% 증가", "방전 반경 +40px 확대", "과충전(200%) 역폭발 피해 제거 (안전 방전)", "【진화】임계 방전 — 방전 시 전격 연쇄 4체 추가 타격"],
+      evolvedName: "임계 방전", maxLevel: 5
     }
   },
   stats: [
@@ -776,6 +895,8 @@ const REVIVAL_EPICS = [
 
 // 스테이지 클리어 시 젬 자석 플래그
 let stageGemMagnet = false;
+// 반사 실드 활성 타이머 (ms)
+let reflectShieldTimer = 0;
 // 상점 키보드 포커스
 let shopFocusIdx = 0;
 
@@ -785,7 +906,8 @@ const FIELD_ITEM_TYPES = {
   magnet:  { icon: '🧲', color: '#b026ff', name: 'XP 자석',   effect: '화면 내 모든 젬 흡수' },
   nuke:    { icon: '☢️', color: '#ffe600', name: '데이터 핵',  effect: '화면 내 모든 적 제거' },
   shield:  { icon: '🛡️', color: '#00f0ff', name: '실드 버블',  effect: '5초간 피격 무적' },
-  surge:   { icon: '⚡', color: '#39ff14', name: '오버클럭',   effect: '8초간 이동속도 2배' }
+  surge:   { icon: '⚡', color: '#39ff14', name: '오버클럭',   effect: '8초간 이동속도 2배' },
+  reflect: { icon: '🪞', color: '#aaddff', name: '반사 실드',  effect: '10초간 보스 투사체 반사' }
 };
 
 // ============================================================
@@ -816,7 +938,11 @@ const ACHIEVEMENTS = [
   { id: 'ach_evolved',  icon: '✨', name: '시스템 진화',     desc: '백신 모듈 진화 1회',           reward: 5  },
   { id: 'ach_combo',    icon: '🎯', name: '연속 격리',       desc: '콤보 25 이상 달성',            reward: 3  },
   { id: 'ach_gold',     icon: '💾', name: '코어 수집가',     desc: '골드 50 이상 보유',            reward: 3  },
-  { id: 'ach_endless',  icon: '∞',  name: '무한 방어 프로토콜', desc: '무한 모드 진입',            reward: 12 }
+  { id: 'ach_endless',  icon: '∞',  name: '무한 방어 프로토콜', desc: '무한 모드 진입',            reward: 12 },
+  // 트루 엔딩 힌트 업적
+  { id: 'ach_absorb30',   icon: '🧬', name: '흡수 적응',       desc: '패러사이트로 런 중 30회 흡수. 더 깊이 들어가라.', reward: 8 },
+  { id: 'ach_hidden_trio', icon: '🔓', name: '히든 마스터',    desc: '재머·크래커·글리치 댄서 완전 마스터. ...문이 열릴 것 같다.', reward: 20 },
+  { id: 'ach_true_ending', icon: '🦠', name: 'VIRUS ERADICATED', desc: '패러사이트 트루 엔딩 달성. 진실을 보았다.', reward: 50 }
 ];
 
 const CLOUD_ACHIEVEMENTS = [
@@ -899,6 +1025,22 @@ const CLASS_PASSIVE_DEFS = {
     { key: 'pb_maxhp', name: '핵심 강화',   icon: '💪', desc: ['최대 HP +40 & 즉시 회복',      '추가 HP +40, 레벨업 시 HP 20% 회복'] },
     { key: 'pb_triage',name: '응급 처치',   icon: '🏥', desc: ['피격 후 5초간 HP +4/초 재생',  '피격 후 5초간 HP +8/초 재생'] },
   ],
+  cracker: [
+    { key: 'ck_zombie', name: '좀비 프로토콜', icon: '🧟', desc: ['해킹 적 피해 +40%, 해킹 지속 +3초', '해킹 적 피해 +70%, 지속 +5초'] },
+    { key: 'ck_blast',  name: '자폭 명령',     icon: '💥', desc: ['해킹 종료 시 반경 130 폭발 (피해 150)', '폭발 반경 180, 피해 280 + 인근 1체 연쇄 해킹'] },
+  ],
+  glitch_dancer: [
+    { key: 'gd_rhythm', name: '리듬 강화',  icon: '🎵', desc: ['댄스 폭발 피해 +30%',           '댄스 폭발 피해 +60%'] },
+    { key: 'gd_burst',  name: '연속 폭발',  icon: '💫', desc: ['Q 후 3초간 댄스 쿨다운 초기화', 'Q 후 5초간 댄스 쿨다운 초기화'] },
+  ],
+  parasite: [
+    { key: 'ps_absorb', name: '강화 흡수',  icon: '💉', desc: ['흡수 시 HP +3 회복',             '흡수 시 HP +6 + 흡수 슬롯 +1'] },
+    { key: 'ps_surge',  name: '방출 급등',  icon: '🌊', desc: ['Q 폭발 범위 +50px',              'Q 폭발 범위 +100px'] },
+  ],
+  jammer: [
+    { key: 'jm_wave',   name: '광대역 간섭', icon: '📶', desc: ['펄스 범위 +40px, 디버프 +2초',  '펄스 범위 +80px, 디버프 +4초'] },
+    { key: 'jm_static', name: '정전기 누적', icon: '⚡', desc: ['펄스 접촉 시 피해 10',           '피해 20 + 25% 확률 0.5초 스턴'] },
+  ],
 };
 
 // 상점 아이템 풀
@@ -932,6 +1074,139 @@ let weaponStats = {
   missile:   { level: 0, damage: 0, kills: 0 },
   ring:      { level: 0, damage: 0, kills: 0 },
   chain:     { level: 0, damage: 0, kills: 0 },
-  mine:      { level: 0, damage: 0, kills: 0 },
-  blackhole: { level: 0, damage: 0, kills: 0 }
+  mine:          { level: 0, damage: 0, kills: 0 },
+  blackhole:     { level: 0, damage: 0, kills: 0 },
+  command_dance: { level: 0, damage: 0, kills: 0 },
+  echo_record:   { level: 0, damage: 0, kills: 0 },
+  viral_bomb:    { level: 0, damage: 0, kills: 0 },
+  resonance:     { level: 0, damage: 0, kills: 0 },
+  hack_gun:      { level: 0, damage: 0, kills: 0 },
+  overcharge:    { level: 0, damage: 0, kills: 0 }
 };
+
+// ============================================================
+// 클래스 코덱 — 격리 로그 (클래스당 3개, 시스템 보고서 형식)
+// cond: 해금 조건 키 (endgame.js _checkCodecUnlocks에서 판정)
+// ============================================================
+const CLASS_CODEC = {
+  hacker: [
+    { cond: 'first_play',   condLabel: '해커로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #H-001',
+      text: `SUBJECT: HACKER-CLASS 운영자 #7\n상태: 활성 / 추적 진행 중\n\n비고: 대상은 바이러스 소스코드를 역분석해\n무기화하는 것으로 1차 확인됨.\n네트워크 격리를 권장하나 현재 유일한 방어선.\n감염 가능성: 낮음. 역이용 가능성: 높음.` },
+    { cond: 'stage_30',     condLabel: '해커로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #H-002',
+      text: `SUBJECT: HACKER-CLASS 운영자 #7\n상태: 활성 / 심층 구역 진입\n\n비고: 대상이 바이러스 밀도 임계치를 넘어\n더 깊은 구역 진입에 성공함.\n감염 파급력이 예상치 3배 초과.\n운영자 본인은 이것을 "데이터 채굴"이라 표현함.` },
+    { cond: 'hack_50kills', condLabel: '해킹건 50킬 달성',
+      title: '[ANTISURGE] 격리 로그 #H-003',
+      text: `SUBJECT: HACKER-CLASS 운영자 #7\n상태: 위험 / 분류 불가\n\n비고: 바이러스 역이용 기록 갱신.\n시스템은 이 개체를 어떻게 분류해야 할지 판단 불가.\n바이러스인가 인간인가 — 경계가 희미해지고 있다.\n추가 모니터링 권고. 격리 해제 불가.` },
+  ],
+  cyborg: [
+    { cond: 'first_play',  condLabel: '방화벽으로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #C-001',
+      text: `SUBJECT: CYBORG-CLASS 방어 개체 #12\n상태: 활성 / 방어막 가동 중\n\n비고: 생체 조직과 방어 시스템의 융합체.\n바이러스 접촉 시 즉각 방어막 활성화 확인.\n이 개체를 잃으면 전선 붕괴 가능성 있음.` },
+    { cond: 'stage_30',    condLabel: '방화벽으로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #C-002',
+      text: `SUBJECT: CYBORG-CLASS 방어 개체 #12\n상태: 활성 / 강화 진행 중\n\n비고: 스테이지 심층 구역 생존 확인.\n방어막 성능이 예상치 217% 초과.\n바이러스가 이 개체의 외벽을 뚫지 못하고 있음.\n원인 불명.` },
+    { cond: 'stage_70',    condLabel: '방화벽으로 스테이지 70 돌파',
+      title: '[ANTISURGE] 격리 로그 #C-003',
+      text: `SUBJECT: CYBORG-CLASS 방어 개체 #12\n상태: 분류 불가\n\n비고: 이 개체의 방어막은 이제\n바이러스보다 더 복잡한 코드로 이루어져 있다.\n우리가 이 개체를 보호하는 건지,\n이 개체가 우리를 보호하는 건지 불분명.` },
+  ],
+  ghost: [
+    { cond: 'first_play',   condLabel: '루트킷으로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #G-001',
+      text: `SUBJECT: GHOST-CLASS 잠입 개체\n상태: 탐지 불가 / 추적 불가\n\n비고: 기존 센서 시스템으로 포착 불가.\n바이러스 통신망에 침투 흔적 다수 발견.\n대상의 존재를 알아챈 바이러스는 없는 것으로 보임.` },
+    { cond: 'stage_30',     condLabel: '루트킷으로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #G-002',
+      text: `SUBJECT: GHOST-CLASS 잠입 개체\n상태: 활성 / 심층 침투 중\n\n비고: 레이저 패턴 분석 완료.\n대상은 바이러스의 이동 경로를 미리 알고 있는 것처럼 움직임.\n정보를 어디서 얻는가. 아무도 모른다.` },
+    { cond: 'laser_lv5',    condLabel: '레이저 레벨 5 달성',
+      title: '[ANTISURGE] 격리 로그 #G-003',
+      text: `SUBJECT: GHOST-CLASS 잠입 개체\n상태: 위험 / 무기 출처 불명\n\n비고: 현재 운용 중인 무기는\n바이러스 코드로 재컴파일된 레이저 시스템임.\n이것이 바이러스의 무기인지 인간의 무기인지 더 이상 구분 불가.\n그러나 효과적이다.` },
+  ],
+  engineer: [
+    { cond: 'first_play',    condLabel: '드론.exe로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #E-001',
+      text: `SUBJECT: ENGINEER-CLASS 자율 시스템 운영자\n상태: 활성 / 드론 군집 배치 중\n\n비고: 운영자 본인은 전투에 거의 관여하지 않음.\n드론 군집이 대신 전투를 수행.\n운영자의 실제 역할이 무엇인지 아직 불명.` },
+    { cond: 'stage_30',      condLabel: '드론.exe로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #E-002',
+      text: `SUBJECT: ENGINEER-CLASS 자율 시스템 운영자\n상태: 활성 / 드론 최대 밀집도 초과\n\n비고: 허용 드론 개체수 한도를 스스로 초과 운용 중.\n규정 위반이나 현 상황에서 제재 불가.\n드론들은 더 이상 명령 없이도 움직인다.` },
+    { cond: 'drone_100kills',condLabel: '드론 100킬 달성',
+      title: '[ANTISURGE] 격리 로그 #E-003',
+      text: `SUBJECT: ENGINEER-CLASS 자율 시스템 운영자\n상태: 관찰 권고\n\n비고: 운영자는 더 이상 직접 전투하지 않는다.\n그럼에도 불구하고 살아 있고, 전선은 유지된다.\n이것이 공학의 정점인지, 아니면 다른 무언가인지 — 판단 보류.` },
+  ],
+  sniper: [
+    { cond: 'first_play', condLabel: '스나이퍼로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #S-001',
+      text: `SUBJECT: SNIPER-CLASS 장거리 개체\n상태: 활성 / 접근 불가 구역 배치\n\n비고: 대상은 바이러스 군집 외곽에서\n장거리 정밀 타격을 수행 중.\n기존 바이러스 대응 패턴으로는 추적 불가.` },
+    { cond: 'stage_30',   condLabel: '스나이퍼로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #S-002',
+      text: `SUBJECT: SNIPER-CLASS 장거리 개체\n상태: 활성\n\n비고: 이 거리에서 이 정밀도를 유지하는 것은\n이론적으로 불가능하다. 그러나 대상은 한다.\n바이러스는 어디서 공격이 오는지 아직 모른다.` },
+    { cond: 'stage_60',   condLabel: '스나이퍼로 스테이지 60 돌파',
+      title: '[ANTISURGE] 격리 로그 #S-003',
+      text: `SUBJECT: SNIPER-CLASS 장거리 개체\n상태: 자율 판단 개체로 격상\n\n비고: 대상은 더 이상 우리가 모니터링하는 것을\n신경 쓰지 않는다. 우리가 필요로 하는 한\n사냥을 멈추지 않을 것이다. 그것으로 충분하다.` },
+  ],
+  support: [
+    { cond: 'first_play', condLabel: '서포트로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #SP-001',
+      text: `SUBJECT: SUPPORT-CLASS 지원 개체\n상태: 활성 / 단독 운용 확인\n\n비고: 협력 대상 없이 단독으로 전선 유지 중.\n지원 시스템이 왜 혼자 운용되는지 불명.\n그럼에도 전선은 유지된다.` },
+    { cond: 'stage_30',   condLabel: '서포트로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #SP-002',
+      text: `SUBJECT: SUPPORT-CLASS 지원 개체\n상태: 활성 / 자가 최적화 확인\n\n비고: 전투 환경에서 지원 시스템이\n스스로 전투형으로 재구성되고 있음.\n지원 개체가 공격하는 것을 분류해야 하는가.` },
+    { cond: 'stage_80',   condLabel: '서포트로 스테이지 80 돌파',
+      title: '[ANTISURGE] 격리 로그 #SP-003',
+      text: `SUBJECT: SUPPORT-CLASS 지원 개체\n상태: 핵심 자산 / 격리 해제 불가\n\n비고: 시뮬레이션 결과,\n이 개체가 없었다면 바이러스가 이미 이겼을 것이다.\n우리는 이것을 지원하는 것인지,\n이것에 의존하는 것인지 — 더 이상 구분하지 않기로 한다.` },
+  ],
+  jammer: [
+    { cond: 'first_play', condLabel: '재머로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #J-001',
+      text: `SUBJECT: JAMMER-CLASS 신호 교란 개체\n상태: 탐지 불안정 / 발신지 추적 불가\n\n비고: 신호 교란 개체 최초 포착.\n존재 자체가 주변 통신망을 왜곡함.\n이것이 무기인지 증상인지 분류 불가.` },
+    { cond: 'stage_30',   condLabel: '재머로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #J-002',
+      text: `SUBJECT: JAMMER-CLASS 신호 교란 개체\n상태: 위험 / 교란 반경 확대\n\n비고: 교란 반경이 예상보다 광범위함.\n우리 자체 통신도 영향받기 시작함.\n대상에게 이것이 의도된 것인지 묻지 않기로 결정.` },
+    { cond: 'stage_50',   condLabel: '재머로 스테이지 50 돌파',
+      title: '[ANTISURGE] 격리 로그 #J-003',
+      text: `SUBJECT: JAMMER-CLASS 신호 교란 개체\n상태: [기록 손상]\n\n비고: 이 이후의 기록은 —\n[데이터 손상: 교란 신호로 인한 기록 불가]\n[마지막 확인: 대상 생존. 바이러스 통신망 전체 마비.]` },
+  ],
+  cracker: [
+    { cond: 'first_play', condLabel: '크래커로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #CR-001',
+      text: `SUBJECT: CRACKER-CLASS 침투 특화 개체\n상태: 활성 / 방어선 우회 패턴 확인\n\n비고: 대상은 바이러스 방어 체계의 취약점을\n찾아내는 속도가 비정상적으로 빠름.\n이것이 훈련인지 본능인지 불명.` },
+    { cond: 'stage_30',   condLabel: '크래커로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #CR-002',
+      text: `SUBJECT: CRACKER-CLASS 침투 특화 개체\n상태: 활성\n\n비고: 대상은 바이러스 방어 체계를\n일종의 퍼즐처럼 인식하는 것으로 보임.\n위협이라는 인식이 없다. 그래서 더 효과적이다.` },
+    { cond: 'evolved3',   condLabel: '진화 무기 3개 이상 보유',
+      title: '[ANTISURGE] 격리 로그 #CR-003',
+      text: `SUBJECT: CRACKER-CLASS 침투 특화 개체\n상태: 추적 불가\n\n비고: 이 개체가 현재 어떤 코드를 실행하는지\n더 이상 추적할 수 없다.\n우리가 설계한 무기가 아니다.\n그러나 바이러스를 죽인다. 그것으로 충분하다.` },
+  ],
+  glitch_dancer: [
+    { cond: 'first_play',    condLabel: '글리치 댄서로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #GD-001',
+      text: `SUBJECT: GLITCH-DANCER-CLASS 데이터 왜곡 개체\n상태: 불안정 / 글리치 패턴 감지\n\n비고: 이 개체의 존재 자체가 주변 바이러스 데이터를\n왜곡하는 것으로 확인됨.\n전술인지 존재 방식인지 — 구분 불가.` },
+    { cond: 'stage_30',      condLabel: '글리치 댄서로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #GD-002',
+      text: `SUBJECT: GLITCH-DANCER-CLASS 데이터 왜곡 개체\n상태: 관찰 권고\n\n비고: 대상의 이동 패턴이 글리치인지\n고도로 계산된 전술인지 분석팀 내 의견 불일치.\n어느 쪽이든 바이러스는 대응하지 못한다.` },
+    { cond: 'dance_100kills',condLabel: '커맨드 댄스 100킬 달성',
+      title: '[ANTISURGE] 격리 로그 #GD-003',
+      text: `SUBJECT: GLITCH-DANCER-CLASS 데이터 왜곡 개체\n상태: [분류 오류]\n\n비고: 이 춤은 바이러스를 혼란에 빠뜨리는가,\n아니면 대상 자신이 바이러스가 된 것인가.\n질문의 답이 중요한지도 더 이상 확신할 수 없다.` },
+  ],
+  parasite: [
+    { cond: 'first_play', condLabel: '패러사이트로 첫 플레이',
+      title: '[ANTISURGE] 격리 로그 #P-001',
+      text: `SUBJECT: PARASITE-CLASS 흡수 개체\n상태: 이상 징후 / 분류 오류\n\n비고: 대상이 바이러스를 흡수한다는 보고 접수.\n기록 오류로 처리 후 재확인 요청.\n바이러스를 흡수하는 인간 — 이것은 가능하지 않다.` },
+    { cond: 'stage_30',   condLabel: '패러사이트로 스테이지 30 돌파',
+      title: '[ANTISURGE] 격리 로그 #P-002',
+      text: `SUBJECT: PARASITE-CLASS 흡수 개체\n상태: 위험 / 분류 변경 검토 중\n\n비고: 흡수 횟수 누적 확인.\n이것은 감염인가, 진화인가.\n대상의 세포가 바이러스 코드를 재작성하고 있다.\n격리가 의미 있는가 — 내부 검토 요청.` },
+    { cond: 'absorb_50',  condLabel: '런 중 흡수 50회 달성',
+      title: '[ANTISURGE] 격리 로그 #P-003',
+      text: `SUBJECT: PARASITE-CLASS 흡수 개체\n상태: [ANTISURGE PROTOCOL COMPROMISED]\n\n비고: 이 개체는 더 이상 격리 대상이 아니다.\n이 개체가 바이러스를 끝낼 것이다.\n이것이 우리가 원한 결말인지는 —\n더 이상 중요하지 않다.` },
+  ],
+};
+
+// ============================================================
+// 파이널 스테이지 전역 상태
+// ============================================================
+let isFinalStage       = false;
+let finalStageWave     = 0;       // 1=대군, 2=바이러스 코어, 3=바이러스 원점
+let finalWave1Kills    = 0;
+let finalWave1SpawnTimer = 0;
+let finalWaveVirusCore   = null;
+let finalWaveVirusOrigin = null;

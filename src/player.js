@@ -51,6 +51,14 @@ class Player {
     this._sniperShotBoost  = 0;
     this._nearDeathCurseSent = false;
 
+    // 히든 직업 상태
+    this._parasiteStacks  = 0;
+    this._totalAbsorptions = 0;
+    this._jammerCharge   = 0;
+    this._jamPrevX       = 0;
+    this._jamPrevY       = 0;
+    this._gdBurstTimer   = 0;
+
     // 부활 퍽
     this.revivals     = { restore: false, backup: false, lastStand: 0, counter: false, void: false };
     this.voidActive   = false;
@@ -67,8 +75,14 @@ class Player {
       missile:   new MissileWeapon(this),
       ring:      new RingWeapon(this),
       chain:     new ChainWeapon(this),
-      mine:      new MineWeapon(this),
-      blackhole: new BlackHoleWeapon(this)
+      mine:          new MineWeapon(this),
+      blackhole:     new BlackHoleWeapon(this),
+      command_dance: new CommandDanceWeapon(this),
+      echo_record:   new EchoRecordWeapon(this),
+      viral_bomb:    new ViralBombWeapon(this),
+      resonance:     new ResonanceWeapon(this),
+      hack_gun:      new HackGunWeapon(this),
+      overcharge:    new OverchargeWeapon(this)
     };
     const startW = cls.startWeapon || 'flare';
     this.weapons[startW].level = 1;
@@ -89,6 +103,7 @@ class Player {
 
     if (dx !== 0 || dy !== 0) this._moveAngle = Math.atan2(dy, dx);
     let spd = this.speed * (this.surgeTimer > 0 ? 2.0 : 1.0) * (this._poolSpeedMult ?? 1.0);
+    spd = Math.min(spd, this.surgeTimer > 0 ? 16 : 8); // 속도 하드캡 (서지 포함 16, 기본 8)
     this.x += dx * spd * (dt / 16.66);
     this.y += dy * spd * (dt / 16.66);
     this.x = Math.max(this.radius, Math.min(MAP_WIDTH  - this.radius, this.x));
@@ -96,6 +111,7 @@ class Player {
 
     if (this.shieldTimer > 0) this.shieldTimer -= dt;
     if (this.surgeTimer  > 0) this.surgeTimer  -= dt;
+    if (this._gdBurstTimer > 0) this._gdBurstTimer -= dt;
 
     // 액티브 스킬 쿨다운 & 타이머
     if (this.activeSkillCd > 0) this.activeSkillCd = Math.max(0, this.activeSkillCd - dt);
@@ -330,6 +346,48 @@ class Player {
       const _arm=_s*0.45, _th=_s*0.28;
       ctx.fillRect(bx-_th/2, by-_arm, _th, _arm*2);
       ctx.fillRect(bx-_arm, by-_th/2, _arm*2, _th);
+    } else if (_cls === 'jammer') {
+      // 재머: 레이더 동심원 + 4방향 안테나
+      const _t = Date.now() * 0.002;
+      ctx.beginPath(); ctx.arc(bx, by, _s*0.55, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(bx, by, _s*0.22, 0, Math.PI*2); ctx.fill();
+      for (let _i=0;_i<4;_i++){
+        const _a = _i*Math.PI/2 + _t*0.4;
+        ctx.beginPath(); ctx.moveTo(bx+Math.cos(_a)*_s*0.6, by+Math.sin(_a)*_s*0.6);
+        ctx.lineTo(bx+Math.cos(_a)*_s*1.1, by+Math.sin(_a)*_s*1.1); ctx.stroke();
+      }
+    } else if (_cls === 'cracker') {
+      // 크래커: 조이스틱 + 해킹 커서 (회전 링 + 중앙 상향 벡터)
+      const _cr = (Date.now()*0.0014)%(Math.PI*2);
+      ctx.beginPath();
+      for (let _i=0;_i<8;_i++){
+        const _a = _cr + _i*Math.PI/4;
+        const _rd = _i%2===0 ? _s*0.9 : _s*0.55;
+        _i===0 ? ctx.moveTo(bx+Math.cos(_a)*_rd, by+Math.sin(_a)*_rd) : ctx.lineTo(bx+Math.cos(_a)*_rd, by+Math.sin(_a)*_rd);
+      }
+      ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(bx, by, _s*0.25, 0, Math.PI*2); ctx.fill();
+    } else if (_cls === 'glitch_dancer') {
+      // 글리치 댄서: 5각 별 (춤추듯 진동)
+      const _jt = Math.sin(Date.now()*0.008)*0.18;
+      ctx.beginPath();
+      for (let _i=0;_i<10;_i++){
+        const _a = _i*Math.PI/5 - Math.PI/2 + _jt;
+        const _rd = _i%2===0 ? _s*1.05 : _s*0.45;
+        _i===0 ? ctx.moveTo(bx+Math.cos(_a)*_rd, by+Math.sin(_a)*_rd) : ctx.lineTo(bx+Math.cos(_a)*_rd, by+Math.sin(_a)*_rd);
+      }
+      ctx.closePath(); ctx.fill();
+    } else if (_cls === 'parasite') {
+      // 패러사이트: 유기체 세포 (원 + 촉수 3개)
+      ctx.beginPath(); ctx.arc(bx, by, _s*0.55, 0, Math.PI*2); ctx.fill();
+      const _pt = Date.now()*0.0018;
+      for (let _i=0;_i<3;_i++){
+        const _a = _i*Math.PI*2/3 + _pt;
+        const _len = _s*(0.65 + 0.2*Math.sin(_pt*2+_i));
+        ctx.beginPath(); ctx.moveTo(bx+Math.cos(_a)*_s*0.55, by+Math.sin(_a)*_s*0.55);
+        ctx.lineTo(bx+Math.cos(_a)*(_s*0.55+_len), by+Math.sin(_a)*(_s*0.55+_len));
+        ctx.lineWidth=3; ctx.stroke(); ctx.lineWidth=2.5;
+      }
     } else {
       // 해커(default): 다이아몬드
       ctx.beginPath();

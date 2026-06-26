@@ -47,6 +47,37 @@ class FlareWeapon extends BaseWeapon {
       projectiles.push(new Projectile(this.owner.x, this.owner.y, Math.cos(sa)*speed, Math.sin(sa)*speed, damage, 4, '#00f0ff', pierce, 'flare'));
     }
   }
+  draw(ctx, camera) {
+    const cd  = this.level === 5 ? 950 : 1500;
+    const pct = Math.min(1, this.timer / cd);
+    if (pct < 0.12) return;
+    const col = this.level === 5 ? '#ff7700' : '#00f0ff';
+    const bx = this.owner.x - camera.x, by = this.owner.y - camera.y;
+    ctx.save();
+    ctx.globalAlpha = 0.45 + pct * 0.45;
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.shadowBlur = 8; ctx.shadowColor = col;
+    ctx.beginPath();
+    ctx.arc(bx, by, this.owner.radius + 5, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct);
+    ctx.stroke();
+    if (pct > 0.55) {
+      let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+      let target = null, minD = Infinity;
+      for (const e of allT) { const d = dist(this.owner.x, this.owner.y, e.x, e.y); if (d < minD) { minD = d; target = e; } }
+      if (target) {
+        const tx = target.x - camera.x, ty = target.y - camera.y;
+        const spin = Date.now() * 0.003;
+        ctx.globalAlpha = (pct - 0.55) / 0.45 * 0.75;
+        ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.shadowBlur = 10;
+        const rs = target.radius + 7;
+        for (let i = 0; i < 3; i++) {
+          const a = spin + i * Math.PI * 2 / 3;
+          ctx.beginPath(); ctx.arc(tx, ty, rs, a, a + Math.PI * 0.42); ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+  }
 }
 
 // 2. 사이버 오비터
@@ -232,6 +263,45 @@ class LaserWeapon extends BaseWeapon {
       projectiles.push(new BoomerangProjectile(this.owner.x, this.owner.y, Math.cos(angle-Math.PI/2)*spd, Math.sin(angle-Math.PI/2)*spd, bDmg, '#ff6600', this.owner));
     }
   }
+  draw(ctx, camera) {
+    const cd  = this.level >= 4 ? 2200 : this.level >= 2 ? 2900 : 3500;
+    const pct = Math.min(1, this.timer / cd);
+    if (pct < 0.18) return;
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    if (!allT.length) return;
+    let target = allT[0];
+    for (const e of allT) { if (dist(this.owner.x, this.owner.y, e.x, e.y) < dist(this.owner.x, this.owner.y, target.x, target.y)) target = e; }
+    const bx = this.owner.x - camera.x, by = this.owner.y - camera.y;
+    const angle = Math.atan2(target.y - this.owner.y, target.x - this.owner.x);
+    const range = Math.min(dist(this.owner.x, this.owner.y, target.x, target.y), 600);
+    const col = this.level === 5 ? '#ff0099' : '#ff3300';
+    ctx.save();
+    ctx.globalAlpha = (pct - 0.18) / 0.82 * 0.55;
+    ctx.strokeStyle = col; ctx.lineWidth = pct * (this.level >= 3 ? 5 : 2.5);
+    ctx.shadowBlur = 10 * pct; ctx.shadowColor = col;
+    ctx.setLineDash([7, 9]);
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx + Math.cos(angle) * range, by + Math.sin(angle) * range);
+    ctx.stroke(); ctx.setLineDash([]);
+    if (pct > 0.75) {
+      const tx = target.x - camera.x, ty = target.y - camera.y;
+      const a2 = (pct - 0.75) / 0.25;
+      ctx.globalAlpha = a2 * 0.7; ctx.lineWidth = 2;
+      const rs = target.radius + 8;
+      ctx.beginPath();
+      ctx.moveTo(tx - rs, ty - rs); ctx.lineTo(tx - rs + 8, ty - rs);
+      ctx.moveTo(tx - rs, ty - rs); ctx.lineTo(tx - rs, ty - rs + 8);
+      ctx.moveTo(tx + rs, ty - rs); ctx.lineTo(tx + rs - 8, ty - rs);
+      ctx.moveTo(tx + rs, ty - rs); ctx.lineTo(tx + rs, ty - rs + 8);
+      ctx.moveTo(tx - rs, ty + rs); ctx.lineTo(tx - rs + 8, ty + rs);
+      ctx.moveTo(tx - rs, ty + rs); ctx.lineTo(tx - rs, ty + rs - 8);
+      ctx.moveTo(tx + rs, ty + rs); ctx.lineTo(tx + rs - 8, ty + rs);
+      ctx.moveTo(tx + rs, ty + rs); ctx.lineTo(tx + rs, ty + rs - 8);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+  }
 }
 
 // 5. 사이버 부메랑
@@ -260,6 +330,29 @@ class BoomerangWeapon extends BaseWeapon {
       projectiles.push(new BoomerangProjectile(this.owner.x, this.owner.y, Math.cos(a) * speed, Math.sin(a) * speed, damage, '#ff00cc', this.owner));
     }
   }
+  draw(ctx, camera) {
+    const cd  = [2200, 2000, 1700, 1500, 1200][this.level-1] ?? 2200;
+    const pct = Math.min(1, this.timer / cd);
+    if (pct < 0.08) return;
+    const bx = this.owner.x - camera.x, by = this.owner.y - camera.y;
+    const col = '#ff00cc';
+    const spin = Date.now() * 0.004 * (0.5 + pct * 0.5);
+    ctx.save();
+    ctx.globalAlpha = pct * 0.72;
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.shadowBlur = 10; ctx.shadowColor = col;
+    const arc = Math.PI * (0.5 + pct * 1.1);
+    ctx.beginPath();
+    ctx.arc(bx, by, this.owner.radius + 5 + pct * 6, spin, spin + arc);
+    ctx.stroke();
+    if (this.level === 5) {
+      ctx.globalAlpha = pct * 0.45;
+      ctx.beginPath();
+      ctx.arc(bx, by, this.owner.radius + 5 + pct * 6, spin + Math.PI, spin + Math.PI + arc);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+  }
 }
 
 // 6. 데이터 드론
@@ -267,7 +360,7 @@ class DroneWeapon extends BaseWeapon {
   constructor(owner) { super(owner); this.angleOffset = 0; this.droneTimers = [0, 0, 0, 0, 0]; }
   update(dt) {
     const count  = ([1, 1, 2, 2, 3][this.level - 1] ?? 1) + (this.owner.classPassives?.dr_count || 0);
-    const fireCD = [2000, 1500, 1500, 1100, 900][this.level - 1] ?? 2000;
+    const fireCD = [1600, 1200, 1200, 900, 700][this.level - 1] ?? 1600;
     const radius = 115;
     this.angleOffset += 0.014 * (dt / 16.66);
     for (let i = 0; i < count; i++) {
@@ -278,14 +371,14 @@ class DroneWeapon extends BaseWeapon {
         const droneX = this.owner.x + Math.cos(angle) * radius;
         const droneY = this.owner.y + Math.sin(angle) * radius;
         let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
-        let nearest = null, minD = 350;
+        let nearest = null, minD = 450;
         for (let e of allT) {
           const d = dist(droneX, droneY, e.x, e.y);
           if (d < minD) { minD = d; nearest = e; }
         }
         if (nearest && projectiles.length < MAX_PROJECTILES) {
           const a     = Math.atan2(nearest.y - droneY, nearest.x - droneX);
-          const dmgB  = [12, 16, 20, 30, 45][this.level - 1] ?? 12;
+          const dmgB  = [18, 24, 30, 44, 65][this.level - 1] ?? 18;
           const droneMult = 1 + (this.owner.classPassives?.dr_dmg || 0) * 0.30;
           const dmg   = dmgB * this.owner.damageMultiplier * droneMult;
           const shots = this.level === 5 ? 3 : 1;
@@ -306,7 +399,7 @@ class DroneWeapon extends BaseWeapon {
     }
   }
   draw(ctx, camera) {
-    const count  = [1, 1, 2, 2, 3][this.level - 1] ?? 1;
+    const count  = ([1, 1, 2, 2, 3][this.level - 1] ?? 1) + (this.owner.classPassives?.dr_count || 0);
     const radius = 115;
     const color  = this.level === 5 ? '#ff6600' : '#ff8800';
     ctx.save();
@@ -371,8 +464,33 @@ class MissileWeapon extends BaseWeapon {
     }
   }
   draw(ctx, camera) {
-    if (this.level === 0) return;
-    // 사거리 표시 없음 — 유도탄이라 범위 없음
+    const cds = [3000, 2500, 2500, 2200, 1800];
+    const cd  = cds[Math.min(this.level - 1, cds.length - 1)];
+    const pct = Math.min(1, this.timer / cd);
+    if (pct < 0.2) return;
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    if (!allT.length) return;
+    let target = allT[0];
+    for (const e of allT) { if (dist(this.owner.x, this.owner.y, e.x, e.y) < dist(this.owner.x, this.owner.y, target.x, target.y)) target = e; }
+    const tx = target.x - camera.x, ty = target.y - camera.y;
+    const col = this.level === 5 ? '#ffaa00' : '#ff6600';
+    const blink = pct >= 0.88 && (Math.floor(Date.now() / 180) % 2 === 0);
+    ctx.save();
+    ctx.globalAlpha = 0.35 + pct * 0.55;
+    ctx.strokeStyle = blink ? '#ffffff' : col;
+    ctx.lineWidth = 2; ctx.shadowBlur = 12; ctx.shadowColor = col;
+    const rs = target.radius + 10, br = 9;
+    for (const [ex, ey, sx, sy] of [[tx-rs,ty-rs,1,1],[tx+rs,ty-rs,-1,1],[tx-rs,ty+rs,1,-1],[tx+rs,ty+rs,-1,-1]]) {
+      ctx.beginPath();
+      ctx.moveTo(ex+sx*br, ey); ctx.lineTo(ex, ey); ctx.lineTo(ex, ey+sy*br);
+      ctx.stroke();
+    }
+    const bx = this.owner.x - camera.x, by = this.owner.y - camera.y;
+    ctx.globalAlpha = pct * 0.38;
+    ctx.lineWidth = 1.2; ctx.setLineDash([5, 8]);
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1; ctx.restore();
   }
 }
 
@@ -455,8 +573,24 @@ class RingWeapon extends BaseWeapon {
 // ============================================================
 // 7c. 바이러스 체인
 // ============================================================
+// 체인 번개 지그재그 경로 생성 (fire()에서 미리 계산, draw()에서 재사용)
+function _makeZigzag(x1, y1, x2, y2, segs, spread) {
+  const pts  = [{ x: x1, y: y1 }];
+  const ang  = Math.atan2(y2 - y1, x2 - x1);
+  const perp = ang + Math.PI / 2;
+  for (let i = 1; i < segs; i++) {
+    const t  = i / segs;
+    const mx = x1 + (x2 - x1) * t;
+    const my = y1 + (y2 - y1) * t;
+    const off = (Math.random() - 0.5) * spread * 2;
+    pts.push({ x: mx + Math.cos(perp) * off, y: my + Math.sin(perp) * off });
+  }
+  pts.push({ x: x2, y: y2 });
+  return pts;
+}
+
 class ChainWeapon extends BaseWeapon {
-  constructor(owner) { super(owner); }
+  constructor(owner) { super(owner); this._chainVis = null; }
   update(dt) {
     this.timer += dt;
     const cds = [2200, 1900, 1900, 1600, 1200];
@@ -513,6 +647,48 @@ class ChainWeapon extends BaseWeapon {
       }
     }
     addFloatingText(nearest.x, nearest.y - nearest.radius - 12, `⚡×${hit.length}`, '#00f0ff', 10);
+
+    // 체인 번개 시각 — 적 간 아크 경로 미리 계산
+    if (hit.length >= 2) {
+      const spread = this.level >= 3 ? 38 : 28;
+      const segs   = this.level >= 4 ? 9  : 6;
+      const arcs   = [];
+      for (let i = 0; i < hit.length - 1; i++) {
+        arcs.push(_makeZigzag(hit[i].x, hit[i].y, hit[i+1].x, hit[i+1].y, segs, spread));
+      }
+      this._chainVis = { arcs, end: Date.now() + 480, level: this.level };
+    }
+  }
+  draw(ctx, camera) {
+    if (!this._chainVis || Date.now() > this._chainVis.end) return;
+    const fade  = Math.min(1, (this._chainVis.end - Date.now()) / 180);
+    const isEvo = this._chainVis.level === 5;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    // 외곽선 (두꺼운 글로우)
+    ctx.strokeStyle = isEvo ? '#ff66ff' : '#44ddff';
+    ctx.shadowColor = isEvo ? '#ff66ff' : '#00f0ff';
+    ctx.shadowBlur  = 22;
+    ctx.lineWidth   = 3.5;
+    ctx.lineCap     = 'round';
+    for (const pts of this._chainVis.arcs) {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x - camera.x, pts[0].y - camera.y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x - camera.x, pts[i].y - camera.y);
+      ctx.stroke();
+    }
+    // 내부선 (흰 코어)
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowBlur  = 0;
+    ctx.lineWidth   = 1.5;
+    for (const pts of this._chainVis.arcs) {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x - camera.x, pts[0].y - camera.y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x - camera.x, pts[i].y - camera.y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 }
 
@@ -748,5 +924,468 @@ class BlackHoleWeapon extends BaseWeapon {
     playSynthSound([60, 30], 0.22, 'sawtooth', 0.1);
     triggerScreenShake(5, 300);
     addFloatingText(this.owner.x, this.owner.y - 30, '🌑 블랙홀 생성!', '#b026ff', 11);
+  }
+}
+
+// ============================================================
+// 신규 무기 A — 커맨드 댄서
+// ============================================================
+class CommandDanceWeapon extends BaseWeapon {
+  constructor(owner) {
+    super(owner);
+    this._seq      = [];
+    this._progress = 0;
+    this._prev     = { up:false, down:false, left:false, right:false };
+    this._displayTimer = 0;
+    this._cooldown = 0;
+  }
+  _genSeq() {
+    const dirs = ['up','down','left','right'];
+    const len  = [2,2,3,4,5][Math.min(this.level-1,4)];
+    this._seq = [];
+    for (let i = 0; i < len; i++) this._seq.push(dirs[Math.floor(Math.random()*4)]);
+    this._progress = 0;
+    this._displayTimer = 6000;
+  }
+  update(dt) {
+    if (player?._gdBurstTimer > 0) this._cooldown = 0;
+    if (this._cooldown > 0) { this._cooldown -= dt; return; }
+    if (this._seq.length === 0) { this._genSeq(); return; }
+    if (this._displayTimer > 0) this._displayTimer -= dt;
+    // 방향 상태
+    const cur = {
+      up:    !!(keys['w']||keys['W']||keys['ArrowUp'])    || (isTouching && touchDY < -0.35),
+      down:  !!(keys['s']||keys['S']||keys['ArrowDown'])  || (isTouching && touchDY > 0.35),
+      left:  !!(keys['a']||keys['A']||keys['ArrowLeft'])  || (isTouching && touchDX < -0.35),
+      right: !!(keys['d']||keys['D']||keys['ArrowRight']) || (isTouching && touchDX > 0.35),
+    };
+    for (const dir of ['up','down','left','right']) {
+      if (cur[dir] && !this._prev[dir]) {
+        if (dir === this._seq[this._progress]) {
+          this._progress++;
+          playSynthSound([400 + this._progress*100], 0.07, 'sine', 0.03);
+          if (this._progress >= this._seq.length) {
+            this._triggerDance();
+            this._seq = [];
+            this._cooldown = 3200;
+          }
+        } else {
+          this._progress = 0;
+          playSynthSound([200], 0.05, 'square', 0.02);
+        }
+        break;
+      }
+    }
+    this._prev = { ...cur };
+  }
+  _triggerDance() {
+    if (!player) return;
+    const lvl = this.level;
+    const radius = [200,240,270,300,340][lvl-1] ?? 200;
+    const dmg    = ([350,380,430,470,540][lvl-1] ?? 350) * this.owner.damageMultiplier;
+    createExplosionParticles(this.owner.x, this.owner.y, '#ff88ff', Math.min(22, MAX_PARTICLES - particles.length));
+    triggerScreenShake(8, 320);
+    playSynthSound([600,900,1200,800], 0.18, 'triangle', 0.09);
+    addFloatingText(this.owner.x, this.owner.y - 65, '💃 댄스!', '#ff88ff', 15);
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    const chainTargets = [];
+    for (const e of allT) {
+      if (dist(this.owner.x, this.owner.y, e.x, e.y) < radius) {
+        if (e === activeBoss) activeBoss.takeDamage(Math.floor(dmg * 0.45), 'command_dance');
+        else { if (e.takeDamage(dmg, 'command_dance')) { killCount++; stageKillProgress++; } if (lvl >= 3) chainTargets.push(e); }
+      }
+    }
+    if (lvl >= 3) {
+      for (let i = 0; i < Math.min(2, chainTargets.length); i++) {
+        const ct = chainTargets[i];
+        if (ct && ct.hp > 0) { if (ct.takeDamage(Math.floor(dmg * 0.3), 'command_dance')) { killCount++; stageKillProgress++; } }
+      }
+    }
+    if (lvl >= 4) this.owner.hp = Math.min(this.owner.hp + 5, this.owner.maxHp);
+    if (player.fusions?.dance_master) {
+      for (let i = 0; i < 8; i++) {
+        const a = (i/8)*Math.PI*2;
+        if (projectiles.length < MAX_PROJECTILES)
+          projectiles.push(new Projectile(this.owner.x, this.owner.y, Math.cos(a)*7, Math.sin(a)*7, dmg*0.55, 8, '#ff88ff', 2, 'command_dance'));
+      }
+    }
+    checkStageProgress();
+  }
+  draw(ctx, camera) {
+    if (!player) return;
+    const bx = this.owner.x - camera.x;
+    const by = this.owner.y - camera.y;
+    ctx.save();
+    // 쿨다운 중: 링 표시
+    if (this._cooldown > 0) {
+      const cdMax = 3200;
+      const pct   = 1 - this._cooldown / cdMax;
+      ctx.strokeStyle = '#ff88ff'; ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 8; ctx.shadowColor = '#ff88ff';
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.arc(bx, by, this.owner.radius + 6, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct);
+      ctx.stroke();
+      ctx.globalAlpha = 1; ctx.restore();
+      return;
+    }
+    // 시퀀스 표시
+    if (this._seq.length === 0) { ctx.restore(); return; }
+    const ICONS = { up:'↑', down:'↓', left:'←', right:'→' };
+    const arrowY = by - this.owner.radius - 28;
+    const w = this._seq.length * 22;
+    // 배경 패널
+    ctx.fillStyle = 'rgba(0,0,0,0.52)';
+    ctx.beginPath();
+    const rx = bx - w/2 - 4, ry = arrowY - 15;
+    ctx.roundRect(rx, ry, w + 8, 20, 3);
+    ctx.fill();
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < this._seq.length; i++) {
+      const x = bx - w/2 + i*22 + 11;
+      if (i < this._progress) {
+        ctx.shadowBlur = 12; ctx.shadowColor = '#ff88ff';
+        ctx.fillStyle = '#ff88ff';
+      } else if (i === this._progress) {
+        ctx.shadowBlur = 18; ctx.shadowColor = '#ffffff';
+        ctx.fillStyle = '#ffffff';
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#aaaaaa';
+      }
+      ctx.fillText(ICONS[this._seq[i]], x, arrowY);
+    }
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// 신규 무기 B — 에코 레코더
+// ============================================================
+class EchoRecordWeapon extends BaseWeapon {
+  constructor(owner) {
+    super(owner);
+    this._snaps    = [];   // {x, y, angle}
+    this._snapT    = 0;
+    this._echoes   = [];   // {snaps, idx, t, atkT}
+    this._cd       = 0;
+  }
+  update(dt) {
+    // 스냅샷 기록 (100ms마다)
+    if (player) {
+      this._snapT += dt;
+      if (this._snapT >= 100) {
+        this._snapT = 0;
+        const maxS = [30,30,40,40,50][Math.min(this.level-1,4)];
+        this._snaps.push({ x:player.x, y:player.y, angle:player._moveAngle||0 });
+        if (this._snaps.length > maxS) this._snaps.shift();
+      }
+    }
+    // 쿨다운
+    const cdBase = [18000,16000,14000,12000,10000][Math.min(this.level-1,4)];
+    this._cd += dt;
+    if (this._cd >= cdBase && this._snaps.length >= 8) {
+      this._cd = 0;
+      const maxE = [1,1,1,2,3][Math.min(this.level-1,4)];
+      if (this._echoes.length < maxE) {
+        this._echoes.push({ snaps:[...this._snaps], idx:0, t:0, atkT:0 });
+        addFloatingText(player.x, player.y - 70, '🔄 에코!', '#88ffff', 13);
+        playSynthSound([600,400,800], 0.11, 'sine', 0.05);
+      }
+    }
+    // 에코 재생
+    const dmMult = [1.0,1.4,1.4,1.8,2.0][Math.min(this.level-1,4)];
+    for (let i = this._echoes.length - 1; i >= 0; i--) {
+      const ec = this._echoes[i];
+      ec.t   += dt; ec.atkT += dt;
+      if (ec.t >= 100) { ec.t -= 100; ec.idx++; }
+      if (ec.idx >= ec.snaps.length) { this._echoes.splice(i, 1); continue; }
+      if (ec.atkT >= 800 && projectiles.length < MAX_PROJECTILES) {
+        ec.atkT = 0;
+        const sn  = ec.snaps[ec.idx];
+        const dmg = 55 * this.owner.damageMultiplier * dmMult;
+        const a   = sn.angle || 0;
+        projectiles.push(new Projectile(sn.x, sn.y, Math.cos(a)*7, Math.sin(a)*7, dmg, 5, '#88ffff', 1, 'echo_record'));
+      }
+    }
+  }
+  draw(ctx, camera) {
+    for (const ec of this._echoes) {
+      if (ec.idx >= ec.snaps.length) continue;
+      const sn = ec.snaps[ec.idx];
+      const bx = sn.x - camera.x, by = sn.y - camera.y;
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.shadowBlur = 14; ctx.shadowColor = '#88ffff';
+      ctx.strokeStyle = '#88ffff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(bx, by, 11, 0, Math.PI*2); ctx.stroke();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = '#88ffff';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+// ============================================================
+// 신규 무기 C — 바이러스 증식
+// ============================================================
+class ViralBombWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); }
+  draw(ctx, camera) {
+    if (!player) return;
+    const infected = enemies.filter(e => e._infected && e._infectTimer > 0 && !e.dead);
+    if (!infected.length) return;
+    const bx = this.owner.x - camera.x, by = this.owner.y - camera.y;
+    ctx.save();
+    for (const e of infected) {
+      const tx = e.x - camera.x, ty = e.y - camera.y;
+      const fade = Math.min(1, e._infectTimer / 1500);
+      ctx.globalAlpha = fade * 0.4 * (0.6 + 0.4 * Math.sin(Date.now() * 0.006));
+      ctx.strokeStyle = '#33ff33'; ctx.lineWidth = 1;
+      ctx.shadowBlur = 6; ctx.shadowColor = '#33ff33';
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.setLineDash([]);
+      // 감염 잔여 링
+      const pct = e._infectTimer / 4000;
+      ctx.globalAlpha = fade * 0.7;
+      ctx.strokeStyle = '#33ff33'; ctx.lineWidth = 2;
+      ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(tx, ty, e.radius + 5, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+  update(dt) {
+    this.timer += dt;
+    const cd = [4500,4000,3800,3500,3000][Math.min(this.level-1,4)];
+    if (this.timer >= cd) { this.timer = 0; this._fire(); }
+  }
+  _fire() {
+    if (!player) return;
+    const lvl  = this.level;
+    const maxI = [10,10,12,14,15][lvl-1] ?? 10;
+    const cur  = enemies.filter(e => e._infected).length;
+    if (cur >= maxI) return;
+    let target = null, minD = 800;
+    for (const e of enemies) {
+      if (e._infected) continue;
+      const d = dist(player.x, player.y, e.x, e.y);
+      if (d < minD) { minD = d; target = e; }
+    }
+    if (!target) return;
+    const dmg   = [130,155,195,225,270][lvl-1] * this.owner.damageMultiplier;
+    const chain = [0,0,1,1,2][lvl-1] ?? 0;
+    target._infected    = true;
+    target._infectTimer = 4000;
+    target._infectChain = chain;
+    target._infectDmg   = dmg;
+    addFloatingText(target.x, target.y - 35, '🦠 감염!', '#33ff33', 12);
+    playSynthSound([200,150,80], 0.10, 'sawtooth', 0.05);
+    // 시각용 투사체 (0 데미지, 빠름)
+    if (projectiles.length < MAX_PROJECTILES) {
+      const a = Math.atan2(target.y - player.y, target.x - player.x);
+      projectiles.push(new Projectile(player.x, player.y, Math.cos(a)*14, Math.sin(a)*14, 0, 6, '#33ff33', 1, 'visual'));
+    }
+  }
+}
+
+// ============================================================
+// 신규 무기 D — 공명 증폭기
+// ============================================================
+class ResonanceWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); this._visTarget = null; this._visTimer = 0; }
+  update(dt) {
+    if (this._visTimer > 0) this._visTimer -= dt;
+    this.timer += dt;
+    const cd = [900,800,750,700,600][Math.min(this.level-1,4)];
+    if (this.timer >= cd) { this.timer = 0; this._fire(); }
+  }
+  _fire() {
+    if (!player) return;
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    if (!allT.length) return;
+    const target = allT.reduce((best, e) => {
+      const sB = (best._resStack||0)*500 - dist(player.x,player.y,best.x,best.y);
+      const sE = (e._resStack||0)*500    - dist(player.x,player.y,e.x,   e.y);
+      return sE > sB ? e : best;
+    }, allT[0]);
+    const a   = Math.atan2(target.y - player.y, target.x - player.x);
+    const dmg = [18,22,28,34,40][Math.min(this.level-1,4)] * this.owner.damageMultiplier;
+    if (projectiles.length < MAX_PROJECTILES)
+      projectiles.push(new Projectile(player.x, player.y, Math.cos(a)*9.5, Math.sin(a)*9.5, dmg, 5, '#ffaa00', 1, 'resonance'));
+    this._visTarget = target;
+    this._visTimer  = 200;
+    if (Math.random() < 0.25) playSynthSound([440,660], 0.04, 'sine', 0.02);
+  }
+  draw(ctx, camera) {
+    if (!player) return;
+    const bx = this.owner.x - camera.x, by = this.owner.y - camera.y;
+    const pct  = Math.min(1, this.timer / ([900,800,750,700,600][Math.min(this.level-1,4)] || 900));
+    const col  = this.level >= 4 ? '#ff8800' : '#ffaa00';
+    ctx.save();
+    // 충전 호 (타이머 기반)
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.shadowBlur = 10; ctx.shadowColor = col;
+    ctx.globalAlpha = 0.65;
+    ctx.beginPath();
+    ctx.arc(bx, by, this.owner.radius + 10, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct);
+    ctx.stroke();
+    // 조준 선 (발사 직후 잠깐)
+    if (this._visTimer > 0 && this._visTarget && !this._visTarget.dead) {
+      const fade = this._visTimer / 200;
+      ctx.globalAlpha = fade * 0.6;
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(this._visTarget.x - camera.x, this._visTarget.y - camera.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// 신규 무기 E — 해킹 이식기
+// ============================================================
+class HackGunWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); this._lineTarget = null; this._lineTimer = 0; }
+  update(dt) {
+    this.timer += dt;
+    if (this._lineTimer > 0) this._lineTimer -= dt;
+    const cd = [5000,4500,4000,3500,3000][Math.min(this.level-1,4)];
+    if (this.timer >= cd) { this.timer = 0; this._fire(); }
+  }
+  _fire() {
+    if (!player || !enemies.length) return;
+    const lvl  = this.level;
+    const maxH = [1,1,2,2,3][lvl-1] ?? 1;
+    if (enemies.filter(e => e._hacked).length >= maxH) return;
+    const target = [...enemies].filter(e => !e._hacked).sort((a,b) => b.hp - a.hp)[0];
+    if (!target) return;
+    const zombieLvl = player.classPassives?.ck_zombie || 0;
+    const dur  = ([8000,12000,12000,16000,20000][lvl-1] ?? 8000) + (zombieLvl >= 2 ? 5000 : zombieLvl >= 1 ? 3000 : 0);
+    const expl = [0,0,0,200,260][lvl-1] ?? 0;
+    target._hacked      = true;
+    target._hackTimer   = dur;
+    target._hackDmgTimer= 0;
+    target._hackExplosion = expl;
+    addFloatingText(target.x, target.y - 40, '💻 해킹!', '#00ccff', 13);
+    playSynthSound([1000,600,300], 0.13, 'square', 0.06);
+    this._lineTarget = target;
+    this._lineTimer  = 600;
+    // 바이러스 장악 진화: 해킹 종료 시 주변 1체 연쇄 → 처리는 enemies.js hackTimer=0 블록에서
+    // flag 전달
+    target._hackEvolved = !!(player.fusions?.virus_takeover);
+  }
+  draw(ctx, camera) {
+    if (!player) return;
+    const bx = this.owner.x - camera.x, by = this.owner.y - camera.y;
+    ctx.save();
+    // 해킹 중인 적 전체에 연결선 (지속 표시)
+    const hacked = enemies.filter(e => e._hacked && !e.dead);
+    for (const t of hacked) {
+      const tx = t.x - camera.x, ty = t.y - camera.y;
+      const pulse = 0.35 + 0.25 * Math.sin(Date.now() * 0.008);
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = '#00ccff'; ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 8; ctx.shadowColor = '#00ccff';
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.setLineDash([]);
+      // 해킹 잔여 시간 고리
+      const hackPct = Math.max(0, (t._hackTimer || 0) / 20000);
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = '#00ccff'; ctx.lineWidth = 2;
+      ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(tx, ty, t.radius + 6, -Math.PI/2, -Math.PI/2 + Math.PI*2*hackPct); ctx.stroke();
+    }
+    // 발사 직후 강조선
+    if (this._lineTimer > 0 && this._lineTarget && !this._lineTarget.dead) {
+      ctx.globalAlpha = this._lineTimer / 600;
+      ctx.strokeStyle = '#88eeff'; ctx.lineWidth = 3;
+      ctx.shadowBlur = 18; ctx.shadowColor = '#00ccff';
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(this._lineTarget.x - camera.x, this._lineTarget.y - camera.y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// 신규 무기 F — 오버차지 컨덴서
+// ============================================================
+class OverchargeWeapon extends BaseWeapon {
+  constructor(owner) { super(owner); this.charge = 0; }
+  update(dt) {
+    const rate = [20,26,26,32,40][Math.min(this.level-1,4)];
+    this.charge += rate * (dt/1000);
+    const safe = this.level >= 4;
+    if (this.charge >= 200) {
+      this._discharge(!safe); // 과충전: 역폭발 (Lv4+ 면 안전)
+      this.charge = 0;
+      return;
+    }
+    if (this.charge >= 100) {
+      // 근처 적이 있으면 방전
+      const inRange = enemies.some(e => player && dist(player.x,player.y,e.x,e.y) < 380) ||
+                      (activeBoss && player && dist(player.x,player.y,activeBoss.x,activeBoss.y) < 380);
+      if (inRange) { this._discharge(false); this.charge = 0; }
+    }
+  }
+  _discharge(penalty) {
+    if (!player) return;
+    const lvl    = this.level;
+    const radius = [180,200,240,280,320][lvl-1] ?? 180;
+    const base   = [300,360,420,500,580][lvl-1] ?? 300;
+    const dmg    = Math.floor(base * (Math.min(this.charge,200)/100) * this.owner.damageMultiplier);
+    createExplosionParticles(this.owner.x, this.owner.y, '#ffff00', Math.min(18, MAX_PARTICLES - particles.length));
+    triggerScreenShake(penalty ? 12 : 7, 380);
+    playSynthSound([100,200,500,1000], 0.19, 'sawtooth', 0.10);
+    addFloatingText(this.owner.x, this.owner.y - 65,
+      penalty ? '⚡ 역폭발!' : `⚡ 방전 ${Math.floor(this.charge)}%`,
+      penalty ? '#ff4466' : '#ffff00', 14);
+    let allT = [...enemies]; if (activeBoss) allT.push(activeBoss);
+    const chainHit = [];
+    for (const e of allT) {
+      if (dist(this.owner.x, this.owner.y, e.x, e.y) < radius) {
+        if (e === activeBoss) activeBoss.takeDamage(Math.floor(dmg*0.4), 'overcharge');
+        else { if (e.takeDamage(dmg, 'overcharge')) { killCount++; stageKillProgress++; } chainHit.push(e); }
+      }
+    }
+    if (penalty) this.owner.takeDamage(18);
+    if (player.fusions?.critical_discharge && chainHit.length > 0) {
+      for (let i = 0; i < Math.min(4, chainHit.length); i++) {
+        const ct = chainHit[i];
+        if (ct && ct.hp > 0) {
+          createExplosionParticles(ct.x, ct.y, '#ffff00', 4);
+          if (ct.takeDamage(Math.floor(dmg*0.4), 'overcharge')) { killCount++; stageKillProgress++; }
+        }
+      }
+    }
+    checkStageProgress();
+  }
+  draw(ctx, camera) {
+    if (!player || this.charge < 8) return;
+    const bx  = this.owner.x - camera.x, by = this.owner.y - camera.y;
+    const pct = Math.min(this.charge, 200) / 200;
+    const col = this.charge >= 160 ? '#ff4466' : this.charge >= 100 ? '#ffaa00' : '#ffff00';
+    ctx.save();
+    ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 12; ctx.shadowColor = col;
+    ctx.globalAlpha = 0.72;
+    ctx.beginPath();
+    ctx.arc(bx, by, this.owner.radius + 8, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct);
+    ctx.stroke();
+    ctx.restore();
   }
 }
