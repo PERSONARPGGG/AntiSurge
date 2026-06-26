@@ -498,14 +498,16 @@ function draw(dt) {
     ctx.restore();
   }
 
-  // PC 전용: 플레이어 머리 위 HP 바
-  if (player && window.innerWidth > 768) {
+  // 플레이어 머리 위 HP 바 (PC + 모바일 공통)
+  if (player) {
     const sx = player.x - camera.x;
     const sy = player.y - camera.y;
-    const BAR_W = 56, BAR_H = 6;
+    const isMob = window.innerWidth <= 768;
+    const BAR_W = isMob ? 48 : 56;
+    const BAR_H = isMob ? 5  : 6;
     const ratio = Math.max(0, player.hp / player.maxHp);
     const bx = sx - BAR_W / 2;
-    const by = sy - player.radius - 18;
+    const by = sy - player.radius - (isMob ? 14 : 18);
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.72)';
     ctx.fillRect(bx - 1, by - 1, BAR_W + 2, BAR_H + 2);
@@ -515,10 +517,10 @@ function draw(dt) {
     ctx.fillStyle   = hpCol;
     ctx.fillRect(bx, by, BAR_W * ratio, BAR_H);
     ctx.shadowBlur  = 0;
-    ctx.font        = 'bold 8px Orbitron, monospace';
+    ctx.font        = `bold ${isMob ? 7 : 8}px Orbitron, monospace`;
     ctx.textAlign   = 'center';
     ctx.fillStyle   = 'rgba(210,230,255,0.88)';
-    ctx.fillText(`${Math.ceil(player.hp)} / ${player.maxHp}`, sx, by - 3);
+    ctx.fillText(`${Math.ceil(player.hp)} / ${player.maxHp}`, sx, by - 2);
     ctx.restore();
   }
 
@@ -677,7 +679,7 @@ function drawMinimap(ctx) {
   const SIZE  = isPC ? 160 : 110;
   const PAD   = 12;
   const mx    = canvas.width  - SIZE - PAD;
-  const my    = isPC ? 182 : (canvas.height - SIZE - PAD);
+  const my    = isPC ? 182 : (PAD + 62); // 모바일: HUD 아래 우상단
   const scaleX = SIZE / MAP_WIDTH;
   const scaleY = SIZE / MAP_HEIGHT;
 

@@ -1640,9 +1640,23 @@ body {
 .mission-card.mission-done .mission-progress { color: #39ff14; }
 .mission-check { color: #39ff14; margin-left: 3px; }
 
-/* 모바일 — 미션 패널 숨김 */
+/* 모바일 — 미션 패널: 왼쪽 상단 표시 */
 @media screen and (max-width: 600px) {
-  .mission-panel { display: none !important; }
+  .mission-panel {
+    display: block;
+    left: max(env(safe-area-inset-left, 0px), 8px);
+    right: auto;
+    top: 68px;
+    width: 150px;
+    padding: 5px 7px;
+    border: 1px solid rgba(0,240,255,0.18);
+  }
+  .mission-panel-title { font-size: 0.42rem; letter-spacing: 1.5px; margin-bottom: 3px; }
+  .mission-name     { font-size: 0.42rem; }
+  .mission-desc     { font-size: 0.34rem; margin-bottom: 2px; }
+  .mission-bar-wrap { height: 2px; margin-bottom: 1px; }
+  .mission-progress { font-size: 0.34rem; }
+  .mission-card     { padding: 3px 0; }
 }
 
 /* 잠긴 클래스 카드 */
@@ -2478,8 +2492,8 @@ body {
 /* 스킬 버튼 — 좌하단 (미래 버튼 추가 고려: 위로 스택) */
 .mobile-skill-btn {
   position: absolute;
-  right: max(calc(env(safe-area-inset-right) + 128px), 128px);
-  bottom: max(90px, calc(70px + env(safe-area-inset-bottom)));
+  left: max(env(safe-area-inset-left, 0px), 16px);
+  bottom: max(36px, calc(20px + env(safe-area-inset-bottom)));
   width: 72px;
   height: 72px;
   border-radius: 50%;
