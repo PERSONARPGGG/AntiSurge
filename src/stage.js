@@ -808,7 +808,7 @@ function renderMetaGrid() {
   const grid = document.getElementById('meta-upgrade-grid');
   const disp = document.getElementById('meta-cores-display');
   if (!grid) return;
-  if (disp) disp.textContent = `💾 보유 데이터 코어: ${saveData.dataCores}`;
+  if (disp) disp.textContent = `${typeof t !== 'undefined' ? t('meta.cores') : '💾 보유 데이터 코어: '}${saveData.dataCores}`;
   grid.innerHTML = '';
   for (const upg of META_UPGRADES) {
     const lvl   = saveData.metaLevels[upg.id] || 0;
@@ -818,12 +818,15 @@ function renderMetaGrid() {
     const stars  = '★'.repeat(lvl) + '☆'.repeat(upg.maxLevel - lvl);
     const card = document.createElement('div');
     card.className = `meta-card${maxed ? ' meta-maxed' : ''}`;
+    const metaName = (typeof tGame !== 'undefined' ? tGame('meta', upg.id, 'name') : null) || upg.name;
+    const metaDesc = maxed ? null : ((typeof tGame !== 'undefined' ? tGame('meta', upg.id, 'desc', lvl) : null) || upg.desc[lvl]);
+    const maxedLabel = (typeof LANG !== 'undefined' && LANG === 'en') ? '✓ MAXED' : '✓ 최대 강화';
     card.innerHTML = `
       <div class="meta-icon">${upg.icon}</div>
       <div class="meta-info">
-        <div class="meta-name">${upg.name}</div>
+        <div class="meta-name">${metaName}</div>
         <div class="meta-stars">${stars}</div>
-        <div class="meta-effect">${maxed ? '✓ 최대 강화' : upg.desc[lvl]}</div>
+        <div class="meta-effect">${maxed ? maxedLabel : metaDesc}</div>
       </div>
       <button class="meta-buy-btn${canBuy ? '' : ' meta-buy-disabled'}"${canBuy ? '' : ' disabled'}>
         ${maxed ? 'MAX' : `💾${cost}`}

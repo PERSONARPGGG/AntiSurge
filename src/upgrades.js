@@ -162,30 +162,73 @@ function renderUpgradeCards(choices) {
 
     card.className = `upgrade-card ${baseClass} rarity-${choice.rarity || 'common'}`;
 
-    let tagText  = '신규 무기';
-    if      (choice.type === 'fusion')                                tagText = '🔮 무기 융합';
-    else if (choice.type === 'revival')                               tagText = '💀 에픽 부활';
-    else if (choice.type === 'class_passive' && !choice.isUpgrade)    tagText = '⭐ 클래스 전용';
-    else if (choice.type === 'class_passive' && choice.isUpgrade)     tagText = `⭐ 클래스 Lv${choice.nextLevel}`;
-    else if (choice.type === 'stat')                                   tagText = '시스템 강화';
-    else if (choice.type === 'passive' && !choice.isUpgrade)          tagText = '패시브 신규';
-    else if (choice.type === 'passive' && choice.isUpgrade)           tagText = `패시브 Lv${choice.nextLevel}`;
-    else if (choice.isUpgrade)                                        tagText = `업그레이드 Lv.${choice.nextLevel}`;
-    else if (choice.type === 'legendary')                             tagText = '⭐ 전설';
+    // i18n: tag text
+    let tagText  = t('card.tag.new_weapon');
+    if      (choice.type === 'fusion')                                tagText = t('card.tag.fusion');
+    else if (choice.type === 'revival')                               tagText = t('card.tag.revival');
+    else if (choice.type === 'class_passive' && !choice.isUpgrade)    tagText = t('card.tag.class_new');
+    else if (choice.type === 'class_passive' && choice.isUpgrade)     tagText = `⭐ ${LANG === 'en' ? 'Class' : '클래스'} Lv${choice.nextLevel}`;
+    else if (choice.type === 'stat')                                   tagText = t('card.tag.stat');
+    else if (choice.type === 'passive' && !choice.isUpgrade)          tagText = t('card.tag.passive_new');
+    else if (choice.type === 'passive' && choice.isUpgrade)           tagText = `${LANG === 'en' ? 'Passive' : '패시브'} Lv${choice.nextLevel}`;
+    else if (choice.isUpgrade)                                        tagText = `${LANG === 'en' ? 'Upgrade' : '업그레이드'} Lv.${choice.nextLevel}`;
+    else if (choice.type === 'legendary')                             tagText = t('card.tag.legendary');
 
+    // i18n: localized name
+    let cardName = choice.name;
+    if (choice.type === 'weapon' && choice.key)
+      cardName = tGame('weapons', choice.key, 'name') || choice.name;
+    else if (choice.type === 'stat' && choice.id)
+      cardName = tGame('stats', choice.id, 'name') || choice.name;
+    else if (choice.type === 'passive' && choice.key)
+      cardName = tGame('passives', choice.key, 'name') || choice.name;
+    else if (choice.type === 'class_passive' && choice.key)
+      cardName = tGame('class_passives', choice.key, 'name') || choice.name;
+    else if (choice.type === 'fusion' && choice.id)
+      cardName = tGame('fusions', choice.id, 'name') || choice.name;
+    else if (choice.type === 'legendary' && choice.id)
+      cardName = tGame('legendaries', choice.id, 'name') || choice.name;
+    else if (choice.type === 'revival' && choice.id)
+      cardName = tGame('revivals', choice.id, 'name') || choice.name;
+
+    // i18n: localized description
     let descText = choice.desc;
-    if (choice.rarityMult > 1.0 && choice.type === 'stat') {
-      descText += ` <span style="color:${rd.color}">[${rd.name}: 효과 x${choice.rarityMult}]</span>`;
+    if (choice.type === 'weapon' && choice.key) {
+      const lvlIdx = (choice.nextLevel || 1) - 1;
+      descText = tGame('weapons', choice.key, 'desc', lvlIdx) || choice.desc;
+    } else if (choice.type === 'stat' && choice.id) {
+      descText = tGame('stats', choice.id, 'desc') || choice.desc;
+    } else if (choice.type === 'passive' && choice.key) {
+      const lvlIdx = (choice.nextLevel || 1) - 1;
+      descText = tGame('passives', choice.key, 'desc', lvlIdx) || choice.desc;
+    } else if (choice.type === 'class_passive' && choice.key) {
+      const lvlIdx = (choice.nextLevel || 1) - 1;
+      descText = tGame('class_passives', choice.key, 'desc', lvlIdx) || choice.desc;
+    } else if (choice.type === 'fusion' && choice.id) {
+      descText = tGame('fusions', choice.id, 'desc') || choice.desc;
+    } else if (choice.type === 'legendary' && choice.id) {
+      descText = tGame('legendaries', choice.id, 'desc') || choice.desc;
+    } else if (choice.type === 'revival' && choice.id) {
+      descText = tGame('revivals', choice.id, 'desc') || choice.desc;
     }
 
+    if (choice.rarityMult > 1.0 && choice.type === 'stat') {
+      descText += ` <span style="color:${rd.color}">[${rd.name}: ${t('card.rarity.effect')}${choice.rarityMult}]</span>`;
+    }
+
+    // i18n: evolved weapon name in preview badge
+    const baseEvoName = UPGRADES.weapons[choice.key]?.evolvedName || '진화형';
+    const evoName = (choice.type === 'weapon' && choice.key)
+      ? (tGame('weapons', choice.key, 'evolvedName') || baseEvoName)
+      : baseEvoName;
     const evoPreview = (choice.type === 'weapon' && choice.nextLevel === 5)
-      ? `<div class="evo-preview-badge">✨ 진화 → ${UPGRADES.weapons[choice.key]?.evolvedName || '진화형'}</div>`
+      ? `<div class="evo-preview-badge">✨ ${LANG === 'en' ? 'EVOLVED →' : '진화 →'} ${evoName}</div>`
       : '';
     card.innerHTML = `
       <div class="card-icon">${choice.icon}</div>
       <div class="card-details">
         <div class="card-title-row">
-          <span class="card-name" style="color:${choice.rarity === 'legendary' ? '#ffe600' : '#fff'}">${choice.name}</span>
+          <span class="card-name" style="color:${choice.rarity === 'legendary' ? '#ffe600' : '#fff'}">${cardName}</span>
           <span class="card-tag tag-${choice.rarity || 'common'}">${tagText}</span>
         </div>
         <div class="card-desc">${descText}</div>
@@ -241,7 +284,9 @@ function resumeGame() {
 
 function goToMenu() {
   showGameConfirm(
-    '지금 게임을 종료하고 메인 메뉴로 돌아갑니다.\n진행 상황은 자동 저장됩니다.',
+    LANG === 'en'
+      ? 'Exit game and return to main menu.\nProgress will be auto-saved.'
+      : '지금 게임을 종료하고 메인 메뉴로 돌아갑니다.\n진행 상황은 자동 저장됩니다.',
     () => {
       stopBGM();
       if (gameLoopId) { cancelAnimationFrame(gameLoopId); gameLoopId = null; }
@@ -259,7 +304,9 @@ function goToMenu() {
       tryStartMenuBgm();
     },
     null,
-    { title: '게임 종료', icon: '⚡', okLabel: '나가기', cancelLabel: '계속하기' }
+    LANG === 'en'
+      ? { title: 'EXIT GAME', icon: '⚡', okLabel: 'EXIT', cancelLabel: 'CONTINUE' }
+      : { title: '게임 종료', icon: '⚡', okLabel: '나가기', cancelLabel: '계속하기' }
   );
 }
 
@@ -277,9 +324,11 @@ function showCurseModal() {
   const modal = document.getElementById('curse-modal');
   const card  = document.getElementById('curse-offer-card');
   if (!modal || !card) { gameState = STATE_STAGE_BONUS; showStageBonusModal(); return; }
+  const cDebuff = (LANG === 'en' ? tGame('curses', curse.id, 'debuff') : null) || curse.debuff;
+  const cReward = (LANG === 'en' ? tGame('curses', curse.id, 'reward') : null) || curse.reward;
   card.innerHTML = `
-    <div class="curse-debuff">🦠 감염: ${curse.debuff}</div>
-    <div class="curse-reward">⚡ 추출: ${curse.reward}</div>
+    <div class="curse-debuff">🦠 ${LANG === 'en' ? 'Infection:' : '감염:'} ${cDebuff}</div>
+    <div class="curse-reward">⚡ ${LANG === 'en' ? 'Extract:' : '추출:'} ${cReward}</div>
   `;
   document.getElementById('curse-accept-btn').onclick = () => applyCurseChoice(curse, true);
   document.getElementById('curse-decline-btn').onclick = () => applyCurseChoice(curse, false);
@@ -294,10 +343,12 @@ function showNearDeathCurseModal() {
   const modal = document.getElementById('curse-modal');
   const card  = document.getElementById('curse-offer-card');
   if (!modal || !card) { gameState = STATE_PLAYING; ensureGameLoopRunning(); return; }
+  const ndDebuff = (LANG === 'en' ? tGame('curses', curse.id, 'debuff') : null) || curse.debuff;
+  const ndReward = (LANG === 'en' ? tGame('curses', curse.id, 'reward') : null) || curse.reward;
   card.innerHTML = `
-    <div style="color:#ff8800;font-size:0.75rem;margin-bottom:6px">⚠ 위기 감염 협약 — 생존 우선</div>
-    <div class="curse-debuff">🦠 감염: ${curse.debuff}</div>
-    <div class="curse-reward">⚡ 추출: ${curse.reward}</div>
+    <div style="color:#ff8800;font-size:0.75rem;margin-bottom:6px">${t('curse.neardeath')}</div>
+    <div class="curse-debuff">🦠 ${LANG === 'en' ? 'Infection:' : '감염:'} ${ndDebuff}</div>
+    <div class="curse-reward">⚡ ${LANG === 'en' ? 'Extract:' : '추출:'} ${ndReward}</div>
   `;
   document.getElementById('curse-accept-btn').onclick = () => applyNearDeathCurseChoice(curse, true);
   document.getElementById('curse-decline-btn').onclick = () => applyNearDeathCurseChoice(curse, false);
@@ -583,7 +634,7 @@ function getItemCost(item) {
 function renderShopItems(items) {
   const list     = document.getElementById('shop-items-list');
   const goldDisp = document.getElementById('shop-gold-display');
-  if (goldDisp) goldDisp.textContent = `보유 골드: 💰 ${player.gold}G`;
+  if (goldDisp) goldDisp.textContent = `${t('shop.gold')} ${player.gold}G`;
   list.innerHTML = '';
   items.forEach(item => {
     const cost       = getItemCost(item);
@@ -593,13 +644,17 @@ function renderShopItems(items) {
     const btn = document.createElement('button');
     btn.className = `shop-item-card${canAfford ? '' : ' shop-cant-afford'}`;
     const discountTag  = (player?.shopDiscount > 0) ? ` <span style="color:#39ff14;font-size:0.7em">(-${Math.round((player.shopDiscount)*100)}%)</span>` : '';
-    const purchaseTag  = bought > 0 ? `<span style="color:rgba(255,200,0,0.7);font-size:0.72em;margin-left:4px">×${bought} 구매됨</span>` : '';
-    const nextCostTag  = bought > 0 ? `<div style="font-size:0.68em;color:rgba(255,150,0,0.6);margin-top:2px">다음: ${nextCost}G</div>` : '';
+    const boughtLabel  = t('shop.bought').replace('{n}', bought);
+    const nextLabel    = t('shop.next').replace('{n}', nextCost);
+    const purchaseTag  = bought > 0 ? `<span style="color:rgba(255,200,0,0.7);font-size:0.72em;margin-left:4px">${boughtLabel}</span>` : '';
+    const nextCostTag  = bought > 0 ? `<div style="font-size:0.68em;color:rgba(255,150,0,0.6);margin-top:2px">${nextLabel}</div>` : '';
+    const itemName = tGame('shop', item.id, 'name') || item.name;
+    const itemDesc = tGame('shop', item.id, 'desc') || item.desc;
     btn.innerHTML = `
       <div class="shop-item-icon">${item.icon}</div>
       <div class="shop-item-details">
-        <div class="shop-item-name">${item.name}${purchaseTag}</div>
-        <div class="shop-item-desc">${item.desc}</div>
+        <div class="shop-item-name">${itemName}${purchaseTag}</div>
+        <div class="shop-item-desc">${itemDesc}</div>
         ${nextCostTag}
       </div>
       <div class="shop-item-cost ${canAfford ? 'can-afford' : 'cant-afford'}">💰 ${cost}G${discountTag}</div>

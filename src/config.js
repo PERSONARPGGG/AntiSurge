@@ -691,12 +691,16 @@ function renderMissionPanel() {
     const pct = Math.min(100, (m.progress / m.goal) * 100);
     const card = document.createElement('div');
     card.className = 'mission-card' + (m.done ? ' mission-done' : '');
-    const rewardLabel = m.reward.type === 'gold' ? `+${m.reward.val}🪙` : m.reward.type === 'heal' ? `+${m.reward.val}HP` : m.reward.type === 'cores' ? `+${m.reward.val}코어` : 'XP';
+    const coreLabel = typeof tGame !== 'undefined' ? (tGame('missions', m.id, 'name') || m.name) : m.name;
+    const descLabel = typeof tGame !== 'undefined' ? (tGame('missions', m.id, 'desc') || m.desc) : m.desc;
+    const coreStr = typeof t !== 'undefined' ? t('mission.reward.cores') : '코어';
+    const rewardLabel = m.reward.type === 'gold' ? `+${m.reward.val}🪙` : m.reward.type === 'heal' ? `+${m.reward.val}HP` : m.reward.type === 'cores' ? `+${m.reward.val} ${coreStr}` : (typeof t !== 'undefined' ? t('mission.reward.xp') : 'XP');
+    const donePrefix = typeof t !== 'undefined' ? t('mission.done') : '완료! 보상: ';
     card.innerHTML = `
-      <div class="mission-name">${m.icon} ${m.name}${m.done ? ' <span class="mission-check">✓</span>' : ''}</div>
-      <div class="mission-desc">${m.desc}</div>
+      <div class="mission-name">${m.icon} ${coreLabel}${m.done ? ' <span class="mission-check">✓</span>' : ''}</div>
+      <div class="mission-desc">${descLabel}</div>
       <div class="mission-bar-wrap"><div class="mission-bar-fill" style="width:${pct}%"></div></div>
-      <div class="mission-progress">${m.done ? `완료! 보상: ${rewardLabel}` : `${m.trackKey === 'mNoDmgSec' || m.trackKey === 'mHighHpSec' ? Math.floor(m.progress) + 's' : Math.floor(m.progress)} / ${m.goal}`}</div>
+      <div class="mission-progress">${m.done ? `${donePrefix}${rewardLabel}` : `${m.trackKey === 'mNoDmgSec' || m.trackKey === 'mHighHpSec' ? Math.floor(m.progress) + 's' : Math.floor(m.progress)} / ${m.goal}`}</div>
     `;
     list.appendChild(card);
   }

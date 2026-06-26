@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>AntiSurge — 사이버펑크 바이러스 서바이벌</title>
-  <meta name="description" content="AntiSurge: 사이버펑크 테마의 2D 탑다운 바이러스 서바이벌 게임. 스테이지 100을 돌파하고 무한 생존에 도전하라!">
+  <title>AntiSurge — Cyberpunk Virus Survival</title>
+  <meta name="description" content="AntiSurge: Cyberpunk-themed 2D top-down virus survival game. Break through Stage 100 and survive endless waves!">
 
   <!-- PWA (HTTP 서버에서만 활성화, file:// 에서는 스킵) -->
   <meta name="theme-color" content="#00f0ff">
@@ -48,10 +48,10 @@
         <div class="menu-title-block">
           <div class="menu-title-eyebrow">[ VIRUS SURVIVAL ]</div>
           <h1 class="neon-title"><span class="title-anti">ANTI</span><span class="title-surge">SURGE</span><span id="ascension-menu-badge" class="ascension-menu-badge" style="display:none">NG+0</span></h1>
-          <div class="menu-title-sub">사이버펑크 바이러스 서바이벌</div>
+          <div class="menu-title-sub" data-i18n="menu.title.sub">CYBERPUNK VIRUS SURVIVAL</div>
         </div>
         <div class="menu-header-meta">
-          <span class="version-badge version-beta">β v0.10 BETA</span>
+          <span class="version-badge version-beta" data-i18n="version.badge">β v0.11 BETA</span>
         </div>
       </div>
 
@@ -68,35 +68,35 @@
 
           <!-- 중간 저장 복원 프롬프트 (이전 런 존재 시 표시) -->
           <div id="midrun-prompt" class="midrun-prompt">
-            <div class="midrun-label">⚡ 이전 런이 감지됐습니다</div>
+            <div class="midrun-label" data-i18n="midrun.label">⚡ PREVIOUS RUN DETECTED</div>
             <div class="midrun-info">—</div>
             <div class="midrun-btns">
-              <button class="neon-btn font-sm" onclick="resumeFromMidRun()">▶ 이어서 하기</button>
-              <button class="neon-btn font-sm neon-btn-red" style="font-size:0.72rem" onclick="clearMidRun();document.getElementById('midrun-prompt').classList.remove('active')">✕ 새 게임</button>
+              <button class="neon-btn font-sm" onclick="resumeFromMidRun()" data-i18n="midrun.resume">▶ CONTINUE</button>
+              <button class="neon-btn font-sm neon-btn-red" style="font-size:0.72rem" onclick="clearMidRun();document.getElementById('midrun-prompt').classList.remove('active')" data-i18n="midrun.new">✕ NEW GAME</button>
             </div>
           </div>
 
-          <button id="start-btn" class="neon-btn menu-start-btn">▶ 게임 시작</button>
+          <button id="start-btn" class="neon-btn menu-start-btn" data-i18n="menu.start">▶ START GAME</button>
 
           <button class="neon-btn neon-btn-purple menu-meta-btn" onclick="openMetaModal()">
-            ⚡ 영구 업그레이드 <span class="meta-badge">💾 <span id="meta-cores-badge">0</span></span>
+            <span data-i18n="menu.meta">⚡ PERMANENT UPGRADES</span> <span class="meta-badge">💾 <span id="meta-cores-badge">0</span></span>
           </button>
 
           <div class="menu-controls pc-only">
-            <span class="ctrl-item"><kbd>W A S D</kbd> 이동</span>
+            <span class="ctrl-item"><kbd>W A S D</kbd> <span data-i18n="menu.controls.move">MOVE</span></span>
             <span class="ctrl-sep">·</span>
-            <span class="ctrl-item"><kbd>Q</kbd> 스킬</span>
+            <span class="ctrl-item"><kbd>Q</kbd> <span data-i18n="menu.controls.skill">SKILL</span></span>
             <span class="ctrl-sep">·</span>
-            <span class="ctrl-item"><kbd>ESC</kbd> 일시정지</span>
+            <span class="ctrl-item"><kbd>ESC</kbd> <span data-i18n="menu.controls.pause">PAUSE</span></span>
             <span class="ctrl-sep">·</span>
-            <span class="ctrl-item"><kbd>M</kbd> BGM</span>
+            <span class="ctrl-item"><kbd>M</kbd> <span data-i18n="menu.controls.bgm">BGM</span></span>
           </div>
           <div class="menu-controls mobile-only">
-            <span class="ctrl-item">✋ 드래그 이동</span>
+            <span class="ctrl-item" data-i18n="menu.controls.drag">Drag to Move</span>
             <span class="ctrl-sep">·</span>
-            <span class="ctrl-item">⚡ 스킬</span>
+            <span class="ctrl-item" data-i18n="menu.controls.skillbtn">Skill Button</span>
             <span class="ctrl-sep">·</span>
-            <span class="ctrl-item">⚙ 정지</span>
+            <span class="ctrl-item" data-i18n="menu.controls.pausebtn">Pause</span>
           </div>
         </div>
 
@@ -105,7 +105,7 @@
 
           <!-- 최고 기록 패널 -->
           <div class="menu-record-panel">
-            <div class="mrp-title">— 최고 기록 —</div>
+            <div class="mrp-title" data-i18n="menu.record">— BEST RECORD —</div>
             <div class="mrp-stats">
               <span id="mrp-stage">S —</span>
               <span id="mrp-kills">— 킬</span>
@@ -117,38 +117,38 @@
           <div class="menu-action-grid">
             <button class="menu-action-btn" onclick="openInviteModal()">
               <span class="mab-icon">🎮</span>
-              <span class="mab-label">멀티플레이</span>
+              <span class="mab-label" data-i18n="menu.multi">MULTIPLAYER</span>
               <span class="mab-badge mab-beta">BETA</span>
             </button>
             <button class="menu-action-btn" onclick="startDailyRun()">
               <span class="mab-icon">📅</span>
-              <span class="mab-label">일일 도전</span>
+              <span class="mab-label" data-i18n="menu.daily">DAILY RUN</span>
               <span class="mab-badge mab-today">TODAY</span>
             </button>
             <button class="menu-action-btn" onclick="openLeaderboardModal()">
               <span class="mab-icon">🏅</span>
-              <span class="mab-label">리더보드</span>
+              <span class="mab-label" data-i18n="menu.leaderboard">LEADERBOARD</span>
               <span class="mab-badge mab-purple">TOP 10</span>
             </button>
             <button class="menu-action-btn" onclick="openAchievementModal()">
               <span class="mab-icon">🏆</span>
-              <span class="mab-label">업적</span>
+              <span class="mab-label" data-i18n="menu.achievements">ACHIEVEMENTS</span>
             </button>
             <button class="menu-action-btn" onclick="openArchiveModal()">
               <span class="mab-icon">🗃</span>
-              <span class="mab-label">격리 로그</span>
+              <span class="mab-label" data-i18n="menu.archive">LOG ARCHIVE</span>
               <span id="archive-new-badge" class="mab-badge mab-beta" style="display:none">NEW</span>
             </button>
             <button class="menu-action-btn menu-action-settings" onclick="openSettingsModal()">
               <span class="mab-icon">⚙</span>
-              <span class="mab-label">옵션 설정</span>
+              <span class="mab-label" data-i18n="menu.settings">SETTINGS</span>
             </button>
           </div>
 
           <!-- 인증 -->
           <div class="menu-auth">
-            <p id="auth-user-info" class="auth-info-text">로컬 저장 중 (로그인 시 클라우드 동기화)</p>
-            <button id="auth-btn" class="neon-btn font-sm" onclick="signInGoogle()">🔑 Google 로그인</button>
+            <p id="auth-user-info" class="auth-info-text" data-i18n="menu.auth.local">Local save (Login for cloud sync)</p>
+            <button id="auth-btn" class="neon-btn font-sm" onclick="signInGoogle()" data-i18n="menu.auth.login">🔑 Google Login</button>
           </div>
 
         </div>
@@ -159,8 +159,8 @@
   <!-- 클래스 선택 화면 -->
   <div id="class-select-screen" class="screen">
     <div class="class-select-content">
-      <h2 class="neon-title-sm">백신 선택</h2>
-      <p class="modal-desc">전투 스타일을 선택하세요. 카드를 클릭하면 상세 정보를 확인할 수 있습니다.</p>
+      <h2 class="neon-title-sm" data-i18n="class.select.title">SELECT VACCINE</h2>
+      <p class="modal-desc" data-i18n="class.select.hint">Choose your combat style. Click a card for details.</p>
       <div class="class-card-grid">
         <button class="class-card" data-class="hacker" style="--cls-color:#00f0ff">
           <div class="cls-header">
@@ -255,7 +255,7 @@
       </div>
 
       <div class="hidden-class-divider">
-        <span class="hidden-chip">??? 히든 직업</span>
+        <span class="hidden-chip" data-i18n="class.hidden">??? HIDDEN CLASS</span>
       </div>
       <div class="class-card-grid" id="hidden-class-grid">
         <button class="class-card hidden-class class-locked" data-class="jammer" style="--cls-color:#aaffff">
@@ -298,10 +298,10 @@
       <div id="hidden-hint-popup" style="display:none;position:fixed;background:rgba(0,0,0,0.88);color:#ffe600;border:1px solid #ffe600;border-radius:8px;padding:8px 14px;font-size:12px;z-index:9999;pointer-events:none;"></div>
 
       <div class="class-confirm-footer">
-        <span id="class-selected-hint" class="class-selected-hint">백신 선택</span>
+        <span id="class-selected-hint" class="class-selected-hint" data-i18n="class.confirm.hint">SELECT VACCINE</span>
         <div class="class-confirm-btns">
-          <button class="neon-btn font-sm neon-btn-purple" onclick="goBackToMenu()">← 뒤로</button>
-          <button id="class-confirm-btn" class="neon-btn font-sm" onclick="confirmClassStart()" disabled>▶ 배포 시작</button>
+          <button class="neon-btn font-sm neon-btn-purple" onclick="goBackToMenu()" data-i18n="class.confirm.back">← BACK</button>
+          <button id="class-confirm-btn" class="neon-btn font-sm" onclick="confirmClassStart()" disabled data-i18n="class.confirm.start">▶ DEPLOY</button>
         </div>
       </div>
     </div>
@@ -501,22 +501,22 @@
   <!-- 바이러스 코어 감염 협약 모달 -->
   <div id="curse-modal" class="modal">
     <div class="modal-content glass-panel curse-panel">
-      <h2 class="neon-title-sm" style="color:#ff4466">🦠 감염 협약</h2>
-      <p class="modal-desc">바이러스 코어를 분석했습니다. 감염 위험을 감수하고 강화 데이터를 추출하시겠습니까?</p>
+      <h2 class="neon-title-sm" style="color:#ff4466" data-i18n="curse.title">🦠 INFECTION CONTRACT</h2>
+      <p class="modal-desc" data-i18n="curse.desc">Virus core analyzed. Accept infection risk to extract enhancement data?</p>
       <div id="curse-offer-card" class="curse-offer-card"></div>
       <div class="curse-actions">
-        <button id="curse-accept-btn" class="neon-btn font-sm neon-btn-red">🦠 감염 감수</button>
-        <button id="curse-decline-btn" class="neon-btn font-sm">🛡 격리</button>
+        <button id="curse-accept-btn" class="neon-btn font-sm neon-btn-red" data-i18n="curse.accept">🦠 ACCEPT RISK</button>
+        <button id="curse-decline-btn" class="neon-btn font-sm" data-i18n="curse.decline">🛡 QUARANTINE</button>
       </div>
-      <div class="curse-key-hint"><kbd>Y</kbd> 감수 &nbsp;·&nbsp; <kbd>N</kbd> / <kbd>ESC</kbd> 격리</div>
+      <div class="curse-key-hint" data-i18n="curse.key"><kbd>Y</kbd> Accept &nbsp;·&nbsp; <kbd>N</kbd> / <kbd>ESC</kbd> Reject</div>
     </div>
   </div>
 
   <!-- 스테이지 클리어 보너스 모달 -->
   <div id="stage-bonus-modal" class="modal">
     <div class="modal-content glass-panel bonus-panel">
-      <h2 class="neon-title-sm">★ 스테이지 보상 선택 ★</h2>
-      <p class="modal-desc">하나를 선택하세요.</p>
+      <h2 class="neon-title-sm" data-i18n="bonus.title">★ STAGE REWARD ★</h2>
+      <p class="modal-desc" data-i18n="bonus.desc">Choose one.</p>
       <div id="stage-bonus-list" class="bonus-list"></div>
     </div>
   </div>
@@ -524,11 +524,11 @@
   <!-- 레벨업 선택창 모달 -->
   <div id="level-up-modal" class="modal">
     <div class="modal-content glass-panel levelup-panel">
-      <h2 class="neon-title-sm">시스템 업그레이드 감지</h2>
-      <p class="modal-desc">업그레이드 모듈을 선택하세요.</p>
+      <h2 class="neon-title-sm" data-i18n="levelup.title">SYSTEM UPGRADE DETECTED</h2>
+      <p class="modal-desc" data-i18n="levelup.desc">Select an upgrade module.</p>
       <div id="card-container" class="card-container"></div>
       <div class="reroll-row">
-        <button id="reroll-btn" class="reroll-btn">🔄 리롤 <span id="reroll-uses">(2회)</span></button>
+        <button id="reroll-btn" class="reroll-btn"><span data-i18n="levelup.reroll">🔄 REROLL</span> <span id="reroll-uses">(2회)</span></button>
       </div>
     </div>
   </div>
@@ -594,27 +594,27 @@
 
       <div class="result-stats">
         <div class="stat-card">
-          <div class="stat-label">생존 시간</div>
+          <div class="stat-label" data-i18n="result.time">SURVIVAL TIME</div>
           <div id="stat-time" class="stat-value neon-text-pink">00:00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">도달 스테이지</div>
+          <div class="stat-label" data-i18n="result.stage">STAGE REACHED</div>
           <div id="stat-stage" class="stat-value neon-text-yellow">1</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">파괴된 바이러스</div>
+          <div class="stat-label" data-i18n="result.kills">VIRUSES DESTROYED</div>
           <div id="stat-kills" class="stat-value neon-text-blue">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">최종 레벨</div>
+          <div class="stat-label" data-i18n="result.level">FINAL LEVEL</div>
           <div id="stat-level" class="stat-value neon-text-green">Lv. 1</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">최대 콤보</div>
+          <div class="stat-label" data-i18n="result.maxcombo">MAX COMBO</div>
           <div id="stat-maxcombo" class="stat-value neon-text-yellow">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">무기 진화</div>
+          <div class="stat-label" data-i18n="result.evolutions">WEAPON EVOLUTIONS</div>
           <div id="stat-evolutions" class="stat-value neon-text-blue">0</div>
         </div>
       </div>
@@ -633,19 +633,19 @@
       </div>
 
       <div class="result-details">
-        <h3>[ 업그레이드 이력 및 무기 기여도 ]</h3>
+        <h3 data-i18n="result.upgrades">[ UPGRADE LOG &amp; WEAPON CONTRIBUTION ]</h3>
         <div id="weapon-contribution-list" class="contrib-list"></div>
       </div>
 
       <!-- 이름 입력 + 공유 -->
       <div class="share-row">
-        <input id="player-name-input" class="name-input" type="text" placeholder="닉네임 입력 (선택)" maxlength="12" autocomplete="off">
-        <button id="share-btn" class="neon-btn font-sm neon-btn-share" onclick="shareResult()">📤 결과 공유</button>
+        <input id="player-name-input" class="name-input" type="text" data-i18n-placeholder="result.nickname" placeholder="Enter nickname (optional)" maxlength="12" autocomplete="off">
+        <button id="share-btn" class="neon-btn font-sm neon-btn-share" onclick="shareResult()" data-i18n="result.share">📤 SHARE RESULT</button>
       </div>
 
       <div class="result-actions">
-        <button id="retry-btn" class="neon-btn font-sm">시스템 재가동</button>
-        <button id="home-btn" class="neon-btn font-sm neon-btn-purple">메인 화면으로</button>
+        <button id="retry-btn" class="neon-btn font-sm" data-i18n="result.retry">RESTART SYSTEM</button>
+        <button id="home-btn" class="neon-btn font-sm neon-btn-purple" data-i18n="result.home">MAIN MENU</button>
       </div>
     </div>
   </div>
@@ -657,8 +657,8 @@
       <div class="archive-fixed-header">
         <div class="archive-header">
           <span class="archive-title-icon">🗃</span>
-          <h2 class="archive-title">ANTISURGE — 격리 로그 아카이브</h2>
-          <div class="archive-subtitle">각 운영자의 격리 기록 / 분류 불가 데이터</div>
+          <h2 class="archive-title" data-i18n="archive.title">ANTISURGE — QUARANTINE LOG ARCHIVE</h2>
+          <div class="archive-subtitle" data-i18n="archive.subtitle">Operative records / Unclassified data</div>
         </div>
         <!-- 클래스 탭 -->
         <div class="archive-tabs" id="archive-tabs"></div>
@@ -667,13 +667,13 @@
       <!-- 스크롤 가능 영역 -->
       <div class="archive-scroll-body">
         <div class="archive-log-viewer" id="archive-log-viewer">
-          <div class="archive-placeholder">클래스를 선택하세요</div>
+          <div class="archive-placeholder" data-i18n="archive.placeholder">Select a class</div>
         </div>
       </div>
 
       <!-- 고정 푸터 (항상 보임) -->
       <div class="archive-fixed-footer">
-        <button class="neon-btn font-sm" onclick="closeArchiveModal()">닫기</button>
+        <button class="neon-btn font-sm" onclick="closeArchiveModal()" data-i18n="archive.close">CLOSE</button>
       </div>
     </div>
   </div>
@@ -702,11 +702,11 @@
   <!-- 글로벌 리더보드 모달 -->
   <div id="leaderboard-modal" class="modal" onclick="if(event.target===this)closeLeaderboardModal()">
     <div class="modal-content glass-panel" style="max-width:520px;padding:1.5rem">
-      <h2 class="neon-title-sm" style="color:#b026ff;text-shadow:0 0 10px #b026ff">🏅 글로벌 리더보드</h2>
-      <p class="modal-desc" style="margin-bottom:0.8rem">전체 플레이어 최고 기록 TOP 10 (스테이지 기준)</p>
+      <h2 class="neon-title-sm" style="color:#b026ff;text-shadow:0 0 10px #b026ff" data-i18n="lb.title">🏅 GLOBAL LEADERBOARD</h2>
+      <p class="modal-desc" style="margin-bottom:0.8rem" data-i18n="lb.desc">All-time TOP 10 (by stage)</p>
       <div id="lb-list" style="min-height:120px;font-size:0.85rem;line-height:1.9"></div>
       <div style="text-align:center;margin-top:1rem">
-        <button class="neon-btn font-sm" onclick="closeLeaderboardModal()">← 닫기</button>
+        <button class="neon-btn font-sm" onclick="closeLeaderboardModal()" data-i18n="lb.back">← CLOSE</button>
       </div>
     </div>
   </div>
@@ -714,17 +714,17 @@
   <!-- 메타 영구 업그레이드 모달 -->
   <div id="meta-upgrade-modal" class="modal">
     <div class="modal-content glass-panel meta-panel">
-      <h2 class="neon-title-sm">⚡ 영구 업그레이드</h2>
+      <h2 class="neon-title-sm" data-i18n="meta.title">⚡ PERMANENT UPGRADES</h2>
       <div class="slot-row">
-        <button class="slot-btn slot-active" onclick="selectSaveSlot(0)">슬롯 1</button>
-        <button class="slot-btn" onclick="selectSaveSlot(1)">슬롯 2</button>
-        <button class="slot-btn" onclick="selectSaveSlot(2)">슬롯 3</button>
+        <button class="slot-btn slot-active" onclick="selectSaveSlot(0)" data-i18n="meta.slot1">SLOT 1</button>
+        <button class="slot-btn" onclick="selectSaveSlot(1)" data-i18n="meta.slot2">SLOT 2</button>
+        <button class="slot-btn" onclick="selectSaveSlot(2)" data-i18n="meta.slot3">SLOT 3</button>
       </div>
-      <p id="meta-cores-display" class="meta-cores-display">💾 보유 데이터 코어: 0</p>
-      <p class="modal-desc">런 종료 후 획득한 데이터 코어로 영구 능력을 강화하세요.</p>
+      <p id="meta-cores-display" class="meta-cores-display">💾 DATA CORES: 0</p>
+      <p class="modal-desc" data-i18n="meta.desc">Spend Data Cores to permanently boost your abilities.</p>
       <div id="meta-upgrade-grid" class="meta-upgrade-grid"></div>
       <div style="text-align:center;margin-top:0.5rem">
-        <button class="neon-btn font-sm" onclick="closeMetaModal()">← 돌아가기</button>
+        <button class="neon-btn font-sm" onclick="closeMetaModal()" data-i18n="meta.back">← BACK</button>
       </div>
     </div>
   </div>
@@ -732,12 +732,12 @@
   <!-- 상점 모달 -->
   <div id="shop-modal" class="modal">
     <div class="modal-content glass-panel shop-panel">
-      <h2 class="neon-title-sm">🛒 데이터 마켓</h2>
-      <p id="shop-gold-display" class="shop-gold-display">보유 골드: 💰 0G</p>
-      <p class="modal-desc">아이템을 구매하세요. 여러 개 구매 가능합니다.</p>
+      <h2 class="neon-title-sm" data-i18n="shop.title">🛒 DATA MARKET</h2>
+      <p id="shop-gold-display" class="shop-gold-display">💰 GOLD: 0G</p>
+      <p class="modal-desc" data-i18n="shop.desc">Purchase items. Multiple buys allowed.</p>
       <div id="shop-items-list" class="shop-items-list"></div>
       <div class="shop-close-row">
-        <button class="neon-btn font-sm" onclick="closeShopModal()">계속 진행</button>
+        <button class="neon-btn font-sm" onclick="closeShopModal()" data-i18n="shop.continue">CONTINUE</button>
       </div>
     </div>
   </div>
@@ -745,55 +745,61 @@
   <!-- ⚙ 설정 모달 -->
   <div id="settings-modal" class="modal">
     <div class="modal-content glass-panel settings-panel">
-      <h2 class="neon-title-sm">⚙ 옵션</h2>
+      <h2 class="neon-title-sm" data-i18n="settings.title">⚙ OPTIONS</h2>
 
-      <div class="settings-section-title">화면</div>
+      <div class="settings-section-title" data-i18n="settings.display">DISPLAY</div>
       <div class="settings-list">
         <div class="settings-item">
-          <span class="settings-label">전체화면</span>
-          <button class="neon-btn font-sm settings-btn" onclick="toggleFullscreen()">⛶ 전환</button>
+          <span class="settings-label" data-i18n="settings.fullscreen">Fullscreen</span>
+          <button class="neon-btn font-sm settings-btn" onclick="toggleFullscreen()" data-i18n="settings.toggle.full">⛶ TOGGLE</button>
         </div>
         <div class="settings-item">
-          <span class="settings-label">FPS 표시</span>
-          <button id="settings-fps-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleFps()">📊 꺼짐</button>
+          <span class="settings-label" data-i18n="settings.fps">FPS Counter</span>
+          <button id="settings-fps-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleFps()">📊 OFF</button>
         </div>
       </div>
 
-      <div class="settings-section-title">오디오</div>
+      <div class="settings-section-title" data-i18n="settings.audio">AUDIO</div>
       <div class="settings-list">
         <div class="settings-item">
-          <span class="settings-label">배경음악</span>
-          <button id="settings-mute-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleMute()">🎵 켜짐</button>
+          <span class="settings-label" data-i18n="settings.bgm">Background Music</span>
+          <button id="settings-mute-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleMute()">🎵 ON</button>
         </div>
         <div class="settings-item">
-          <span class="settings-label">BGM 트랙</span>
-          <button id="settings-bgm-track-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleBgmTrack()">🎵 신스웨이브</button>
+          <span class="settings-label" data-i18n="settings.bgm.track">BGM Track</span>
+          <button id="settings-bgm-track-btn" class="neon-btn font-sm settings-btn" onclick="settingsToggleBgmTrack()">🎵 SYNTHWAVE</button>
         </div>
       </div>
 
-      <div class="settings-section-title pc-only">단축키</div>
+      <div class="settings-section-title" data-i18n="settings.language">LANGUAGE</div>
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
+        <button class="lang-btn" data-lang="ko" onclick="setLang('ko')">🇰🇷 한국어</button>
+      </div>
+
+      <div class="settings-section-title pc-only" data-i18n="settings.shortcuts">SHORTCUTS</div>
       <div class="settings-shortcuts pc-only">
-        <div class="shortcut-row"><kbd>WASD / ↑↓←→</kbd><span>이동</span></div>
-        <div class="shortcut-row"><kbd>Q</kbd><span>클래스 스킬</span></div>
-        <div class="shortcut-row"><kbd>M</kbd><span>BGM 끄기/켜기</span></div>
-        <div class="shortcut-row"><kbd>ESC / P</kbd><span>일시정지</span></div>
-        <div class="shortcut-row"><kbd>F</kbd><span>전체화면</span></div>
+        <div class="shortcut-row"><kbd>WASD / ↑↓←→</kbd><span data-i18n="settings.shortcuts.move">Move</span></div>
+        <div class="shortcut-row"><kbd>Q</kbd><span data-i18n="settings.shortcuts.skill">Class Skill</span></div>
+        <div class="shortcut-row"><kbd>M</kbd><span data-i18n="settings.shortcuts.bgm">Toggle BGM</span></div>
+        <div class="shortcut-row"><kbd>ESC / P</kbd><span data-i18n="settings.shortcuts.pause">Pause</span></div>
+        <div class="shortcut-row"><kbd>F</kbd><span data-i18n="settings.shortcuts.fs">Fullscreen</span></div>
       </div>
-      <div class="settings-section-title mobile-only">터치 조작</div>
+      <div class="settings-section-title mobile-only" data-i18n="settings.touch">TOUCH CONTROLS</div>
       <div class="mobile-tips mobile-only">
-        <div class="mobile-tip-row">✋ <span>화면 드래그 — 이동</span></div>
-        <div class="mobile-tip-row">⚡ <span>우하단 버튼 — 클래스 스킬</span></div>
-        <div class="mobile-tip-row">⚙ <span>HUD 우상단 ⚙ — 일시정지</span></div>
-        <div class="mobile-tip-row">🎵 <span>HUD 🎵 — BGM 켜기/끄기</span></div>
+        <div class="mobile-tip-row">✋ <span data-i18n="settings.touch.drag">Drag screen — Move</span></div>
+        <div class="mobile-tip-row">⚡ <span data-i18n="settings.touch.skill">Skill button — Class Skill</span></div>
+        <div class="mobile-tip-row">⚙ <span data-i18n="settings.touch.pause">HUD ⚙ — Pause</span></div>
+        <div class="mobile-tip-row">🎵 <span data-i18n="settings.touch.bgm">HUD 🎵 — Toggle BGM</span></div>
       </div>
 
       <!-- 게임 중 일시정지 시에만 표시 -->
       <div id="settings-ingame-actions" class="settings-ingame-actions" style="display:none">
-        <button class="neon-btn font-sm" onclick="resumeGame()">▶ 계속하기</button>
-        <button class="neon-btn font-sm neon-btn-red" onclick="goToMenu()">🏠 메인으로</button>
+        <button class="neon-btn font-sm" onclick="resumeGame()" data-i18n="settings.resume">▶ RESUME</button>
+        <button class="neon-btn font-sm neon-btn-red" onclick="goToMenu()" data-i18n="settings.menu">🏠 MAIN MENU</button>
       </div>
       <div style="text-align:center;margin-top:0.8rem">
-        <button class="neon-btn font-sm" onclick="closeSettingsModal()">← 닫기</button>
+        <button class="neon-btn font-sm" onclick="closeSettingsModal()" data-i18n="settings.close">← CLOSE</button>
       </div>
     </div>
   </div>
@@ -837,15 +843,15 @@
   <!-- 업적 모달 -->
   <div id="achievement-modal" class="modal">
     <div class="modal-content glass-panel achievement-modal-content">
-      <h2 class="neon-title-sm">🏆 업적</h2>
+      <h2 class="neon-title-sm" data-i18n="ach.title">🏆 ACHIEVEMENTS</h2>
       <div class="ach-tabs">
-        <button class="ach-tab active" onclick="switchAchTab('basic')">기본</button>
-        <button class="ach-tab" onclick="switchAchTab('cloud')">도전</button>
-        <button class="ach-tab" onclick="switchAchTab('stats')">통계</button>
+        <button class="ach-tab active" onclick="switchAchTab('basic')" data-i18n="ach.basic">Basic</button>
+        <button class="ach-tab" onclick="switchAchTab('cloud')" data-i18n="ach.cloud">Challenge</button>
+        <button class="ach-tab" onclick="switchAchTab('stats')" data-i18n="ach.stats">Stats</button>
       </div>
       <div id="achievement-list" class="achievement-list"></div>
       <div style="text-align:center;margin-top:0.8rem">
-        <button class="neon-btn font-sm neon-btn-purple" onclick="closeAchievementModal()">← 닫기</button>
+        <button class="neon-btn font-sm neon-btn-purple" onclick="closeAchievementModal()" data-i18n="ach.back">← CLOSE</button>
       </div>
     </div>
   </div>
@@ -942,6 +948,8 @@
     })();
   </script>
   <!-- AntiSurge 모듈 (로딩 순서 중요) -->
+  <!-- i18n must load before all game modules -->
+  <script src="src/i18n.js"></script>
   <script src="src/config.js"></script>
   <script src="src/audio.js"></script>
   <script src="src/player.js"></script>
