@@ -392,7 +392,9 @@
 
     <!-- 미션 패널 -->
     <div id="mission-panel" class="mission-panel" style="display:none">
-      <div class="mission-panel-title">📋 MISSION</div>
+      <div class="mission-panel-title" id="mission-panel-title" onclick="toggleMissionPanel()">
+        📋 MISSION <span id="mission-panel-toggle" class="mission-toggle-icon">▲</span>
+      </div>
       <div id="mission-list"></div>
     </div>
 

@@ -1581,24 +1581,37 @@ body {
   position: absolute;
   right: max(env(safe-area-inset-right, 0px), 12px);
   top: 88px;
-  width: 184px;
+  width: 160px;
   background: rgba(3, 4, 14, 0.84);
   border: 1px solid rgba(0, 240, 255, 0.15);
   border-radius: 8px;
-  padding: 6px 8px;
+  padding: 5px 7px;
   z-index: 19;
   pointer-events: none;
   backdrop-filter: blur(4px);
   font-family: 'Orbitron', monospace;
 }
 .mission-panel-title {
-  font-size: 0.5rem;
-  letter-spacing: 2.5px;
+  font-size: 0.46rem;
+  letter-spacing: 2px;
   color: #475569;
-  margin-bottom: 5px;
-  padding-bottom: 3px;
+  margin-bottom: 4px;
+  padding-bottom: 2px;
   border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+.mission-toggle-icon {
+  font-size: 0.4rem;
+  opacity: 0.6;
+}
+/* 접힌 상태: mission-list 숨김 */
+.mission-panel.collapsed #mission-list { display: none; }
+.mission-panel.collapsed .mission-panel-title { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
 .mission-card {
   padding: 4px 0;
   border-bottom: 1px solid rgba(255,255,255,0.04);
@@ -1640,23 +1653,23 @@ body {
 .mission-card.mission-done .mission-progress { color: #39ff14; }
 .mission-check { color: #39ff14; margin-left: 3px; }
 
-/* 모바일 — 미션 패널: 왼쪽 상단 표시 */
+/* 모바일 — 미션 패널: 왼쪽 상단 표시 (크기 증가) */
 @media screen and (max-width: 600px) {
   .mission-panel {
     display: block;
     left: max(env(safe-area-inset-left, 0px), 8px);
     right: auto;
     top: 68px;
-    width: 150px;
-    padding: 5px 7px;
-    border: 1px solid rgba(0,240,255,0.18);
+    width: 175px;
+    padding: 6px 8px;
+    border: 1px solid rgba(0,240,255,0.22);
   }
-  .mission-panel-title { font-size: 0.42rem; letter-spacing: 1.5px; margin-bottom: 3px; }
-  .mission-name     { font-size: 0.42rem; }
-  .mission-desc     { font-size: 0.34rem; margin-bottom: 2px; }
-  .mission-bar-wrap { height: 2px; margin-bottom: 1px; }
-  .mission-progress { font-size: 0.34rem; }
-  .mission-card     { padding: 3px 0; }
+  .mission-panel-title { font-size: 0.52rem; letter-spacing: 1.5px; margin-bottom: 4px; }
+  .mission-name     { font-size: 0.52rem; }
+  .mission-desc     { font-size: 0.42rem; margin-bottom: 3px; }
+  .mission-bar-wrap { height: 3px; margin-bottom: 2px; }
+  .mission-progress { font-size: 0.40rem; }
+  .mission-card     { padding: 4px 0; }
 }
 
 /* 잠긴 클래스 카드 */
@@ -3529,26 +3542,26 @@ body {
     opacity: 1;
   }
 
-  /* 미션 패널 — 왼쪽, HUD 바로 아래 */
+  /* 미션 패널 — 왼쪽, HUD 바로 아래 (PC 크기 소폭 감소) */
   .mission-panel {
     left: 12px;
     right: auto;
     top: 186px;
-    width: 230px;
-    padding: 9px 11px;
+    width: 190px;
+    padding: 7px 9px;
     border: 1px solid rgba(0, 240, 255, 0.22);
   }
   .mission-panel-title {
-    font-size: 0.62rem;
+    font-size: 0.54rem;
     letter-spacing: 2px;
-    margin-bottom: 6px;
-    padding-bottom: 4px;
+    margin-bottom: 5px;
+    padding-bottom: 3px;
   }
-  .mission-card     { padding: 6px 0; }
-  .mission-name     { font-size: 0.65rem; margin-bottom: 2px; }
-  .mission-desc     { font-size: 0.55rem; margin-bottom: 4px; }
-  .mission-bar-wrap { height: 5px; margin-bottom: 3px; }
-  .mission-progress { font-size: 0.52rem; }
+  .mission-card     { padding: 5px 0; }
+  .mission-name     { font-size: 0.56rem; margin-bottom: 2px; }
+  .mission-desc     { font-size: 0.46rem; margin-bottom: 3px; }
+  .mission-bar-wrap { height: 4px; margin-bottom: 2px; }
+  .mission-progress { font-size: 0.44rem; }
 
   /* 콤보 — 12시 방향(상단 중앙), STAGE PROGRESS 바 아래 */
   .combo-display {

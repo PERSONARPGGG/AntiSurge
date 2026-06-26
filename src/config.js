@@ -702,6 +702,14 @@ function renderMissionPanel() {
   }
 }
 
+function toggleMissionPanel() {
+  const panel  = document.getElementById('mission-panel');
+  const toggle = document.getElementById('mission-panel-toggle');
+  if (!panel) return;
+  const collapsed = panel.classList.toggle('collapsed');
+  if (toggle) toggle.textContent = collapsed ? '▼' : '▲';
+}
+
 // ─── 저주 정의 ───
 const CURSE_DEFS = [
   {
