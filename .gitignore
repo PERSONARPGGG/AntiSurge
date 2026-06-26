@@ -54,3 +54,8 @@ conversation-*.txt
 # ── 노드 (향후 빌드 도구 추가 시) ─────────────
 node_modules/
 npm-debug.log*
+
+# ── 개발 전용 도구 (배포·커밋 제외) ──────────
+tools/
+doc/
+game.js.bak

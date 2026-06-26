@@ -4,7 +4,14 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "tools/**",
+      "doc/**",
+      "game.js.bak",
+      "validate.js",
+      "deploy.sh",
+      "CLAUDE.md",
+      "*.bak"
     ],
     "rewrites": [
       { "source": "/favicon.ico", "destination": "/icon-192.png" }
