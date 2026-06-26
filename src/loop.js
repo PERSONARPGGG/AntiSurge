@@ -410,13 +410,14 @@ function draw(dt) {
   // 배경 (화면 공간, 흔들림 없음)
   drawBackground(ctx, canvas.width, canvas.height, dt);
 
-  // 화면 진동 적용
+  // 줌 + 화면 진동 (모바일: scale 0.75 → 시야 33% 확장)
   ctx.save();
+  if (gameZoom !== 1.0) ctx.scale(gameZoom, gameZoom);
   if (screenShake.duration > 0) {
     ctx.translate(screenShake.x, screenShake.y);
   }
 
-  drawGrid(ctx, camera, canvas.width, canvas.height);
+  drawGrid(ctx, camera, canvas.width / gameZoom, canvas.height / gameZoom);
 
   for (let gem of gems)  gem.draw(ctx, camera);
 

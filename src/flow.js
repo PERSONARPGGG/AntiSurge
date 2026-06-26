@@ -5,10 +5,12 @@ const ctx    = canvas.getContext('2d');
 let camera   = { x: 0, y: 0, width: 0, height: 0 };
 
 function resizeCanvas() {
-  canvas.width   = canvas.parentElement.clientWidth;
-  canvas.height  = canvas.parentElement.clientHeight;
-  camera.width   = canvas.width;
-  camera.height  = canvas.height;
+  canvas.width  = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight;
+  // 모바일: ctx.scale(0.75)로 월드 33% 더 표시 → camera는 더 넓은 영역 커버
+  gameZoom      = window.matchMedia('(pointer: coarse)').matches ? 0.75 : 1.0;
+  camera.width  = canvas.width  / gameZoom;
+  camera.height = canvas.height / gameZoom;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
